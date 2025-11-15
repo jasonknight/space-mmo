@@ -1,0 +1,7 @@
+.vagrant/
+build/
+gen-py/
+*.obj
+*.exe
+*.dll
+*.a
