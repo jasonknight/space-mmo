@@ -1,9 +1,8 @@
-.vagrant/
-build/
-gen-py/
-.vscode/
-gitrepo/
-__pycache__/
+**/.vagrant
+**/build
+**/.vscode
+**/gitrepo
+**/__pycache__
 *.obj
 *.exe
 *.dll
