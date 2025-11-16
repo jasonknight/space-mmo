@@ -1,7 +1,11 @@
 .vagrant/
 build/
 gen-py/
+.vscode/
 *.obj
 *.exe
 *.dll
 *.a
+*.lib
+*.pdb
+*.pyc
