@@ -1,8 +1,8 @@
 **/.vagrant
 **/build
 **/.vscode
-**/gitrepo
-**/__pycache__
+**/gitrepo/*
+**/__pycache__/*
 *.obj
 *.exe
 *.dll

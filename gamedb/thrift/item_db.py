@@ -185,7 +185,7 @@ CONFIG.items.append(CARBON.build())
 STEEL = ItemBuilder(
     internal_name="steel", 
     item_type=ItemType.REFINEDMATERIAL,
-).stackable_up_to(500).add_attribute(
+).stackable_up_to(100).add_attribute(
     item_attribute_type=ItemAttributeType.QUANTITY, 
     internal_name="quantity", 
     value=attribute_value(double_value=0.0)

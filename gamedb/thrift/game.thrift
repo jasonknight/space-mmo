@@ -114,11 +114,22 @@ struct ItemDb {
 struct InventoryEntry {
     1: ItemId item_id;
     2: double quantity;
+    3: bool is_max_stacked = false;
 }
 struct Inventory {
     1: i64 id;
-    2: i64 max_items;
+    2: i64 max_entries;
     3: double max_volume;
     4: list<InventoryEntry> entries;
     5: double last_calculated_volume = 0.0;
+}
+
+enum StatusType {
+    SUCCESS = 1,
+    FAILURE = 2,
+    SKIP = 3,
+}
+struct InventoryResult {
+    1: StatusType status;
+    2: string message;
 }

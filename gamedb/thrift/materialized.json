@@ -1545,7 +1545,7 @@
             },
             "stackable": {
                 "stackable": {
-                    "max_stack_size": 500
+                    "max_stack_size": 100
                 }
             },
             "item_type": 5,
