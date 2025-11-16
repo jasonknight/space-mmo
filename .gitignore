@@ -2,6 +2,7 @@
 build/
 gen-py/
 .vscode/
+gitrepo/
 *.obj
 *.exe
 *.dll
