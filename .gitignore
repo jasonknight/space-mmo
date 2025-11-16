@@ -3,6 +3,7 @@ build/
 gen-py/
 .vscode/
 gitrepo/
+__pycache__/
 *.obj
 *.exe
 *.dll
