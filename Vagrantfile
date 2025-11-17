@@ -13,7 +13,7 @@ Vagrant.configure("2") do |config|
   config.vm.box_check_update = false
   config.vm.provider "virtualbox" do |v|
     v.name = "gamedb"
-    v.memory = 1024 * 4
-    v.cpus = 2
+    v.memory = 1024 * 8
+    v.cpus = 4
   end
 end
