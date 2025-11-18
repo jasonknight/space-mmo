@@ -13,3 +13,14 @@ from uuid import UUID
 
 import sys
 from .ttypes import *
+INVERR2STRING = {
+        2: "item is in inventory, but all entries are max stacked",
+        4: "cannot add this item to the inventory",
+        7: "could not find entry",
+        5: "failed to add to inventory",
+        6: "failed to transfer",
+        9: "inventory is full, cannot split entry",
+        1: "item is not in inventory, and inventory has reached max items",
+        8: "the new_quantity must be less than, and not equal to, the current entry.quantity",
+        3: "the new_volume is too high",
+}

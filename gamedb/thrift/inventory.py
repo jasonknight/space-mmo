@@ -108,7 +108,8 @@ def _can_add_item_to_inventory(inventory: Inventory, item: Item, item_volume: fl
     if not item_is_in_inventory and inventory.max_entries == len(inventory.entries):
         return InventoryResult(
             status=StatusType.FAILURE,
-            message="item is not in inventory, and inventory has reached max items"
+            message="item is not in inventory, and inventory has reached max items",
+            error_code=InventoryError.INVENTORY_MAX_ITEMS_REACHED
         )
     # Now we need to ask, is the item in inventory, but all those items are maxxed, so
     # we cannot add one more because of that...
@@ -118,13 +119,15 @@ def _can_add_item_to_inventory(inventory: Inventory, item: Item, item_volume: fl
             return InventoryResult(
                 status=StatusType.FAILURE,
                 message="item is in inventory, but all entries are max stacked",
+                error_code=InventoryError.ALL_ENTRIES_MAX_STACKED
             )
 
     new_volume = item_volume + inventory.last_calculated_volume
     if  new_volume > inventory.max_volume:
         return InventoryResult(
             status=StatusType.FAILURE,
-            message=f"the new_volume={new_volume} is too high"
+            message=f"the new_volume={new_volume} is too high",
+            error_code=InventoryError.NEW_VOLUME_TOO_HIGH
         )
     return InventoryResult(
         status=StatusType.SUCCESS,
@@ -156,6 +159,7 @@ def add_item_to_inventory(
             InventoryResult(
                 status=StatusType.FAILURE,
                 message="cannot add this item to the inventory",
+                error_code=InventoryError.CANNOT_ADD_ITEM
             )
         ]
     if item_quantity is None:
@@ -227,6 +231,7 @@ def add_item_to_inventory(
                     InventoryResult(
                         status=StatusType.FAILURE,
                         message=f"failed to add {item_quantity} to inventory",
+                        error_code=InventoryError.FAILED_TO_ADD
                     )
                 )
                 return results
@@ -240,21 +245,100 @@ def add_item_to_inventory(
         )
         return results
 
-def transfer_item(
-    from_inventory: Inventory, 
+def can_transfer_item(
+    from_inventory: Inventory,
     to_inventory: Inventory,
     item: Item,
     item_quantity: Optional[float] = None,
 ) -> list[InventoryResult]:
+    """
+    Check if a transfer_item operation would be successful without actually
+    performing the transfer. Returns a list of InventoryResult objects indicating
+    whether the transfer would succeed.
+    """
+    results: list[InventoryResult] = []
+
+    # Check if the item exists in the from_inventory
+    item_found = False
+    available_quantity = 0.0
+
+    for entry in from_inventory.entries:
+        if entry.item_id == item.id:
+            item_found = True
+            available_quantity += entry.quantity
+
+    if not item_found:
+        return [
+            InventoryResult(
+                status=StatusType.FAILURE,
+                message=f"item {item.id} not found in from_inventory",
+                error_code=InventoryError.ITEM_NOT_FOUND
+            )
+        ]
+
+    # Determine the quantity to transfer
+    transfer_quantity = item_quantity if item_quantity is not None else available_quantity
+
+    # Check if there's enough quantity available
+    if transfer_quantity > available_quantity:
+        return [
+            InventoryResult(
+                status=StatusType.FAILURE,
+                message=f"insufficient quantity: requested {transfer_quantity}, available {available_quantity}",
+                error_code=InventoryError.INSUFFICIENT_QUANTITY
+            )
+        ]
+
+    # Check if the to_inventory can accept the item
+    item_volume = get_item_volume(item=item, item_quantity=transfer_quantity)
+    can_add_result = _can_add_item_to_inventory(inventory=to_inventory, item=item, item_volume=item_volume)
+
+    if not is_true(can_add_result):
+        return [
+            can_add_result,
+            InventoryResult(
+                status=StatusType.FAILURE,
+                message=f"to_inventory cannot accept {transfer_quantity} of item {item.id}",
+                error_code=InventoryError.CANNOT_ADD_ITEM
+            )
+        ]
+
+    # Transfer would be successful
+    return [
+        InventoryResult(
+            status=StatusType.SUCCESS,
+            message=f"transfer of {transfer_quantity} of item {item.id} would be successful",
+        )
+    ]
+
+def transfer_item(
+    from_inventory: Inventory,
+    to_inventory: Inventory,
+    item: Item,
+    item_quantity: Optional[float] = None,
+) -> list[InventoryResult]:
+    # First, check if the transfer is possible
+    can_transfer_results = can_transfer_item(
+        from_inventory=from_inventory,
+        to_inventory=to_inventory,
+        item=item,
+        item_quantity=item_quantity
+    )
+
+    # If the transfer check fails, return the failure results
+    if not is_ok(can_transfer_results):
+        return can_transfer_results
+
+    # Transfer is possible, proceed with the actual transfer
     results: list[InventoryResult] = []
     new_entries = []
     for entry in from_inventory.entries:
         if entry.item_id == item.id:
             if item_quantity is None:
                 item_quantity = entry.quantity
-            add_results = add_item_to_inventory(inventory=to_inventory, item=item, item_quantity=item_quantity)  
+            add_results = add_item_to_inventory(inventory=to_inventory, item=item, item_quantity=item_quantity)
             if is_ok(add_results):
-                entry.quantity -= item_quantity  
+                entry.quantity -= item_quantity
                 results.append(
                     InventoryResult(
                         status=StatusType.SUCCESS,
@@ -265,7 +349,8 @@ def transfer_item(
                 return [
                     InventoryResult(
                         status=StatusType.FAILURE,
-                        message=f"failed to transfer {item.id} with quantity {item_quantity}"
+                        message=f"failed to transfer {item.id} with quantity {item_quantity}",
+                        error_code=InventoryError.FAILED_TO_TRANSFER
                     )
                 ] + add_results
         if entry.quantity > 0.0:
@@ -291,6 +376,7 @@ def split_stack(
             InventoryResult(
                 status=StatusType.FAILURE,
                 message=f"could not find entry {entry_id}",
+                error_code=InventoryError.COULD_NOT_FIND_ENTRY
             )
         )
         return results
@@ -300,6 +386,7 @@ def split_stack(
             InventoryResult(
                 status=StatusType.FAILURE,
                 message=f"the new_quantity must be less than, and not equal to, the current entry.quantity",
+                error_code=InventoryError.NEW_QUANTITY_INVALID
             )
         )
         return results
@@ -307,7 +394,8 @@ def split_stack(
         results.append(
             InventoryResult(
                 status=StatusType.FAILURE,
-                message=f"inventory is full, cannot split entry"
+                message=f"inventory is full, cannot split entry",
+                error_code=InventoryError.INVENTORY_FULL_CANNOT_SPLIT
             )
         )
         return results
@@ -427,6 +515,7 @@ def test_item_splitting():
         entry_index=0,
         new_quantity=1.0,
     )
+    print(results)
     assert(not is_ok(results))
 
     # Now test that we can't split with a larger quantity

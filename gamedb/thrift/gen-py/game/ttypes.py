@@ -110,6 +110,42 @@ class StatusType(object):
     }
 
 
+class InventoryError(object):
+    INVENTORY_MAX_ITEMS_REACHED = 1
+    ALL_ENTRIES_MAX_STACKED = 2
+    NEW_VOLUME_TOO_HIGH = 3
+    CANNOT_ADD_ITEM = 4
+    FAILED_TO_ADD = 5
+    FAILED_TO_TRANSFER = 6
+    COULD_NOT_FIND_ENTRY = 7
+    NEW_QUANTITY_INVALID = 8
+    INVENTORY_FULL_CANNOT_SPLIT = 9
+
+    _VALUES_TO_NAMES = {
+        1: "INVENTORY_MAX_ITEMS_REACHED",
+        2: "ALL_ENTRIES_MAX_STACKED",
+        3: "NEW_VOLUME_TOO_HIGH",
+        4: "CANNOT_ADD_ITEM",
+        5: "FAILED_TO_ADD",
+        6: "FAILED_TO_TRANSFER",
+        7: "COULD_NOT_FIND_ENTRY",
+        8: "NEW_QUANTITY_INVALID",
+        9: "INVENTORY_FULL_CANNOT_SPLIT",
+    }
+
+    _NAMES_TO_VALUES = {
+        "INVENTORY_MAX_ITEMS_REACHED": 1,
+        "ALL_ENTRIES_MAX_STACKED": 2,
+        "NEW_VOLUME_TOO_HIGH": 3,
+        "CANNOT_ADD_ITEM": 4,
+        "FAILED_TO_ADD": 5,
+        "FAILED_TO_TRANSFER": 6,
+        "COULD_NOT_FIND_ENTRY": 7,
+        "NEW_QUANTITY_INVALID": 8,
+        "INVENTORY_FULL_CANNOT_SPLIT": 9,
+    }
+
+
 class NotApplicable(object):
     thrift_spec = None
 
@@ -1105,14 +1141,16 @@ class InventoryResult(object):
     Attributes:
      - status
      - message
+     - error_code
 
     """
     thrift_spec = None
 
 
-    def __init__(self, status = None, message = None,):
+    def __init__(self, status = None, message = None, error_code = None,):
         self.status = status
         self.message = message
+        self.error_code = error_code
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -1133,6 +1171,11 @@ class InventoryResult(object):
                     self.message = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
                 else:
                     iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.I32:
+                    self.error_code = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -1151,6 +1194,10 @@ class InventoryResult(object):
         if self.message is not None:
             oprot.writeFieldBegin('message', TType.STRING, 2)
             oprot.writeString(self.message.encode('utf-8') if sys.version_info[0] == 2 else self.message)
+            oprot.writeFieldEnd()
+        if self.error_code is not None:
+            oprot.writeFieldBegin('error_code', TType.I32, 3)
+            oprot.writeI32(self.error_code)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -1254,6 +1301,7 @@ InventoryResult.thrift_spec = (
     None,  # 0
     (1, TType.I32, 'status', None, None, ),  # 1
     (2, TType.STRING, 'message', 'UTF8', None, ),  # 2
+    (3, TType.I32, 'error_code', None, None, ),  # 3
 )
 fix_spec(all_structs)
 del all_structs

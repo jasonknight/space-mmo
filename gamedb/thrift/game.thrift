@@ -129,7 +129,32 @@ enum StatusType {
     FAILURE = 2,
     SKIP = 3,
 }
+
+enum InventoryError {
+    INVENTORY_MAX_ITEMS_REACHED = 1,
+    ALL_ENTRIES_MAX_STACKED = 2,
+    NEW_VOLUME_TOO_HIGH = 3,
+    CANNOT_ADD_ITEM = 4,
+    FAILED_TO_ADD = 5,
+    FAILED_TO_TRANSFER = 6,
+    COULD_NOT_FIND_ENTRY = 7,
+    NEW_QUANTITY_INVALID = 8,
+    INVENTORY_FULL_CANNOT_SPLIT = 9,
+}
 struct InventoryResult {
     1: StatusType status;
     2: string message;
+    3: optional InventoryError error_code;
+}
+
+const map<InventoryError, string> INVERR2STRING = {
+    InventoryError.INVENTORY_MAX_ITEMS_REACHED: "item is not in inventory, and inventory has reached max items",
+    InventoryError.ALL_ENTRIES_MAX_STACKED: "item is in inventory, but all entries are max stacked",
+    InventoryError.NEW_VOLUME_TOO_HIGH: "the new_volume is too high",
+    InventoryError.CANNOT_ADD_ITEM: "cannot add this item to the inventory",
+    InventoryError.FAILED_TO_ADD: "failed to add to inventory",
+    InventoryError.FAILED_TO_TRANSFER: "failed to transfer",
+    InventoryError.COULD_NOT_FIND_ENTRY: "could not find entry",
+    InventoryError.NEW_QUANTITY_INVALID: "the new_quantity must be less than, and not equal to, the current entry.quantity",
+    InventoryError.INVENTORY_FULL_CANNOT_SPLIT: "inventory is full, cannot split entry",
 }
