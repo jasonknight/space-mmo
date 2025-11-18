@@ -140,6 +140,8 @@ enum InventoryError {
     COULD_NOT_FIND_ENTRY = 7,
     NEW_QUANTITY_INVALID = 8,
     INVENTORY_FULL_CANNOT_SPLIT = 9,
+    ITEM_NOT_FOUND = 10,
+    INSUFFICIENT_QUANTITY = 11,
 }
 struct InventoryResult {
     1: StatusType status;
@@ -157,4 +159,6 @@ const map<InventoryError, string> INVERR2STRING = {
     InventoryError.COULD_NOT_FIND_ENTRY: "could not find entry",
     InventoryError.NEW_QUANTITY_INVALID: "the new_quantity must be less than, and not equal to, the current entry.quantity",
     InventoryError.INVENTORY_FULL_CANNOT_SPLIT: "inventory is full, cannot split entry",
+    InventoryError.ITEM_NOT_FOUND: "item not found in inventory",
+    InventoryError.INSUFFICIENT_QUANTITY: "insufficient quantity available",
 }

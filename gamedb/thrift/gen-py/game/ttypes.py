@@ -120,6 +120,8 @@ class InventoryError(object):
     COULD_NOT_FIND_ENTRY = 7
     NEW_QUANTITY_INVALID = 8
     INVENTORY_FULL_CANNOT_SPLIT = 9
+    ITEM_NOT_FOUND = 10
+    INSUFFICIENT_QUANTITY = 11
 
     _VALUES_TO_NAMES = {
         1: "INVENTORY_MAX_ITEMS_REACHED",
@@ -131,6 +133,8 @@ class InventoryError(object):
         7: "COULD_NOT_FIND_ENTRY",
         8: "NEW_QUANTITY_INVALID",
         9: "INVENTORY_FULL_CANNOT_SPLIT",
+        10: "ITEM_NOT_FOUND",
+        11: "INSUFFICIENT_QUANTITY",
     }
 
     _NAMES_TO_VALUES = {
@@ -143,6 +147,8 @@ class InventoryError(object):
         "COULD_NOT_FIND_ENTRY": 7,
         "NEW_QUANTITY_INVALID": 8,
         "INVENTORY_FULL_CANNOT_SPLIT": 9,
+        "ITEM_NOT_FOUND": 10,
+        "INSUFFICIENT_QUANTITY": 11,
     }
 
 

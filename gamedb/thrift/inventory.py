@@ -73,15 +73,43 @@ def get_item_volume(item: Item, item_quantity: Optional[float] = None) -> float:
             return item_quantity * volume
     return 0.0
 
-def is_item_in_inventory(inventory: Inventory, item_id: int) -> bool:
+def is_item_in_inventory(inventory: Inventory, item_id: int, quantity: Optional[float] = None) -> InventoryResult:
+    total_quantity = 0.0
+    item_found = False
+
     for entry in inventory.entries:
         if entry.item_id == item_id:
-            return True
-    return False
+            item_found = True
+            total_quantity += entry.quantity
+
+    if not item_found:
+        return InventoryResult(
+            status=StatusType.FAILURE,
+            message="item not found in inventory",
+            error_code=InventoryError.ITEM_NOT_FOUND
+        )
+
+    if quantity is not None and total_quantity < quantity:
+        return InventoryResult(
+            status=StatusType.FAILURE,
+            message=f"insufficient quantity: requested {quantity}, available {total_quantity}",
+            error_code=InventoryError.INSUFFICIENT_QUANTITY
+        )
+
+    return InventoryResult(
+        status=StatusType.SUCCESS,
+        message="item found in inventory",
+    )
 
 def is_true(result: Any) -> bool:
-    if hasattr(result, "status"): 
-        if result.status == StatusType.SUCCESS:
+    if isinstance(result, list):
+        for item in result:
+            if hasattr(item, "status"):
+                if item.status == StatusType.FAILURE:
+                    return False
+        return True
+    if hasattr(result, "status"):
+        if result.status != StatusType.FAILURE:
             return True
         else:
             return False
@@ -104,7 +132,7 @@ def _can_add_item_to_inventory(inventory: Inventory, item: Item, item_volume: fl
             status=StatusType.SUCCESS,
             message="virtual items can always be added",
         )
-    item_is_in_inventory = is_item_in_inventory(inventory=inventory, item_id=item.id)
+    item_is_in_inventory = is_true(is_item_in_inventory(inventory=inventory, item_id=item.id))
     if not item_is_in_inventory and inventory.max_entries == len(inventory.entries):
         return InventoryResult(
             status=StatusType.FAILURE,
