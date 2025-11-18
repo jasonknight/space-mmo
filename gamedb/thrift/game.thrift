@@ -16,7 +16,7 @@ enum ItemType {
     REFINEDMATERIAL=5,
 }
 
-enum ItemAttributeType {
+enum AttributeType {
     TRANSLATED_NAME = 1,
     TRANSLATED_SHORT_DESCRIPTION = 2,
     TRANSLATED_LONG_DESCRIPTION = 3,
@@ -65,7 +65,7 @@ struct ItemVector3 {
     2: double y;
     3: double z;
 }
-union ItemAttributeValue {
+union AttributeValue {
     1: bool bool_value;
     2: double double_value;
     3: ItemVector3 vector3;
@@ -74,19 +74,19 @@ union ItemAttributeValue {
     4: AssetId asset_id; 
  }
 
-struct ItemAttribute {
+struct Attribute {
     1: i64 id; // this member only matters for a materialized attribute of an owned item
     2: string internal_name;
     3: bool visible;
-    4: ItemAttributeValue value;
-    5: ItemAttributeType attribute_type;
+    4: AttributeValue value;
+    5: AttributeType attribute_type;
 }
 
 struct Item {
     1: i64 id;
     2: string internal_name; // used internally to talk about the item, but
     // not shown to users, as their names/descriptions must come for i18n translations
-    3: map<ItemAttributeType, ItemAttribute> attributes;
+    3: map<AttributeType, Attribute> attributes;
     4: Stackability stackable;
     5: ItemType item_type;
     // Optional because not items can be constructed by players

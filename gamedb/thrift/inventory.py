@@ -39,14 +39,14 @@ def debug_inventory(inventory: Inventory) -> str:
 
 def set_item_quantity(item: Item, quantity: float) -> bool:
     for item_attribute_type, item_attribute in item.attributes.items():
-        if item_attribute_type == ItemAttributeType.QUANTITY:
+        if item_attribute_type == AttributeType.QUANTITY:
             item_attribute.value.double_value = quantity
             return True
     return False
 
 def get_item_quantity(item: Item) -> float:
-    if ItemAttributeType.QUANTITY in item.attributes:
-        item_attribute = item.attributes[ItemAttributeType.QUANTITY]
+    if AttributeType.QUANTITY in item.attributes:
+        item_attribute = item.attributes[AttributeType.QUANTITY]
         return item_attribute.value.double_value
     return 0.0
 
@@ -63,12 +63,12 @@ def get_entry_free_quantity(entry: InventoryEntry, item: Item) -> float:
 
 def get_item_volume(item: Item, item_quantity: Optional[float] = None) -> float:
     if item_quantity is None:
-        if ItemAttributeType.QUANTITY in item.attributes:
-            item_attribute = item.attributes[ItemAttributeType.QUANTITY]
+        if AttributeType.QUANTITY in item.attributes:
+            item_attribute = item.attributes[AttributeType.QUANTITY]
             item_quantity = item_attribute.value.double_value
     if item_quantity is not None:
-        if ItemAttributeType.VOLUME in item.attributes:
-            item_attribute = item.attributes[ItemAttributeType.VOLUME]
+        if AttributeType.VOLUME in item.attributes:
+            item_attribute = item.attributes[AttributeType.VOLUME]
             volume = item_attribute.value.double_value
             return item_quantity * volume
     return 0.0

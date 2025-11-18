@@ -41,7 +41,7 @@ class ItemType(object):
     }
 
 
-class ItemAttributeType(object):
+class AttributeType(object):
     TRANSLATED_NAME = 1
     TRANSLATED_SHORT_DESCRIPTION = 2
     TRANSLATED_LONG_DESCRIPTION = 3
@@ -406,7 +406,7 @@ class ItemVector3(object):
         return not (self == other)
 
 
-class ItemAttributeValue(object):
+class AttributeValue(object):
     """
     Attributes:
      - bool_value
@@ -464,7 +464,7 @@ class ItemAttributeValue(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('ItemAttributeValue')
+        oprot.writeStructBegin('AttributeValue')
         if self.bool_value is not None:
             oprot.writeFieldBegin('bool_value', TType.BOOL, 1)
             oprot.writeBool(self.bool_value)
@@ -499,7 +499,7 @@ class ItemAttributeValue(object):
         return not (self == other)
 
 
-class ItemAttribute(object):
+class Attribute(object):
     """
     Attributes:
      - id
@@ -545,7 +545,7 @@ class ItemAttribute(object):
                     iprot.skip(ftype)
             elif fid == 4:
                 if ftype == TType.STRUCT:
-                    self.value = ItemAttributeValue()
+                    self.value = AttributeValue()
                     self.value.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -564,7 +564,7 @@ class ItemAttribute(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('ItemAttribute')
+        oprot.writeStructBegin('Attribute')
         if self.id is not None:
             oprot.writeFieldBegin('id', TType.I64, 1)
             oprot.writeI64(self.id)
@@ -650,7 +650,7 @@ class Item(object):
                     (_ktype1, _vtype2, _size0) = iprot.readMapBegin()
                     for _i4 in range(_size0):
                         _key5 = iprot.readI32()
-                        _val6 = ItemAttribute()
+                        _val6 = Attribute()
                         _val6.read(iprot)
                         self.attributes[_key5] = _val6
                     iprot.readMapEnd()
@@ -1242,21 +1242,21 @@ ItemVector3.thrift_spec = (
     (2, TType.DOUBLE, 'y', None, None, ),  # 2
     (3, TType.DOUBLE, 'z', None, None, ),  # 3
 )
-all_structs.append(ItemAttributeValue)
-ItemAttributeValue.thrift_spec = (
+all_structs.append(AttributeValue)
+AttributeValue.thrift_spec = (
     None,  # 0
     (1, TType.BOOL, 'bool_value', None, None, ),  # 1
     (2, TType.DOUBLE, 'double_value', None, None, ),  # 2
     (3, TType.STRUCT, 'vector3', [ItemVector3, None], None, ),  # 3
     (4, TType.I64, 'asset_id', None, None, ),  # 4
 )
-all_structs.append(ItemAttribute)
-ItemAttribute.thrift_spec = (
+all_structs.append(Attribute)
+Attribute.thrift_spec = (
     None,  # 0
     (1, TType.I64, 'id', None, None, ),  # 1
     (2, TType.STRING, 'internal_name', 'UTF8', None, ),  # 2
     (3, TType.BOOL, 'visible', None, None, ),  # 3
-    (4, TType.STRUCT, 'value', [ItemAttributeValue, None], None, ),  # 4
+    (4, TType.STRUCT, 'value', [AttributeValue, None], None, ),  # 4
     (5, TType.I32, 'attribute_type', None, None, ),  # 5
 )
 all_structs.append(Item)
@@ -1264,7 +1264,7 @@ Item.thrift_spec = (
     None,  # 0
     (1, TType.I64, 'id', None, None, ),  # 1
     (2, TType.STRING, 'internal_name', 'UTF8', None, ),  # 2
-    (3, TType.MAP, 'attributes', (TType.I32, None, TType.STRUCT, [ItemAttribute, None], False), None, ),  # 3
+    (3, TType.MAP, 'attributes', (TType.I32, None, TType.STRUCT, [Attribute, None], False), None, ),  # 3
     (4, TType.STRUCT, 'stackable', [Stackability, None], None, ),  # 4
     (5, TType.I32, 'item_type', None, None, ),  # 5
     (6, TType.STRUCT, 'blueprint', [ItemBlueprint, None], None, ),  # 6

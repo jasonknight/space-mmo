@@ -48,16 +48,16 @@ class ItemBuilder:
     
     def add_attribute(
         self, 
-        item_attribute_type: ItemAttributeType, 
+        item_attribute_type: AttributeType, 
         internal_name: str, 
-        value: Optional[ItemAttributeValue] = None, 
+        value: Optional[AttributeValue] = None, 
         visible: bool = True
     ) -> "ItemBuilder":
         if value is None:
-            value = ItemAttributeValue(
+            value = AttributeValue(
                 double_value=0.0
             )
-        self.attributes[item_attribute_type] = ItemAttribute(
+        self.attributes[item_attribute_type] = Attribute(
             id=next_item_attribute_id(),
             internal_name=internal_name,
             visible=visible,
@@ -90,13 +90,13 @@ class ItemBuilder:
             blueprint=self.blueprint,
         )
 
-def attribute_value(bool_value: Optional[bool] = None, double_value: Optional[float] = None) -> ItemAttributeValue:
+def attribute_value(bool_value: Optional[bool] = None, double_value: Optional[float] = None) -> AttributeValue:
     if bool_value is not None:
-        return ItemAttributeValue(
+        return AttributeValue(
             bool_value=bool_value,
         )
     if double_value is not None:
-        return ItemAttributeValue(
+        return AttributeValue(
             double_value=double_value,
         )
     raise Exception("Unhandled value")
@@ -120,15 +120,15 @@ for metal, sources in refined_metallic_materials.items():
         internal_name=metal, 
         item_type=ItemType.REFINEDMATERIAL,
     ).stackable_up_to(10000).add_attribute(
-        item_attribute_type=ItemAttributeType.QUANTITY, 
+        item_attribute_type=AttributeType.QUANTITY, 
         internal_name="quantity", 
         value=attribute_value(double_value=0.0)
     ).add_attribute(
-        item_attribute_type=ItemAttributeType.PURITY, 
+        item_attribute_type=AttributeType.PURITY, 
         internal_name="purity", 
         value=attribute_value(double_value=0.0)
     ).add_attribute(
-        item_attribute_type=ItemAttributeType.VOLUME,
+        item_attribute_type=AttributeType.VOLUME,
         internal_name="volume",
         value=attribute_value(double_value=1.0),
     )
@@ -137,15 +137,15 @@ for metal, sources in refined_metallic_materials.items():
             internal_name=source,
             item_type=ItemType.RAWMATERIAL,
         ).add_attribute(
-            item_attribute_type=ItemAttributeType.QUANTITY, 
+            item_attribute_type=AttributeType.QUANTITY, 
             internal_name="quantity", 
             value=attribute_value(double_value=0.0)
         ).add_attribute(
-            item_attribute_type=ItemAttributeType.PURITY, 
+            item_attribute_type=AttributeType.PURITY, 
             internal_name="purity", 
             value=attribute_value(double_value=0.0)
         ).stackable_up_to(10000).add_attribute(
-            item_attribute_type=ItemAttributeType.VOLUME,
+            item_attribute_type=AttributeType.VOLUME,
             internal_name="volume",
             value=attribute_value(double_value=2.0),
         )
@@ -169,15 +169,15 @@ CARBON = ItemBuilder(
     internal_name="carbon",
     item_type=ItemType.RAWMATERIAL,
 ).add_attribute(
-    item_attribute_type=ItemAttributeType.QUANTITY, 
+    item_attribute_type=AttributeType.QUANTITY, 
     internal_name="quantity", 
     value=attribute_value(double_value=0.0)
 ).add_attribute(
-    item_attribute_type=ItemAttributeType.PURITY, 
+    item_attribute_type=AttributeType.PURITY, 
     internal_name="purity", 
     value=attribute_value(double_value=0.0)
 ).add_attribute(
-    item_attribute_type=ItemAttributeType.VOLUME, 
+    item_attribute_type=AttributeType.VOLUME, 
     internal_name="volume", 
     value=attribute_value(double_value=1.0)
 ).stackable_up_to(10000)
@@ -186,15 +186,15 @@ STEEL = ItemBuilder(
     internal_name="steel", 
     item_type=ItemType.REFINEDMATERIAL,
 ).stackable_up_to(100).add_attribute(
-    item_attribute_type=ItemAttributeType.QUANTITY, 
+    item_attribute_type=AttributeType.QUANTITY, 
     internal_name="quantity", 
     value=attribute_value(double_value=0.0)
 ).add_attribute(
-    item_attribute_type=ItemAttributeType.PURITY, 
+    item_attribute_type=AttributeType.PURITY, 
     internal_name="purity", 
     value=attribute_value(double_value=0.0)
 ).add_attribute(
-    item_attribute_type=ItemAttributeType.VOLUME, 
+    item_attribute_type=AttributeType.VOLUME, 
     internal_name="volume", 
     value=attribute_value(double_value=3.0)
 ).add_item_to_blueprint(
