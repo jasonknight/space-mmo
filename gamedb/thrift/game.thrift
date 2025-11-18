@@ -1,5 +1,6 @@
 typedef i64 AssetId
 typedef i64 ItemId
+typedef i64 MobileId
 // The general item type is something like a parent item
 // class, it gives some broad category to the item, is it 
 // a consumable, virtual, weapon, These are special, globally
@@ -14,6 +15,11 @@ enum ItemType {
     WEAPON=3,
     RAWMATERIAL=4,
     REFINEDMATERIAL=5,
+}
+
+enum MobileType {
+    PLAYER = 1,
+    NPC = 2,
 }
 
 enum AttributeType {
@@ -161,4 +167,10 @@ const map<GameError, string> INVERR2STRING = {
     GameError.INV_FULL_CANNOT_SPLIT: "inventory is full, cannot split entry",
     GameError.INV_ITEM_NOT_FOUND: "item not found in inventory",
     GameError.INV_INSUFFICIENT_QUANTITY: "insufficient quantity available",
+}
+
+struct Mobile {
+    1: MobileId id;
+    2: MobileType mobile_type;
+    3: map<AttributeType, Attribute> attributes;
 }
