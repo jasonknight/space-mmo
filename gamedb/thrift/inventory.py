@@ -73,7 +73,7 @@ def get_item_volume(item: Item, item_quantity: Optional[float] = None) -> float:
             return item_quantity * volume
     return 0.0
 
-def is_item_in_inventory(inventory: Inventory, item_id: int, quantity: Optional[float] = None) -> InventoryResult:
+def is_item_in_inventory(inventory: Inventory, item_id: int, quantity: Optional[float] = None) -> GameResult:
     total_quantity = 0.0
     item_found = False
 
@@ -83,20 +83,20 @@ def is_item_in_inventory(inventory: Inventory, item_id: int, quantity: Optional[
             total_quantity += entry.quantity
 
     if not item_found:
-        return InventoryResult(
+        return GameResult(
             status=StatusType.FAILURE,
             message="item not found in inventory",
-            error_code=InventoryError.ITEM_NOT_FOUND
+            error_code=GameError.INV_ITEM_NOT_FOUND
         )
 
     if quantity is not None and total_quantity < quantity:
-        return InventoryResult(
+        return GameResult(
             status=StatusType.FAILURE,
             message=f"insufficient quantity: requested {quantity}, available {total_quantity}",
-            error_code=InventoryError.INSUFFICIENT_QUANTITY
+            error_code=GameError.INV_INSUFFICIENT_QUANTITY
         )
 
-    return InventoryResult(
+    return GameResult(
         status=StatusType.SUCCESS,
         message="item found in inventory",
     )
@@ -124,40 +124,40 @@ def is_ok(results: list[Any]) -> bool:
                 return False
     return True
 
-def _can_add_item_to_inventory(inventory: Inventory, item: Item, item_volume: float) -> InventoryResult:
+def _can_add_item_to_inventory(inventory: Inventory, item: Item, item_volume: float) -> GameResult:
     if item.item_type == ItemType.VIRTUAL:
         # We can always add a virtual item as it doesn't count towards
         # the totals of count or volume
-        return InventoryResult(
+        return GameResult(
             status=StatusType.SUCCESS,
             message="virtual items can always be added",
         )
     item_is_in_inventory = is_true(is_item_in_inventory(inventory=inventory, item_id=item.id))
     if not item_is_in_inventory and inventory.max_entries == len(inventory.entries):
-        return InventoryResult(
+        return GameResult(
             status=StatusType.FAILURE,
             message="item is not in inventory, and inventory has reached max items",
-            error_code=InventoryError.INVENTORY_MAX_ITEMS_REACHED
+            error_code=GameError.INV_MAX_ITEMS_REACHED
         )
     # Now we need to ask, is the item in inventory, but all those items are maxxed, so
     # we cannot add one more because of that...
     if item_is_in_inventory:
         max_stacked_items = [entry.is_max_stacked for entry in inventory.entries]
         if all(max_stacked_items) and inventory.max_entries == len(inventory.entries):
-            return InventoryResult(
+            return GameResult(
                 status=StatusType.FAILURE,
                 message="item is in inventory, but all entries are max stacked",
-                error_code=InventoryError.ALL_ENTRIES_MAX_STACKED
+                error_code=GameError.INV_ALL_ENTRIES_MAX_STACKED
             )
 
     new_volume = item_volume + inventory.last_calculated_volume
     if  new_volume > inventory.max_volume:
-        return InventoryResult(
+        return GameResult(
             status=StatusType.FAILURE,
             message=f"the new_volume={new_volume} is too high",
-            error_code=InventoryError.NEW_VOLUME_TOO_HIGH
+            error_code=GameError.INV_NEW_VOLUME_TOO_HIGH
         )
-    return InventoryResult(
+    return GameResult(
         status=StatusType.SUCCESS,
         message="item can be added",
     )
@@ -167,7 +167,7 @@ def add_item_to_inventory(
     item: Item, 
     item_quantity: Optional[float] = None, 
     item_volume: Optional[float] = None
-) -> list[InventoryResult]:
+) -> list[GameResult]:
     """
     Adding an item to the inventory is not a trivial operation. We need
     to consider 1 how much of the item can we add? Can we add it to an
@@ -177,17 +177,17 @@ def add_item_to_inventory(
     Let's say you pick up a stack of 500 of one item, but your inventory can
     only accept 250 of that item? Do we add the 250? Do we reject entirely?
     """
-    results: list[InventoryResult] = []
+    results: list[GameResult] = []
     if item_volume is None:
         item_volume = get_item_volume(item=item, item_quantity=item_quantity)
     can_add_item_result = _can_add_item_to_inventory(inventory=inventory, item=item, item_volume=item_volume)
     if not is_true(can_add_item_result):
         return [
             can_add_item_result,
-            InventoryResult(
+            GameResult(
                 status=StatusType.FAILURE,
                 message="cannot add this item to the inventory",
-                error_code=InventoryError.CANNOT_ADD_ITEM
+                error_code=GameError.INV_CANNOT_ADD_ITEM
             )
         ]
     if item_quantity is None:
@@ -200,7 +200,7 @@ def add_item_to_inventory(
                     entry.quantity += item_quantity
                     inventory.last_calculated_volume = item_volume + inventory.last_calculated_volume
                     results.append(
-                        InventoryResult(
+                        GameResult(
                             status=StatusType.SUCCESS,
                             message="item added to inventory",
                         )
@@ -213,14 +213,14 @@ def add_item_to_inventory(
                     inventory.last_calculated_volume = delta_volume + inventory.last_calculated_volume
                     item_quantity = delta
                     results.append(
-                        InventoryResult(
+                        GameResult(
                             status=StatusType.SUCCESS,
                             message=f"incremented entry by {can_add_quantity}",
                         )
                     )
             else:
                 results.append(
-                    InventoryResult(
+                    GameResult(
                         status=StatusType.SKIP,
                         message=f"can_add_quantity={can_add_quantity} so not doing anything here?",
                     )
@@ -249,24 +249,24 @@ def add_item_to_inventory(
                 )
                 inventory.last_calculated_volume = delta_volume + inventory.last_calculated_volume
                 results.append(
-                    InventoryResult(
+                    GameResult(
                         status=StatusType.SUCCESS,
                         message=f"added {can_add_quantity} to inventory",
                     )
                 )
             else:
                 results.append(
-                    InventoryResult(
+                    GameResult(
                         status=StatusType.FAILURE,
                         message=f"failed to add {item_quantity} to inventory",
-                        error_code=InventoryError.FAILED_TO_ADD
+                        error_code=GameError.INV_FAILED_TO_ADD
                     )
                 )
                 return results
         return results
     else:
         results.append(
-            InventoryResult(
+            GameResult(
                 status=StatusType.SUCCESS,
                 message="nothing? item_quantity is not > 0.0",
             )
@@ -278,13 +278,13 @@ def can_transfer_item(
     to_inventory: Inventory,
     item: Item,
     item_quantity: Optional[float] = None,
-) -> list[InventoryResult]:
+) -> list[GameResult]:
     """
     Check if a transfer_item operation would be successful without actually
-    performing the transfer. Returns a list of InventoryResult objects indicating
+    performing the transfer. Returns a list of GameResult objects indicating
     whether the transfer would succeed.
     """
-    results: list[InventoryResult] = []
+    results: list[GameResult] = []
 
     # Check if the item exists in the from_inventory
     item_found = False
@@ -297,10 +297,10 @@ def can_transfer_item(
 
     if not item_found:
         return [
-            InventoryResult(
+            GameResult(
                 status=StatusType.FAILURE,
                 message=f"item {item.id} not found in from_inventory",
-                error_code=InventoryError.ITEM_NOT_FOUND
+                error_code=GameError.INV_ITEM_NOT_FOUND
             )
         ]
 
@@ -310,10 +310,10 @@ def can_transfer_item(
     # Check if there's enough quantity available
     if transfer_quantity > available_quantity:
         return [
-            InventoryResult(
+            GameResult(
                 status=StatusType.FAILURE,
                 message=f"insufficient quantity: requested {transfer_quantity}, available {available_quantity}",
-                error_code=InventoryError.INSUFFICIENT_QUANTITY
+                error_code=GameError.INV_INSUFFICIENT_QUANTITY
             )
         ]
 
@@ -324,16 +324,16 @@ def can_transfer_item(
     if not is_true(can_add_result):
         return [
             can_add_result,
-            InventoryResult(
+            GameResult(
                 status=StatusType.FAILURE,
                 message=f"to_inventory cannot accept {transfer_quantity} of item {item.id}",
-                error_code=InventoryError.CANNOT_ADD_ITEM
+                error_code=GameError.INV_CANNOT_ADD_ITEM
             )
         ]
 
     # Transfer would be successful
     return [
-        InventoryResult(
+        GameResult(
             status=StatusType.SUCCESS,
             message=f"transfer of {transfer_quantity} of item {item.id} would be successful",
         )
@@ -344,7 +344,7 @@ def transfer_item(
     to_inventory: Inventory,
     item: Item,
     item_quantity: Optional[float] = None,
-) -> list[InventoryResult]:
+) -> list[GameResult]:
     # First, check if the transfer is possible
     can_transfer_results = can_transfer_item(
         from_inventory=from_inventory,
@@ -358,7 +358,7 @@ def transfer_item(
         return can_transfer_results
 
     # Transfer is possible, proceed with the actual transfer
-    results: list[InventoryResult] = []
+    results: list[GameResult] = []
     new_entries = []
     for entry in from_inventory.entries:
         if entry.item_id == item.id:
@@ -368,24 +368,24 @@ def transfer_item(
             if is_ok(add_results):
                 entry.quantity -= item_quantity
                 results.append(
-                    InventoryResult(
+                    GameResult(
                         status=StatusType.SUCCESS,
                         message=f"transferred {item_quantity} of {item.id} to {to_inventory.id}",
                     )
                 )
             else:
                 return [
-                    InventoryResult(
+                    GameResult(
                         status=StatusType.FAILURE,
                         message=f"failed to transfer {item.id} with quantity {item_quantity}",
-                        error_code=InventoryError.FAILED_TO_TRANSFER
+                        error_code=GameError.INV_FAILED_TO_TRANSFER
                     )
                 ] + add_results
         if entry.quantity > 0.0:
             new_entries.append(entry)
         else:
             results.append(
-                InventoryResult(
+                GameResult(
                     status=StatusType.SUCCESS,
                     message=f"removed {entry.item_id} because it's quantity is 0.0"
                 )
@@ -398,7 +398,7 @@ def transfer_item_to_first_available_inventory(
     to_inventories: list[Inventory],
     item: Item,
     item_quantity: Optional[float] = None,
-) -> list[InventoryResult]:
+) -> list[GameResult]:
     """
     Iterates over to_inventories and transfers the item to the first inventory
     that can accept it. Returns the results from the successful transfer, or
@@ -423,10 +423,10 @@ def transfer_item_to_first_available_inventory(
 
     # No inventory could accept the item
     return [
-        InventoryResult(
+        GameResult(
             status=StatusType.FAILURE,
             message="no available inventory could accept the item",
-            error_code=InventoryError.CANNOT_ADD_ITEM
+            error_code=GameError.INV_CANNOT_ADD_ITEM
         )
     ]
 
@@ -434,33 +434,33 @@ def split_stack(
     inventory: Inventory, 
     entry_index: int,
     new_quantity: float
-) -> list[InventoryResult]:
-    results: list[InventoryResult] = []
+) -> list[GameResult]:
+    results: list[GameResult] = []
     if entry_index >= len(inventory.entries):
         results.append(
-            InventoryResult(
+            GameResult(
                 status=StatusType.FAILURE,
                 message=f"could not find entry {entry_id}",
-                error_code=InventoryError.COULD_NOT_FIND_ENTRY
+                error_code=GameError.INV_COULD_NOT_FIND_ENTRY
             )
         )
         return results
     entry = inventory.entries[entry_index]
     if new_quantity >= entry.quantity:
         results.append(
-            InventoryResult(
+            GameResult(
                 status=StatusType.FAILURE,
                 message=f"the new_quantity must be less than, and not equal to, the current entry.quantity",
-                error_code=InventoryError.NEW_QUANTITY_INVALID
+                error_code=GameError.INV_NEW_QUANTITY_INVALID
             )
         )
         return results
     if len(inventory.entries) >= inventory.max_entries:
         results.append(
-            InventoryResult(
+            GameResult(
                 status=StatusType.FAILURE,
                 message=f"inventory is full, cannot split entry",
-                error_code=InventoryError.INVENTORY_FULL_CANNOT_SPLIT
+                error_code=GameError.INV_FULL_CANNOT_SPLIT
             )
         )
         return results
@@ -469,7 +469,7 @@ def split_stack(
     new_entry.quantity = new_quantity
     inventory.entries.append(new_entry)
     results.append(
-        InventoryResult(
+        GameResult(
             status=StatusType.SUCCESS,
             message="split entry",
         )

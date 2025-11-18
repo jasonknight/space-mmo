@@ -130,35 +130,35 @@ enum StatusType {
     SKIP = 3,
 }
 
-enum InventoryError {
-    INVENTORY_MAX_ITEMS_REACHED = 1,
-    ALL_ENTRIES_MAX_STACKED = 2,
-    NEW_VOLUME_TOO_HIGH = 3,
-    CANNOT_ADD_ITEM = 4,
-    FAILED_TO_ADD = 5,
-    FAILED_TO_TRANSFER = 6,
-    COULD_NOT_FIND_ENTRY = 7,
-    NEW_QUANTITY_INVALID = 8,
-    INVENTORY_FULL_CANNOT_SPLIT = 9,
-    ITEM_NOT_FOUND = 10,
-    INSUFFICIENT_QUANTITY = 11,
+enum GameError {
+    INV_MAX_ITEMS_REACHED = 1,
+    INV_ALL_ENTRIES_MAX_STACKED = 2,
+    INV_NEW_VOLUME_TOO_HIGH = 3,
+    INV_CANNOT_ADD_ITEM = 4,
+    INV_FAILED_TO_ADD = 5,
+    INV_FAILED_TO_TRANSFER = 6,
+    INV_COULD_NOT_FIND_ENTRY = 7,
+    INV_NEW_QUANTITY_INVALID = 8,
+    INV_FULL_CANNOT_SPLIT = 9,
+    INV_ITEM_NOT_FOUND = 10,
+    INV_INSUFFICIENT_QUANTITY = 11,
 }
-struct InventoryResult {
+struct GameResult {
     1: StatusType status;
     2: string message;
-    3: optional InventoryError error_code;
+    3: optional GameError error_code;
 }
 
-const map<InventoryError, string> INVERR2STRING = {
-    InventoryError.INVENTORY_MAX_ITEMS_REACHED: "item is not in inventory, and inventory has reached max items",
-    InventoryError.ALL_ENTRIES_MAX_STACKED: "item is in inventory, but all entries are max stacked",
-    InventoryError.NEW_VOLUME_TOO_HIGH: "the new_volume is too high",
-    InventoryError.CANNOT_ADD_ITEM: "cannot add this item to the inventory",
-    InventoryError.FAILED_TO_ADD: "failed to add to inventory",
-    InventoryError.FAILED_TO_TRANSFER: "failed to transfer",
-    InventoryError.COULD_NOT_FIND_ENTRY: "could not find entry",
-    InventoryError.NEW_QUANTITY_INVALID: "the new_quantity must be less than, and not equal to, the current entry.quantity",
-    InventoryError.INVENTORY_FULL_CANNOT_SPLIT: "inventory is full, cannot split entry",
-    InventoryError.ITEM_NOT_FOUND: "item not found in inventory",
-    InventoryError.INSUFFICIENT_QUANTITY: "insufficient quantity available",
+const map<GameError, string> INVERR2STRING = {
+    GameError.INV_MAX_ITEMS_REACHED: "item is not in inventory, and inventory has reached max items",
+    GameError.INV_ALL_ENTRIES_MAX_STACKED: "item is in inventory, but all entries are max stacked",
+    GameError.INV_NEW_VOLUME_TOO_HIGH: "the new_volume is too high",
+    GameError.INV_CANNOT_ADD_ITEM: "cannot add this item to the inventory",
+    GameError.INV_FAILED_TO_ADD: "failed to add to inventory",
+    GameError.INV_FAILED_TO_TRANSFER: "failed to transfer",
+    GameError.INV_COULD_NOT_FIND_ENTRY: "could not find entry",
+    GameError.INV_NEW_QUANTITY_INVALID: "the new_quantity must be less than, and not equal to, the current entry.quantity",
+    GameError.INV_FULL_CANNOT_SPLIT: "inventory is full, cannot split entry",
+    GameError.INV_ITEM_NOT_FOUND: "item not found in inventory",
+    GameError.INV_INSUFFICIENT_QUANTITY: "insufficient quantity available",
 }

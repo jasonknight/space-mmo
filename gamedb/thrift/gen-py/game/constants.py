@@ -19,10 +19,10 @@ INVERR2STRING = {
         7: "could not find entry",
         5: "failed to add to inventory",
         6: "failed to transfer",
-        11: "insufficient quantity available",
         9: "inventory is full, cannot split entry",
-        1: "item is not in inventory, and inventory has reached max items",
+        11: "insufficient quantity available",
         10: "item not found in inventory",
+        1: "item is not in inventory, and inventory has reached max items",
         8: "the new_quantity must be less than, and not equal to, the current entry.quantity",
         3: "the new_volume is too high",
 }

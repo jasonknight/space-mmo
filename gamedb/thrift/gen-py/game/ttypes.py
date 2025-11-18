@@ -110,45 +110,45 @@ class StatusType(object):
     }
 
 
-class InventoryError(object):
-    INVENTORY_MAX_ITEMS_REACHED = 1
-    ALL_ENTRIES_MAX_STACKED = 2
-    NEW_VOLUME_TOO_HIGH = 3
-    CANNOT_ADD_ITEM = 4
-    FAILED_TO_ADD = 5
-    FAILED_TO_TRANSFER = 6
-    COULD_NOT_FIND_ENTRY = 7
-    NEW_QUANTITY_INVALID = 8
-    INVENTORY_FULL_CANNOT_SPLIT = 9
-    ITEM_NOT_FOUND = 10
-    INSUFFICIENT_QUANTITY = 11
+class GameError(object):
+    INV_MAX_ITEMS_REACHED = 1
+    INV_ALL_ENTRIES_MAX_STACKED = 2
+    INV_NEW_VOLUME_TOO_HIGH = 3
+    INV_CANNOT_ADD_ITEM = 4
+    INV_FAILED_TO_ADD = 5
+    INV_FAILED_TO_TRANSFER = 6
+    INV_COULD_NOT_FIND_ENTRY = 7
+    INV_NEW_QUANTITY_INVALID = 8
+    INV_FULL_CANNOT_SPLIT = 9
+    INV_ITEM_NOT_FOUND = 10
+    INV_INSUFFICIENT_QUANTITY = 11
 
     _VALUES_TO_NAMES = {
-        1: "INVENTORY_MAX_ITEMS_REACHED",
-        2: "ALL_ENTRIES_MAX_STACKED",
-        3: "NEW_VOLUME_TOO_HIGH",
-        4: "CANNOT_ADD_ITEM",
-        5: "FAILED_TO_ADD",
-        6: "FAILED_TO_TRANSFER",
-        7: "COULD_NOT_FIND_ENTRY",
-        8: "NEW_QUANTITY_INVALID",
-        9: "INVENTORY_FULL_CANNOT_SPLIT",
-        10: "ITEM_NOT_FOUND",
-        11: "INSUFFICIENT_QUANTITY",
+        1: "INV_MAX_ITEMS_REACHED",
+        2: "INV_ALL_ENTRIES_MAX_STACKED",
+        3: "INV_NEW_VOLUME_TOO_HIGH",
+        4: "INV_CANNOT_ADD_ITEM",
+        5: "INV_FAILED_TO_ADD",
+        6: "INV_FAILED_TO_TRANSFER",
+        7: "INV_COULD_NOT_FIND_ENTRY",
+        8: "INV_NEW_QUANTITY_INVALID",
+        9: "INV_FULL_CANNOT_SPLIT",
+        10: "INV_ITEM_NOT_FOUND",
+        11: "INV_INSUFFICIENT_QUANTITY",
     }
 
     _NAMES_TO_VALUES = {
-        "INVENTORY_MAX_ITEMS_REACHED": 1,
-        "ALL_ENTRIES_MAX_STACKED": 2,
-        "NEW_VOLUME_TOO_HIGH": 3,
-        "CANNOT_ADD_ITEM": 4,
-        "FAILED_TO_ADD": 5,
-        "FAILED_TO_TRANSFER": 6,
-        "COULD_NOT_FIND_ENTRY": 7,
-        "NEW_QUANTITY_INVALID": 8,
-        "INVENTORY_FULL_CANNOT_SPLIT": 9,
-        "ITEM_NOT_FOUND": 10,
-        "INSUFFICIENT_QUANTITY": 11,
+        "INV_MAX_ITEMS_REACHED": 1,
+        "INV_ALL_ENTRIES_MAX_STACKED": 2,
+        "INV_NEW_VOLUME_TOO_HIGH": 3,
+        "INV_CANNOT_ADD_ITEM": 4,
+        "INV_FAILED_TO_ADD": 5,
+        "INV_FAILED_TO_TRANSFER": 6,
+        "INV_COULD_NOT_FIND_ENTRY": 7,
+        "INV_NEW_QUANTITY_INVALID": 8,
+        "INV_FULL_CANNOT_SPLIT": 9,
+        "INV_ITEM_NOT_FOUND": 10,
+        "INV_INSUFFICIENT_QUANTITY": 11,
     }
 
 
@@ -1142,7 +1142,7 @@ class Inventory(object):
         return not (self == other)
 
 
-class InventoryResult(object):
+class GameResult(object):
     """
     Attributes:
      - status
@@ -1192,7 +1192,7 @@ class InventoryResult(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('InventoryResult')
+        oprot.writeStructBegin('GameResult')
         if self.status is not None:
             oprot.writeFieldBegin('status', TType.I32, 1)
             oprot.writeI32(self.status)
@@ -1302,8 +1302,8 @@ Inventory.thrift_spec = (
     (4, TType.LIST, 'entries', (TType.STRUCT, [InventoryEntry, None], False), None, ),  # 4
     (5, TType.DOUBLE, 'last_calculated_volume', None, 0.0000000000000000, ),  # 5
 )
-all_structs.append(InventoryResult)
-InventoryResult.thrift_spec = (
+all_structs.append(GameResult)
+GameResult.thrift_spec = (
     None,  # 0
     (1, TType.I32, 'status', None, None, ),  # 1
     (2, TType.STRING, 'message', 'UTF8', None, ),  # 2
