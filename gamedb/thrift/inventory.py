@@ -365,6 +365,43 @@ def transfer_item(
     from_inventory.entries = new_entries
     return results
 
+def transfer_item_to_first_available_inventory(
+    from_inventory: Inventory,
+    to_inventories: list[Inventory],
+    item: Item,
+    item_quantity: Optional[float] = None,
+) -> list[InventoryResult]:
+    """
+    Iterates over to_inventories and transfers the item to the first inventory
+    that can accept it. Returns the results from the successful transfer, or
+    a failure result if no inventory can accept the item.
+    """
+    for to_inventory in to_inventories:
+        can_transfer_results = can_transfer_item(
+            from_inventory=from_inventory,
+            to_inventory=to_inventory,
+            item=item,
+            item_quantity=item_quantity
+        )
+
+        if is_ok(can_transfer_results):
+            # Found an inventory that can accept the item
+            return transfer_item(
+                from_inventory=from_inventory,
+                to_inventory=to_inventory,
+                item=item,
+                item_quantity=item_quantity
+            )
+
+    # No inventory could accept the item
+    return [
+        InventoryResult(
+            status=StatusType.FAILURE,
+            message="no available inventory could accept the item",
+            error_code=InventoryError.CANNOT_ADD_ITEM
+        )
+    ]
+
 def split_stack(
     inventory: Inventory, 
     entry_index: int,
@@ -515,7 +552,6 @@ def test_item_splitting():
         entry_index=0,
         new_quantity=1.0,
     )
-    print(results)
     assert(not is_ok(results))
 
     # Now test that we can't split with a larger quantity
@@ -536,6 +572,84 @@ def test_item_splitting():
 
 
 
+def test_transfer_item_to_first_available_inventory():
+    """
+    Test the transfer_item_to_first_available_inventory function.
+    Creates a from_inventory with steel_item quantity 10.
+    Creates three to_inventories:
+    - First is full due to max_entries
+    - Second is full due to max_volume
+    - Third is empty and should accept the transfer
+    """
+    steel_item = find_item_by_name("steel")
+
+    # Create from_inventory with steel_item quantity 10
+    from_inventory = Inventory(
+        id=1,
+        max_entries=5,
+        max_volume=1000,
+        entries=[],
+    )
+    add_item_to_inventory(
+        inventory=from_inventory,
+        item=steel_item,
+        item_quantity=10.0
+    )
+    assert len(from_inventory.entries) == 1
+    assert from_inventory.entries[0].quantity == 10.0
+
+    # Create first to_inventory - full because of max_entries
+    # We'll set max_entries to 0 so it can't accept any new items
+    to_inventory_1 = Inventory(
+        id=2,
+        max_entries=0,
+        max_volume=1000,
+        entries=[],
+    )
+
+    # Create second to_inventory - full because of max_volume
+    # Set max_volume to 0 so it can't accept any items
+    to_inventory_2 = Inventory(
+        id=3,
+        max_entries=5,
+        max_volume=0,
+        entries=[],
+    )
+
+    # Create third to_inventory - empty and can accept items
+    to_inventory_3 = Inventory(
+        id=4,
+        max_entries=5,
+        max_volume=1000,
+        entries=[],
+    )
+
+    to_inventories = [to_inventory_1, to_inventory_2, to_inventory_3]
+
+    # Perform the transfer
+    results = transfer_item_to_first_available_inventory(
+        from_inventory=from_inventory,
+        to_inventories=to_inventories,
+        item=steel_item,
+        item_quantity=10.0
+    )
+
+    # Verify results
+    assert is_ok(results), f"Transfer should succeed but got: {results}"
+
+    # Verify the from_inventory is now empty
+    assert len(from_inventory.entries) == 0, "from_inventory should be empty after transfer"
+
+    # Verify first two inventories are still empty
+    assert len(to_inventory_1.entries) == 0, "First to_inventory should still be empty"
+    assert len(to_inventory_2.entries) == 0, "Second to_inventory should still be empty"
+
+    # Verify third inventory received the item
+    assert len(to_inventory_3.entries) == 1, "Third to_inventory should have the item"
+    assert to_inventory_3.entries[0].quantity == 10.0, "Third to_inventory should have quantity 10"
+    assert to_inventory_3.entries[0].item_id == steel_item.id, "Third to_inventory should have steel_item"
+
 test_item_adding()
 test_item_transferring()
 test_item_splitting()
+test_transfer_item_to_first_available_inventory()
