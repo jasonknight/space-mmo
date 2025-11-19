@@ -22,6 +22,12 @@ enum MobileType {
     NPC = 2,
 }
 
+union Owner {
+    1: MobileId mobile_id;
+    2: ItemId item_it;
+    3: AssetId asset_id;
+}
+
 enum AttributeType {
     TRANSLATED_NAME = 1,
     TRANSLATED_SHORT_DESCRIPTION = 2,
@@ -86,6 +92,7 @@ struct Attribute {
     3: bool visible;
     4: AttributeValue value;
     5: AttributeType attribute_type;
+    6: Owner owner;
 }
 
 struct Item {

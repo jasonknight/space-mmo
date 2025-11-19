@@ -41,6 +41,21 @@ class ItemType(object):
     }
 
 
+class MobileType(object):
+    PLAYER = 1
+    NPC = 2
+
+    _VALUES_TO_NAMES = {
+        1: "PLAYER",
+        2: "NPC",
+    }
+
+    _NAMES_TO_VALUES = {
+        "PLAYER": 1,
+        "NPC": 2,
+    }
+
+
 class AttributeType(object):
     TRANSLATED_NAME = 1
     TRANSLATED_SHORT_DESCRIPTION = 2
@@ -150,6 +165,87 @@ class GameError(object):
         "INV_ITEM_NOT_FOUND": 10,
         "INV_INSUFFICIENT_QUANTITY": 11,
     }
+
+
+class Owner(object):
+    """
+    Attributes:
+     - mobile_id
+     - item_it
+     - asset_id
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, mobile_id = None, item_it = None, asset_id = None,):
+        self.mobile_id = mobile_id
+        self.item_it = item_it
+        self.asset_id = asset_id
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.mobile_id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.I64:
+                    self.item_it = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.I64:
+                    self.asset_id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('Owner')
+        if self.mobile_id is not None:
+            oprot.writeFieldBegin('mobile_id', TType.I64, 1)
+            oprot.writeI64(self.mobile_id)
+            oprot.writeFieldEnd()
+        if self.item_it is not None:
+            oprot.writeFieldBegin('item_it', TType.I64, 2)
+            oprot.writeI64(self.item_it)
+            oprot.writeFieldEnd()
+        if self.asset_id is not None:
+            oprot.writeFieldBegin('asset_id', TType.I64, 3)
+            oprot.writeI64(self.asset_id)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
 
 
 class NotApplicable(object):
@@ -507,17 +603,19 @@ class Attribute(object):
      - visible
      - value
      - attribute_type
+     - owner
 
     """
     thrift_spec = None
 
 
-    def __init__(self, id = None, internal_name = None, visible = None, value = None, attribute_type = None,):
+    def __init__(self, id = None, internal_name = None, visible = None, value = None, attribute_type = None, owner = None,):
         self.id = id
         self.internal_name = internal_name
         self.visible = visible
         self.value = value
         self.attribute_type = attribute_type
+        self.owner = owner
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -554,6 +652,12 @@ class Attribute(object):
                     self.attribute_type = iprot.readI32()
                 else:
                     iprot.skip(ftype)
+            elif fid == 6:
+                if ftype == TType.STRUCT:
+                    self.owner = Owner()
+                    self.owner.read(iprot)
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -584,6 +688,10 @@ class Attribute(object):
         if self.attribute_type is not None:
             oprot.writeFieldBegin('attribute_type', TType.I32, 5)
             oprot.writeI32(self.attribute_type)
+            oprot.writeFieldEnd()
+        if self.owner is not None:
+            oprot.writeFieldBegin('owner', TType.STRUCT, 6)
+            self.owner.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -1221,6 +1329,105 @@ class GameResult(object):
 
     def __ne__(self, other):
         return not (self == other)
+
+
+class Mobile(object):
+    """
+    Attributes:
+     - id
+     - mobile_type
+     - attributes
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, id = None, mobile_type = None, attributes = None,):
+        self.id = id
+        self.mobile_type = mobile_type
+        self.attributes = attributes
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.I32:
+                    self.mobile_type = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.MAP:
+                    self.attributes = {}
+                    (_ktype33, _vtype34, _size32) = iprot.readMapBegin()
+                    for _i36 in range(_size32):
+                        _key37 = iprot.readI32()
+                        _val38 = Attribute()
+                        _val38.read(iprot)
+                        self.attributes[_key37] = _val38
+                    iprot.readMapEnd()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('Mobile')
+        if self.id is not None:
+            oprot.writeFieldBegin('id', TType.I64, 1)
+            oprot.writeI64(self.id)
+            oprot.writeFieldEnd()
+        if self.mobile_type is not None:
+            oprot.writeFieldBegin('mobile_type', TType.I32, 2)
+            oprot.writeI32(self.mobile_type)
+            oprot.writeFieldEnd()
+        if self.attributes is not None:
+            oprot.writeFieldBegin('attributes', TType.MAP, 3)
+            oprot.writeMapBegin(TType.I32, TType.STRUCT, len(self.attributes))
+            for kiter39, viter40 in self.attributes.items():
+                oprot.writeI32(kiter39)
+                viter40.write(oprot)
+            oprot.writeMapEnd()
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(Owner)
+Owner.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'mobile_id', None, None, ),  # 1
+    (2, TType.I64, 'item_it', None, None, ),  # 2
+    (3, TType.I64, 'asset_id', None, None, ),  # 3
+)
 all_structs.append(NotApplicable)
 NotApplicable.thrift_spec = (
 )
@@ -1258,6 +1465,7 @@ Attribute.thrift_spec = (
     (3, TType.BOOL, 'visible', None, None, ),  # 3
     (4, TType.STRUCT, 'value', [AttributeValue, None], None, ),  # 4
     (5, TType.I32, 'attribute_type', None, None, ),  # 5
+    (6, TType.STRUCT, 'owner', [Owner, None], None, ),  # 6
 )
 all_structs.append(Item)
 Item.thrift_spec = (
@@ -1308,6 +1516,13 @@ GameResult.thrift_spec = (
     (1, TType.I32, 'status', None, None, ),  # 1
     (2, TType.STRING, 'message', 'UTF8', None, ),  # 2
     (3, TType.I32, 'error_code', None, None, ),  # 3
+)
+all_structs.append(Mobile)
+Mobile.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'id', None, None, ),  # 1
+    (2, TType.I32, 'mobile_type', None, None, ),  # 2
+    (3, TType.MAP, 'attributes', (TType.I32, None, TType.STRUCT, [Attribute, None], False), None, ),  # 3
 )
 fix_spec(all_structs)
 del all_structs
