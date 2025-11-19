@@ -41,39 +41,6 @@ class DB:
         if self.connection and self.connection.is_connected():
             self.connection.close()
 
-    def save_not_applicable(
-        self,
-        obj: NotApplicable,
-    ) -> list[GameResult]:
-        return [
-            GameResult(
-                status=StatusType.SUCCESS,
-                message="Successfully saved NotApplicable",
-            ),
-        ]
-
-    def save_stackability_info(
-        self,
-        obj: StackabilityInfo,
-    ) -> list[GameResult]:
-        return [
-            GameResult(
-                status=StatusType.SUCCESS,
-                message="Successfully saved StackabilityInfo",
-            ),
-        ]
-
-    def save_item_vector3(
-        self,
-        obj: ItemVector3,
-    ) -> list[GameResult]:
-        return [
-            GameResult(
-                status=StatusType.SUCCESS,
-                message="Successfully saved ItemVector3",
-            ),
-        ]
-
     def save_attribute(
         self,
         obj: Attribute,
@@ -96,16 +63,6 @@ class DB:
             ),
         ]
 
-    def save_item_blueprint_component(
-        self,
-        obj: ItemBlueprintComponent,
-    ) -> list[GameResult]:
-        return [
-            GameResult(
-                status=StatusType.SUCCESS,
-                message="Successfully saved ItemBlueprintComponent",
-            ),
-        ]
 
     def save_item_blueprint(
         self,
@@ -118,27 +75,6 @@ class DB:
             ),
         ]
 
-    def save_item_db(
-        self,
-        obj: ItemDb,
-    ) -> list[GameResult]:
-        return [
-            GameResult(
-                status=StatusType.SUCCESS,
-                message="Successfully saved ItemDb",
-            ),
-        ]
-
-    def save_inventory_entry(
-        self,
-        obj: InventoryEntry,
-    ) -> list[GameResult]:
-        return [
-            GameResult(
-                status=StatusType.SUCCESS,
-                message="Successfully saved InventoryEntry",
-            ),
-        ]
 
     def save_inventory(
         self,
@@ -148,17 +84,6 @@ class DB:
             GameResult(
                 status=StatusType.SUCCESS,
                 message="Successfully saved Inventory",
-            ),
-        ]
-
-    def save_game_result(
-        self,
-        obj: GameResult,
-    ) -> list[GameResult]:
-        return [
-            GameResult(
-                status=StatusType.SUCCESS,
-                message="Successfully saved GameResult",
             ),
         ]
 
