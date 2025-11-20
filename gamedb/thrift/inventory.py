@@ -12,6 +12,7 @@ from item_db import find_item_by_name
 from functools import lru_cache
 from thrift.protocol.TJSONProtocol import TSimpleJSONProtocolFactory
 from thrift.TSerialization import serialize
+from common import is_ok, is_true
 
 def debug_inventory(inventory: Inventory) -> str:
     json_data = serialize(inventory, TSimpleJSONProtocolFactory())
@@ -33,9 +34,8 @@ def get_item_quantity(item: Item) -> float:
     return 0.0
 
 def get_entry_free_quantity(entry: InventoryEntry, item: Item) -> float:
-    stack_info = item.stackable.stackable
-    if stack_info is not None:
-        max_stack = stack_info.max_stack_size
+    max_stack = item.max_stack_size
+    if max_stack is not None:
         amount_that_can_be_added = max_stack - entry.quantity
         if amount_that_can_be_added <= 0.0:
             entry.is_max_stacked = True
@@ -83,28 +83,7 @@ def is_item_in_inventory(inventory: Inventory, item_id: int, quantity: Optional[
         message="item found in inventory",
     )
 
-def is_true(result: Any) -> bool:
-    if isinstance(result, list):
-        for item in result:
-            if hasattr(item, "status"):
-                if item.status == StatusType.FAILURE:
-                    return False
-        return True
-    if hasattr(result, "status"):
-        if result.status != StatusType.FAILURE:
-            return True
-        else:
-            return False
-    if isinstance(result, bool):
-        return result
-    return False
 
-def is_ok(results: list[Any]) -> bool:
-    for result in results:
-        if hasattr(result, "status"):
-            if result.status == StatusType.FAILURE:
-                return False
-    return True
 
 def _can_add_item_to_inventory(inventory: Inventory, item: Item, item_volume: float) -> GameResult:
     if item.item_type == ItemType.VIRTUAL:

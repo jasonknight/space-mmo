@@ -41,7 +41,7 @@ class DB:
         if self.connection and self.connection.is_connected():
             self.connection.close()
 
-    def create_attribute_table(
+    def get_attributes_table_sql(
         self,
         database: str,
     ) -> list[str]:
@@ -62,7 +62,7 @@ class DB:
             );""",
         ]
 
-    def create_owner_table(
+    def get_attribute_owners_table_sql(
         self,
         database: str,
     ) -> list[str]:
@@ -78,7 +78,7 @@ class DB:
             );""",
         ]
 
-    def create_item_table(
+    def get_items_table_sql(
         self,
         database: str,
     ) -> list[str]:
@@ -93,7 +93,7 @@ class DB:
             );""",
         ]
 
-    def create_item_blueprint_table(
+    def get_item_blueprints_table_sql(
         self,
         database: str,
     ) -> list[str]:
@@ -105,7 +105,7 @@ class DB:
             );""",
         ]
 
-    def create_item_blueprint_component_table(
+    def get_item_blueprint_components_table_sql(
         self,
         database: str,
     ) -> list[str]:
@@ -120,7 +120,7 @@ class DB:
             );""",
         ]
 
-    def create_inventory_table(
+    def get_inventories_table_sql(
         self,
         database: str,
     ) -> list[str]:
@@ -136,7 +136,7 @@ class DB:
             );""",
         ]
 
-    def create_inventory_entry_table(
+    def get_inventory_entries_table_sql(
         self,
         database: str,
     ) -> list[str]:
@@ -152,7 +152,23 @@ class DB:
             );""",
         ]
 
-    def create_mobile_table(
+    def get_inventory_owners_table_sql(
+        self,
+        database: str,
+    ) -> list[str]:
+        return [
+            f"CREATE DATABASE IF NOT EXISTS {database};",
+            f"""CREATE TABLE IF NOT EXISTS {database}.inventory_owners (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                inventory_id BIGINT NOT NULL,
+                mobile_id BIGINT,
+                item_id BIGINT,
+                asset_id BIGINT,
+                FOREIGN KEY (inventory_id) REFERENCES {database}.inventories(id)
+            );""",
+        ]
+
+    def get_mobiles_table_sql(
         self,
         database: str,
     ) -> list[str]:

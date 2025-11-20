@@ -56,21 +56,7 @@ enum AttributeType {
     VOLUME=14, // how many mm3 is 1 unit
 }
 
-// Sometimes items can be present in stacks, this
-// decides whether or not we can stack the item.
-// non-stacking items enforce a limit on players, how
-// many they can hold becomes a function of how big their
-// inventory is, and also how many of this item a container
-// can hold.
-struct NotApplicable {}
-struct StackabilityInfo {
-    1: i64 max_stack_size;
-}
 
-union Stackability {
-    1: NotApplicable not_applicable;
-    2: StackabilityInfo stackable;
-}
 
 struct ItemVector3 {
     1: double x;
@@ -100,7 +86,7 @@ struct Item {
     2: string internal_name; // used internally to talk about the item, but
     // not shown to users, as their names/descriptions must come for i18n translations
     3: map<AttributeType, Attribute> attributes;
-    4: Stackability stackable;
+    4: optional i64 max_stack_size;
     5: ItemType item_type;
     // Optional because not items can be constructed by players
     6: optional ItemBlueprint blueprint;
@@ -135,6 +121,7 @@ struct Inventory {
     3: double max_volume;
     4: list<InventoryEntry> entries;
     5: double last_calculated_volume = 0.0;
+    6: Owner owner;
 }
 
 enum StatusType {

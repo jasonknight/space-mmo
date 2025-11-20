@@ -248,179 +248,6 @@ class Owner(object):
         return not (self == other)
 
 
-class NotApplicable(object):
-    thrift_spec = None
-
-
-    def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
-            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
-            return
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-
-    def write(self, oprot):
-        self.validate()
-        if oprot._fast_encode is not None and self.thrift_spec is not None:
-            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
-            return
-        oprot.writeStructBegin('NotApplicable')
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-
-
-class StackabilityInfo(object):
-    """
-    Attributes:
-     - max_stack_size
-
-    """
-    thrift_spec = None
-
-
-    def __init__(self, max_stack_size = None,):
-        self.max_stack_size = max_stack_size
-
-    def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
-            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
-            return
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 1:
-                if ftype == TType.I64:
-                    self.max_stack_size = iprot.readI64()
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-
-    def write(self, oprot):
-        self.validate()
-        if oprot._fast_encode is not None and self.thrift_spec is not None:
-            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
-            return
-        oprot.writeStructBegin('StackabilityInfo')
-        if self.max_stack_size is not None:
-            oprot.writeFieldBegin('max_stack_size', TType.I64, 1)
-            oprot.writeI64(self.max_stack_size)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-
-
-class Stackability(object):
-    """
-    Attributes:
-     - not_applicable
-     - stackable
-
-    """
-    thrift_spec = None
-
-
-    def __init__(self, not_applicable = None, stackable = None,):
-        self.not_applicable = not_applicable
-        self.stackable = stackable
-
-    def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
-            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
-            return
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 1:
-                if ftype == TType.STRUCT:
-                    self.not_applicable = NotApplicable()
-                    self.not_applicable.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            elif fid == 2:
-                if ftype == TType.STRUCT:
-                    self.stackable = StackabilityInfo()
-                    self.stackable.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-
-    def write(self, oprot):
-        self.validate()
-        if oprot._fast_encode is not None and self.thrift_spec is not None:
-            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
-            return
-        oprot.writeStructBegin('Stackability')
-        if self.not_applicable is not None:
-            oprot.writeFieldBegin('not_applicable', TType.STRUCT, 1)
-            self.not_applicable.write(oprot)
-            oprot.writeFieldEnd()
-        if self.stackable is not None:
-            oprot.writeFieldBegin('stackable', TType.STRUCT, 2)
-            self.stackable.write(oprot)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-
-
 class ItemVector3(object):
     """
     Attributes:
@@ -717,7 +544,7 @@ class Item(object):
      - id
      - internal_name
      - attributes
-     - stackable
+     - max_stack_size
      - item_type
      - blueprint
 
@@ -725,11 +552,11 @@ class Item(object):
     thrift_spec = None
 
 
-    def __init__(self, id = None, internal_name = None, attributes = None, stackable = None, item_type = None, blueprint = None,):
+    def __init__(self, id = None, internal_name = None, attributes = None, max_stack_size = None, item_type = None, blueprint = None,):
         self.id = id
         self.internal_name = internal_name
         self.attributes = attributes
-        self.stackable = stackable
+        self.max_stack_size = max_stack_size
         self.item_type = item_type
         self.blueprint = blueprint
 
@@ -765,9 +592,8 @@ class Item(object):
                 else:
                     iprot.skip(ftype)
             elif fid == 4:
-                if ftype == TType.STRUCT:
-                    self.stackable = Stackability()
-                    self.stackable.read(iprot)
+                if ftype == TType.I64:
+                    self.max_stack_size = iprot.readI64()
                 else:
                     iprot.skip(ftype)
             elif fid == 5:
@@ -808,9 +634,9 @@ class Item(object):
                 viter8.write(oprot)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
-        if self.stackable is not None:
-            oprot.writeFieldBegin('stackable', TType.STRUCT, 4)
-            self.stackable.write(oprot)
+        if self.max_stack_size is not None:
+            oprot.writeFieldBegin('max_stack_size', TType.I64, 4)
+            oprot.writeI64(self.max_stack_size)
             oprot.writeFieldEnd()
         if self.item_type is not None:
             oprot.writeFieldBegin('item_type', TType.I32, 5)
@@ -1146,17 +972,19 @@ class Inventory(object):
      - max_volume
      - entries
      - last_calculated_volume
+     - owner
 
     """
     thrift_spec = None
 
 
-    def __init__(self, id = None, max_entries = None, max_volume = None, entries = None, last_calculated_volume = 0.0000000000000000,):
+    def __init__(self, id = None, max_entries = None, max_volume = None, entries = None, last_calculated_volume = 0.0000000000000000, owner = None,):
         self.id = id
         self.max_entries = max_entries
         self.max_volume = max_volume
         self.entries = entries
         self.last_calculated_volume = last_calculated_volume
+        self.owner = owner
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -1198,6 +1026,12 @@ class Inventory(object):
                     self.last_calculated_volume = iprot.readDouble()
                 else:
                     iprot.skip(ftype)
+            elif fid == 6:
+                if ftype == TType.STRUCT:
+                    self.owner = Owner()
+                    self.owner.read(iprot)
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -1231,6 +1065,10 @@ class Inventory(object):
         if self.last_calculated_volume is not None:
             oprot.writeFieldBegin('last_calculated_volume', TType.DOUBLE, 5)
             oprot.writeDouble(self.last_calculated_volume)
+            oprot.writeFieldEnd()
+        if self.owner is not None:
+            oprot.writeFieldBegin('owner', TType.STRUCT, 6)
+            self.owner.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -1428,20 +1266,6 @@ Owner.thrift_spec = (
     (2, TType.I64, 'item_it', None, None, ),  # 2
     (3, TType.I64, 'asset_id', None, None, ),  # 3
 )
-all_structs.append(NotApplicable)
-NotApplicable.thrift_spec = (
-)
-all_structs.append(StackabilityInfo)
-StackabilityInfo.thrift_spec = (
-    None,  # 0
-    (1, TType.I64, 'max_stack_size', None, None, ),  # 1
-)
-all_structs.append(Stackability)
-Stackability.thrift_spec = (
-    None,  # 0
-    (1, TType.STRUCT, 'not_applicable', [NotApplicable, None], None, ),  # 1
-    (2, TType.STRUCT, 'stackable', [StackabilityInfo, None], None, ),  # 2
-)
 all_structs.append(ItemVector3)
 ItemVector3.thrift_spec = (
     None,  # 0
@@ -1473,7 +1297,7 @@ Item.thrift_spec = (
     (1, TType.I64, 'id', None, None, ),  # 1
     (2, TType.STRING, 'internal_name', 'UTF8', None, ),  # 2
     (3, TType.MAP, 'attributes', (TType.I32, None, TType.STRUCT, [Attribute, None], False), None, ),  # 3
-    (4, TType.STRUCT, 'stackable', [Stackability, None], None, ),  # 4
+    (4, TType.I64, 'max_stack_size', None, None, ),  # 4
     (5, TType.I32, 'item_type', None, None, ),  # 5
     (6, TType.STRUCT, 'blueprint', [ItemBlueprint, None], None, ),  # 6
 )
@@ -1509,6 +1333,7 @@ Inventory.thrift_spec = (
     (3, TType.DOUBLE, 'max_volume', None, None, ),  # 3
     (4, TType.LIST, 'entries', (TType.STRUCT, [InventoryEntry, None], False), None, ),  # 4
     (5, TType.DOUBLE, 'last_calculated_volume', None, 0.0000000000000000, ),  # 5
+    (6, TType.STRUCT, 'owner', [Owner, None], None, ),  # 6
 )
 all_structs.append(GameResult)
 GameResult.thrift_spec = (

@@ -33,6 +33,7 @@ class ItemBuilder:
         self.attributes = {}
         self.id = next_item_id()
         self.blueprint = None
+        self.max_stack_size = None
     
     def add_item_to_blueprint(self, otheritem: "ItemBuilder", ratio: float) -> "ItemBuilder":
         if self.blueprint is None:
@@ -67,24 +68,18 @@ class ItemBuilder:
         return self
     
     def stackable_up_to(self, n: int) -> "ItemBuilder":
-        self.stackable = Stackability(
-            stackable=StackabilityInfo(
-                max_stack_size=n,
-            )
-        )
+        self.max_stack_size = n
         return self
 
     def not_stackable(self) -> "ItemBuilder":
-        self.stackable = Stackability(
-            not_applicable=NotApplicable(),
-        )
+        self.max_stack_size = None
         return self
     
     def build(self) -> Item:     
         return Item(
             id=self.id,
             internal_name=self.internal_name,
-            stackable=self.stackable,
+            max_stack_size=self.max_stack_size,
             item_type=self.item_type,
             attributes=self.attributes,
             blueprint=self.blueprint,
