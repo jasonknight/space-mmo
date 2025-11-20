@@ -137,6 +137,16 @@ class GameError(object):
     INV_FULL_CANNOT_SPLIT = 9
     INV_ITEM_NOT_FOUND = 10
     INV_INSUFFICIENT_QUANTITY = 11
+    DB_CONNECTION_FAILED = 12
+    DB_TRANSACTION_FAILED = 13
+    DB_INSERT_FAILED = 14
+    DB_UPDATE_FAILED = 15
+    DB_DELETE_FAILED = 16
+    DB_QUERY_FAILED = 17
+    DB_RECORD_NOT_FOUND = 18
+    DB_INVALID_DATA = 19
+    DB_FOREIGN_KEY_VIOLATION = 20
+    DB_UNIQUE_CONSTRAINT_VIOLATION = 21
 
     _VALUES_TO_NAMES = {
         1: "INV_MAX_ITEMS_REACHED",
@@ -150,6 +160,16 @@ class GameError(object):
         9: "INV_FULL_CANNOT_SPLIT",
         10: "INV_ITEM_NOT_FOUND",
         11: "INV_INSUFFICIENT_QUANTITY",
+        12: "DB_CONNECTION_FAILED",
+        13: "DB_TRANSACTION_FAILED",
+        14: "DB_INSERT_FAILED",
+        15: "DB_UPDATE_FAILED",
+        16: "DB_DELETE_FAILED",
+        17: "DB_QUERY_FAILED",
+        18: "DB_RECORD_NOT_FOUND",
+        19: "DB_INVALID_DATA",
+        20: "DB_FOREIGN_KEY_VIOLATION",
+        21: "DB_UNIQUE_CONSTRAINT_VIOLATION",
     }
 
     _NAMES_TO_VALUES = {
@@ -164,6 +184,16 @@ class GameError(object):
         "INV_FULL_CANNOT_SPLIT": 9,
         "INV_ITEM_NOT_FOUND": 10,
         "INV_INSUFFICIENT_QUANTITY": 11,
+        "DB_CONNECTION_FAILED": 12,
+        "DB_TRANSACTION_FAILED": 13,
+        "DB_INSERT_FAILED": 14,
+        "DB_UPDATE_FAILED": 15,
+        "DB_DELETE_FAILED": 16,
+        "DB_QUERY_FAILED": 17,
+        "DB_RECORD_NOT_FOUND": 18,
+        "DB_INVALID_DATA": 19,
+        "DB_FOREIGN_KEY_VIOLATION": 20,
+        "DB_UNIQUE_CONSTRAINT_VIOLATION": 21,
     }
 
 
@@ -737,6 +767,7 @@ class ItemBlueprintComponent(object):
 class ItemBlueprint(object):
     """
     Attributes:
+     - id
      - components
      - bake_time_ms
 
@@ -744,7 +775,8 @@ class ItemBlueprint(object):
     thrift_spec = None
 
 
-    def __init__(self, components = None, bake_time_ms = None,):
+    def __init__(self, id = None, components = None, bake_time_ms = None,):
+        self.id = id
         self.components = components
         self.bake_time_ms = bake_time_ms
 
@@ -758,6 +790,11 @@ class ItemBlueprint(object):
             if ftype == TType.STOP:
                 break
             if fid == 1:
+                if ftype == TType.I64:
+                    self.id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
                 if ftype == TType.MAP:
                     self.components = {}
                     (_ktype10, _vtype11, _size9) = iprot.readMapBegin()
@@ -769,7 +806,7 @@ class ItemBlueprint(object):
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
-            elif fid == 2:
+            elif fid == 3:
                 if ftype == TType.I64:
                     self.bake_time_ms = iprot.readI64()
                 else:
@@ -785,8 +822,12 @@ class ItemBlueprint(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('ItemBlueprint')
+        if self.id is not None:
+            oprot.writeFieldBegin('id', TType.I64, 1)
+            oprot.writeI64(self.id)
+            oprot.writeFieldEnd()
         if self.components is not None:
-            oprot.writeFieldBegin('components', TType.MAP, 1)
+            oprot.writeFieldBegin('components', TType.MAP, 2)
             oprot.writeMapBegin(TType.I64, TType.STRUCT, len(self.components))
             for kiter16, viter17 in self.components.items():
                 oprot.writeI64(kiter16)
@@ -794,7 +835,7 @@ class ItemBlueprint(object):
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         if self.bake_time_ms is not None:
-            oprot.writeFieldBegin('bake_time_ms', TType.I64, 2)
+            oprot.writeFieldBegin('bake_time_ms', TType.I64, 3)
             oprot.writeI64(self.bake_time_ms)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1310,8 +1351,9 @@ ItemBlueprintComponent.thrift_spec = (
 all_structs.append(ItemBlueprint)
 ItemBlueprint.thrift_spec = (
     None,  # 0
-    (1, TType.MAP, 'components', (TType.I64, None, TType.STRUCT, [ItemBlueprintComponent, None], False), None, ),  # 1
-    (2, TType.I64, 'bake_time_ms', None, None, ),  # 2
+    (1, TType.I64, 'id', None, None, ),  # 1
+    (2, TType.MAP, 'components', (TType.I64, None, TType.STRUCT, [ItemBlueprintComponent, None], False), None, ),  # 2
+    (3, TType.I64, 'bake_time_ms', None, None, ),  # 3
 )
 all_structs.append(ItemDb)
 ItemDb.thrift_spec = (

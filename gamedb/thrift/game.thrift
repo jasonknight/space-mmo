@@ -97,12 +97,13 @@ struct ItemBlueprintComponent {
     1: double ratio; // i.e. for every 1 unit of this item, how much of the target item do we get?
     2: ItemId item_id;
 }
-// An ItemBlueprint contains the item id and the amount of that item required 
+// An ItemBlueprint contains the item id and the amount of that item required
 // to construct it, this is also used when recycling/breaking down an item
 // into its base components
 struct ItemBlueprint {
-    1: map<ItemId, ItemBlueprintComponent> components;
-    2: i64 bake_time_ms;
+    1: i64 id;
+    2: map<ItemId, ItemBlueprintComponent> components;
+    3: i64 bake_time_ms;
 
 }
 
@@ -142,6 +143,16 @@ enum GameError {
     INV_FULL_CANNOT_SPLIT = 9,
     INV_ITEM_NOT_FOUND = 10,
     INV_INSUFFICIENT_QUANTITY = 11,
+    DB_CONNECTION_FAILED = 12,
+    DB_TRANSACTION_FAILED = 13,
+    DB_INSERT_FAILED = 14,
+    DB_UPDATE_FAILED = 15,
+    DB_DELETE_FAILED = 16,
+    DB_QUERY_FAILED = 17,
+    DB_RECORD_NOT_FOUND = 18,
+    DB_INVALID_DATA = 19,
+    DB_FOREIGN_KEY_VIOLATION = 20,
+    DB_UNIQUE_CONSTRAINT_VIOLATION = 21,
 }
 struct GameResult {
     1: StatusType status;
@@ -161,6 +172,16 @@ const map<GameError, string> INVERR2STRING = {
     GameError.INV_FULL_CANNOT_SPLIT: "inventory is full, cannot split entry",
     GameError.INV_ITEM_NOT_FOUND: "item not found in inventory",
     GameError.INV_INSUFFICIENT_QUANTITY: "insufficient quantity available",
+    GameError.DB_CONNECTION_FAILED: "database connection failed",
+    GameError.DB_TRANSACTION_FAILED: "database transaction failed",
+    GameError.DB_INSERT_FAILED: "database insert operation failed",
+    GameError.DB_UPDATE_FAILED: "database update operation failed",
+    GameError.DB_DELETE_FAILED: "database delete operation failed",
+    GameError.DB_QUERY_FAILED: "database query failed",
+    GameError.DB_RECORD_NOT_FOUND: "database record not found",
+    GameError.DB_INVALID_DATA: "invalid data provided for database operation",
+    GameError.DB_FOREIGN_KEY_VIOLATION: "foreign key constraint violation",
+    GameError.DB_UNIQUE_CONSTRAINT_VIOLATION: "unique constraint violation",
 }
 
 struct Mobile {

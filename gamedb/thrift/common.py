@@ -1,3 +1,4 @@
+from typing import Any
 from game.ttypes import StatusType
 
 def is_true(result: Any) -> bool:

@@ -14,6 +14,16 @@ from uuid import UUID
 import sys
 from .ttypes import *
 INVERR2STRING = {
+        12: "database connection failed",
+        16: "database delete operation failed",
+        20: "foreign key constraint violation",
+        14: "database insert operation failed",
+        19: "invalid data provided for database operation",
+        17: "database query failed",
+        18: "database record not found",
+        13: "database transaction failed",
+        21: "unique constraint violation",
+        15: "database update operation failed",
         2: "item is in inventory, but all entries are max stacked",
         4: "cannot add this item to the inventory",
         7: "could not find entry",
