@@ -73,7 +73,7 @@ union AttributeValue {
  }
 
 struct Attribute {
-    1: i64 id; // this member only matters for a materialized attribute of an owned item
+    1: optional i64 id; // this member only matters for a materialized attribute of an owned item
     2: string internal_name;
     3: bool visible;
     4: AttributeValue value;
@@ -82,7 +82,7 @@ struct Attribute {
 }
 
 struct Item {
-    1: i64 id;
+    1: optional i64 id;
     2: string internal_name; // used internally to talk about the item, but
     // not shown to users, as their names/descriptions must come for i18n translations
     3: map<AttributeType, Attribute> attributes;
@@ -101,7 +101,7 @@ struct ItemBlueprintComponent {
 // to construct it, this is also used when recycling/breaking down an item
 // into its base components
 struct ItemBlueprint {
-    1: i64 id;
+    1: optional i64 id;
     2: map<ItemId, ItemBlueprintComponent> components;
     3: i64 bake_time_ms;
 
@@ -117,7 +117,7 @@ struct InventoryEntry {
     3: bool is_max_stacked = false;
 }
 struct Inventory {
-    1: i64 id;
+    1: optional i64 id;
     2: i64 max_entries;
     3: double max_volume;
     4: list<InventoryEntry> entries;
@@ -185,7 +185,111 @@ const map<GameError, string> INVERR2STRING = {
 }
 
 struct Mobile {
-    1: MobileId id;
+    1: optional MobileId id;
     2: MobileType mobile_type;
     3: map<AttributeType, Attribute> attributes;
+}
+
+// ============================================================================
+// Inventory Service Request/Response Structures
+// ============================================================================
+
+// Request data structures for each operation
+struct LoadInventoryRequestData {
+    1: i64 inventory_id;
+}
+
+struct CreateInventoryRequestData {
+    1: Inventory inventory;
+}
+
+struct SaveInventoryRequestData {
+    1: Inventory inventory;
+}
+
+struct SplitStackRequestData {
+    1: i64 inventory_id;
+    2: i64 item_id;
+    3: double quantity_to_split;
+}
+
+struct TransferItemRequestData {
+    1: i64 source_inventory_id;
+    2: i64 destination_inventory_id;
+    3: i64 item_id;
+    4: double quantity;
+}
+
+// Response data structures for each operation
+struct LoadInventoryResponseData {
+    1: Inventory inventory;
+}
+
+struct CreateInventoryResponseData {
+    1: Inventory inventory;
+}
+
+struct SaveInventoryResponseData {
+    1: Inventory inventory;
+}
+
+struct SplitStackResponseData {
+    1: Inventory inventory;
+}
+
+struct TransferItemResponseData {
+    1: Inventory source_inventory;
+    2: Inventory destination_inventory;
+}
+
+// Union of all request data types
+union RequestData {
+    1: LoadInventoryRequestData load_inventory;
+    2: CreateInventoryRequestData create_inventory;
+    3: SaveInventoryRequestData save_inventory;
+    4: SplitStackRequestData split_stack;
+    5: TransferItemRequestData transfer_item;
+}
+
+// Union of all response data types
+union ResponseData {
+    1: LoadInventoryResponseData load_inventory;
+    2: CreateInventoryResponseData create_inventory;
+    3: SaveInventoryResponseData save_inventory;
+    4: SplitStackResponseData split_stack;
+    5: TransferItemResponseData transfer_item;
+}
+
+// Generic Request structure (extensible for auth, tracing, etc.)
+struct Request {
+    1: RequestData data;
+    // Future fields: request_id, auth_token, trace_context, etc.
+}
+
+// Generic Response structure (extensible for status, errors, etc.)
+struct Response {
+    1: list<GameResult> results;
+    2: optional ResponseData response_data;
+    // Future fields: response_id, performance_metrics, etc.
+}
+
+// ============================================================================
+// Inventory Service Definition
+// ============================================================================
+
+service InventoryService {
+    // Load an inventory by ID
+    Response load(1: Request request),
+
+    // Create a new inventory
+    Response create(1: Request request),
+
+    // Save (create or update) an inventory
+    Response save(1: Request request),
+
+    // Split a stack of items within an inventory
+    Response split_stack(1: Request request),
+
+    // Transfer items between inventories
+    Response transfer_item(1: Request request),
 }
