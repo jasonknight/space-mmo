@@ -2,7 +2,7 @@
 """Tests for InventoryService with cache validation."""
 
 import sys
-sys.path.append('gen-py')
+sys.path.append('../gen-py')
 
 from db import DB
 from inventory_service import InventoryServiceHandler, LRUCache

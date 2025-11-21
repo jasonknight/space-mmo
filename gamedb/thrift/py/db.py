@@ -2,7 +2,7 @@ import mysql.connector
 from typing import Optional, Tuple
 from contextlib import contextmanager
 import sys
-sys.path.append('gen-py')
+sys.path.append('../gen-py')
 
 from game.ttypes import (
     GameResult,

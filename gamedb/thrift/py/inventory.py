@@ -5,7 +5,7 @@ import json
 import copy
 # import pdb
 # pdb.set_trace()
-sys.path.append('gen-py')
+sys.path.append('../gen-py')
 
 from game.ttypes import *
 from item_db import find_item_by_name

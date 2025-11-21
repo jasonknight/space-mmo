@@ -1,7 +1,7 @@
 import sys
 import glob
 import json
-sys.path.append('gen-py')
+sys.path.append('../gen-py')
 
 from game.ttypes import *
 

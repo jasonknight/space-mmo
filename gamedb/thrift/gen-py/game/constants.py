@@ -35,4 +35,5 @@ INVERR2STRING = {
         1: "item is not in inventory, and inventory has reached max items",
         8: "the new_quantity must be less than, and not equal to, the current entry.quantity",
         3: "the new_volume is too high",
+        22: "inventory operation failed",
 }

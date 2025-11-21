@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiddler - Thrift Service Explorer</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎻 Fiddler</h1>
+            <p class="subtitle">Thrift Service Explorer</p>
+        </header>
+
+        <!-- Connection Panel -->
+        <div class="connection-panel">
+            <div class="connection-form">
+                <label for="server-input">Thrift Service Address:</label>
+                <div class="input-group">
+                    <input type="text"
+                           id="server-input"
+                           placeholder="localhost:9090"
+                           value="localhost:9090">
+                    <button id="connect-btn" class="primary-button">Connect</button>
+                </div>
+                <div id="connection-status" class="status-message"></div>
+            </div>
+        </div>
+
+        <!-- Service Info (hidden until connected) -->
+        <div id="service-info" class="service-info" style="display: none;">
+            <h2><span id="service-name"></span> <span id="service-version" class="version"></span></h2>
+            <p id="service-description" class="description"></p>
+        </div>
+
+        <!-- Main Content (hidden until connected) -->
+        <div id="main-content" class="main-content" style="display: none;">
+            <!-- Left Panel: Method Selection and Request Editor -->
+            <div class="left-panel">
+                <div class="method-selector">
+                    <label for="method-select">Select Method:</label>
+                    <select id="method-select">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="method-description" id="method-description">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <div class="request-editor">
+                    <label for="request-json">Request JSON:</label>
+                    <textarea id="request-json" rows="20"></textarea>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="invoke-btn" class="primary-button">Invoke Method</button>
+                    <button id="format-btn" class="secondary-button">Format JSON</button>
+                </div>
+
+                <div class="response-section">
+                    <h3>Response:</h3>
+                    <div id="response-status" class="status-message"></div>
+                    <pre id="response-json"></pre>
+                </div>
+            </div>
+
+            <!-- Right Panel: Enum Reference -->
+            <div class="right-panel">
+                <h3>Enum Reference</h3>
+                <div id="enum-list" class="enum-list">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <div class="field-mappings">
+                    <h4>Enum Field Mappings</h4>
+                    <div id="field-mapping-display">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Store service metadata
+        let serviceMetadata = null;
+        let serviceMethods = [];
+        let enumLookup = {};
+        let enumReverseLookup = {};
+
+        // DOM elements
+        const serverInput = document.getElementById('server-input');
+        const connectBtn = document.getElementById('connect-btn');
+        const connectionStatus = document.getElementById('connection-status');
+        const serviceInfo = document.getElementById('service-info');
+        const mainContent = document.getElementById('main-content');
+        const serviceName = document.getElementById('service-name');
+        const serviceVersion = document.getElementById('service-version');
+        const serviceDescription = document.getElementById('service-description');
+        const methodSelect = document.getElementById('method-select');
+        const requestTextarea = document.getElementById('request-json');
+        const methodDescription = document.getElementById('method-description');
+        const invokeBtn = document.getElementById('invoke-btn');
+        const formatBtn = document.getElementById('format-btn');
+        const responseStatus = document.getElementById('response-status');
+        const responseJson = document.getElementById('response-json');
+        const fieldMappingDisplay = document.getElementById('field-mapping-display');
+        const enumList = document.getElementById('enum-list');
+
+        // Connect to service
+        async function connectToService() {
+            const serverAddress = serverInput.value.trim();
+
+            if (!serverAddress) {
+                connectionStatus.innerHTML = '<span class="error">❌ Please enter a server address</span>';
+                return;
+            }
+
+            // Disable button during connection
+            connectBtn.disabled = true;
+            connectBtn.textContent = 'Connecting...';
+            connectionStatus.innerHTML = '<span class="info">⏳ Connecting to service...</span>';
+
+            try {
+                const response = await fetch('/api/connect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        server: serverAddress,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    connectionStatus.innerHTML = '<span class="error">❌ ' + data.error + '</span>';
+                    connectBtn.disabled = false;
+                    connectBtn.textContent = 'Connect';
+                    return;
+                }
+
+                if (data.success) {
+                    connectionStatus.innerHTML = '<span class="success">✅ Connected successfully!</span>';
+                    connectBtn.textContent = 'Reconnect';
+                    connectBtn.disabled = false;
+
+                    // Store metadata
+                    serviceMetadata = data.metadata;
+                    serviceMethods = data.metadata.methods;
+                    enumLookup = data.enum_lookup;
+                    enumReverseLookup = data.enum_reverse_lookup;
+
+                    // Populate UI
+                    populateServiceInfo();
+                    populateEnumList();
+                    populateMethods();
+
+                    // Show the UI
+                    serviceInfo.style.display = 'block';
+                    mainContent.style.display = 'grid';
+                }
+            } catch (e) {
+                connectionStatus.innerHTML = '<span class="error">❌ Connection failed: ' + e.message + '</span>';
+                connectBtn.disabled = false;
+                connectBtn.textContent = 'Connect';
+            }
+        }
+
+        // Populate service info
+        function populateServiceInfo() {
+            serviceName.textContent = serviceMetadata.service_name;
+            serviceVersion.textContent = 'v' + serviceMetadata.version;
+            serviceDescription.textContent = serviceMetadata.description;
+        }
+
+        // Populate enum list
+        function populateEnumList() {
+            let html = '';
+            for (const enumDef of serviceMetadata.enums) {
+                html += '<div class="enum-section">';
+                html += '<h4>' + enumDef.enum_name + '</h4>';
+                if (enumDef.description) {
+                    html += '<p class="enum-description">' + enumDef.description + '</p>';
+                }
+                html += '<table class="enum-table">';
+                html += '<thead><tr><th>String Value</th><th>Integer</th></tr></thead>';
+                html += '<tbody>';
+                for (const [name, value] of Object.entries(enumDef.values)) {
+                    html += '<tr>';
+                    html += '<td class="enum-name">"' + name + '"</td>';
+                    html += '<td class="enum-value">' + value + '</td>';
+                    html += '</tr>';
+                }
+                html += '</tbody></table>';
+                html += '</div>';
+            }
+            enumList.innerHTML = html;
+        }
+
+        // Populate methods dropdown
+        function populateMethods() {
+            methodSelect.innerHTML = '';
+            for (const method of serviceMethods) {
+                const option = document.createElement('option');
+                option.value = method.method_name;
+                option.textContent = method.method_name;
+                option.setAttribute('data-description', method.description);
+                methodSelect.appendChild(option);
+            }
+            loadMethodExample();
+        }
+
+        // Load example request for selected method
+        function loadMethodExample() {
+            const methodName = methodSelect.value;
+            const method = serviceMethods.find(m => m.method_name === methodName);
+
+            if (!method) return;
+
+            // Format the example JSON nicely
+            try {
+                const parsed = JSON.parse(method.example_request_json);
+                requestTextarea.value = JSON.stringify(parsed, null, 2);
+            } catch (e) {
+                requestTextarea.value = method.example_request_json;
+            }
+
+            // Update description
+            methodDescription.innerHTML = '<p>' + method.description + '</p>';
+
+            // Update field mappings
+            updateFieldMappings(method);
+        }
+
+        // Update field mapping display
+        function updateFieldMappings(method) {
+            let html = '<div class="mapping-section">';
+
+            if (method.request_enum_fields && method.request_enum_fields.length > 0) {
+                html += '<h5>Request Enum Fields:</h5><ul>';
+                method.request_enum_fields.forEach(mapping => {
+                    html += `<li><code>${mapping.field_path}</code> → ${mapping.enum_name}</li>`;
+                });
+                html += '</ul>';
+            }
+
+            if (method.response_enum_fields && method.response_enum_fields.length > 0) {
+                html += '<h5>Response Enum Fields:</h5><ul>';
+                method.response_enum_fields.forEach(mapping => {
+                    html += `<li><code>${mapping.field_path}</code> → ${mapping.enum_name}</li>`;
+                });
+                html += '</ul>';
+            }
+
+            html += '</div>';
+            fieldMappingDisplay.innerHTML = html;
+        }
+
+        // Format JSON in textarea
+        function formatJSON() {
+            try {
+                const parsed = JSON.parse(requestTextarea.value);
+                requestTextarea.value = JSON.stringify(parsed, null, 2);
+            } catch (e) {
+                alert('Invalid JSON: ' + e.message);
+            }
+        }
+
+        // Invoke the selected method
+        async function invokeMethod() {
+            const methodName = methodSelect.value;
+            const requestJson = requestTextarea.value;
+
+            // Clear previous response
+            responseStatus.innerHTML = '';
+            responseJson.innerHTML = '';
+
+            // Validate JSON
+            try {
+                JSON.parse(requestJson);
+            } catch (e) {
+                responseStatus.innerHTML = '<span class="error">❌ Invalid JSON: ' + e.message + '</span>';
+                return;
+            }
+
+            // Disable button during request
+            invokeBtn.disabled = true;
+            invokeBtn.textContent = 'Invoking...';
+
+            try {
+                const response = await fetch('/api/invoke', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        method: methodName,
+                        request: requestJson,
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    responseStatus.innerHTML = '<span class="error">❌ Error: ' + data.error + '</span>';
+                } else if (data.success) {
+                    responseStatus.innerHTML = '<span class="success">✅ Success</span>';
+                    responseJson.textContent = JSON.stringify(data.response, null, 2);
+                }
+            } catch (e) {
+                responseStatus.innerHTML = '<span class="error">❌ Request failed: ' + e.message + '</span>';
+            } finally {
+                invokeBtn.disabled = false;
+                invokeBtn.textContent = 'Invoke Method';
+            }
+        }
+
+        // Event listeners
+        connectBtn.addEventListener('click', connectToService);
+        serverInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                connectToService();
+            }
+        });
+        methodSelect.addEventListener('change', loadMethodExample);
+        formatBtn.addEventListener('click', formatJSON);
+        invokeBtn.addEventListener('click', invokeMethod);
+    </script>
+</body>
+</html>

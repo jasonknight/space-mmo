@@ -137,6 +137,7 @@ class GameError(object):
     INV_FULL_CANNOT_SPLIT = 9
     INV_ITEM_NOT_FOUND = 10
     INV_INSUFFICIENT_QUANTITY = 11
+    INV_OPERATION_FAILED = 22
     DB_CONNECTION_FAILED = 12
     DB_TRANSACTION_FAILED = 13
     DB_INSERT_FAILED = 14
@@ -160,6 +161,7 @@ class GameError(object):
         9: "INV_FULL_CANNOT_SPLIT",
         10: "INV_ITEM_NOT_FOUND",
         11: "INV_INSUFFICIENT_QUANTITY",
+        22: "INV_OPERATION_FAILED",
         12: "DB_CONNECTION_FAILED",
         13: "DB_TRANSACTION_FAILED",
         14: "DB_INSERT_FAILED",
@@ -184,6 +186,7 @@ class GameError(object):
         "INV_FULL_CANNOT_SPLIT": 9,
         "INV_ITEM_NOT_FOUND": 10,
         "INV_INSUFFICIENT_QUANTITY": 11,
+        "INV_OPERATION_FAILED": 22,
         "DB_CONNECTION_FAILED": 12,
         "DB_TRANSACTION_FAILED": 13,
         "DB_INSERT_FAILED": 14,
@@ -2320,6 +2323,420 @@ class Response(object):
 
     def __ne__(self, other):
         return not (self == other)
+
+
+class EnumDefinition(object):
+    """
+    Attributes:
+     - enum_name
+     - values
+     - description
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, enum_name = None, values = None, description = None,):
+        self.enum_name = enum_name
+        self.values = values
+        self.description = description
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.enum_name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.MAP:
+                    self.values = {}
+                    (_ktype49, _vtype50, _size48) = iprot.readMapBegin()
+                    for _i52 in range(_size48):
+                        _key53 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        _val54 = iprot.readI32()
+                        self.values[_key53] = _val54
+                    iprot.readMapEnd()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.description = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('EnumDefinition')
+        if self.enum_name is not None:
+            oprot.writeFieldBegin('enum_name', TType.STRING, 1)
+            oprot.writeString(self.enum_name.encode('utf-8') if sys.version_info[0] == 2 else self.enum_name)
+            oprot.writeFieldEnd()
+        if self.values is not None:
+            oprot.writeFieldBegin('values', TType.MAP, 2)
+            oprot.writeMapBegin(TType.STRING, TType.I32, len(self.values))
+            for kiter55, viter56 in self.values.items():
+                oprot.writeString(kiter55.encode('utf-8') if sys.version_info[0] == 2 else kiter55)
+                oprot.writeI32(viter56)
+            oprot.writeMapEnd()
+            oprot.writeFieldEnd()
+        if self.description is not None:
+            oprot.writeFieldBegin('description', TType.STRING, 3)
+            oprot.writeString(self.description.encode('utf-8') if sys.version_info[0] == 2 else self.description)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class FieldEnumMapping(object):
+    """
+    Attributes:
+     - field_path
+     - enum_name
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, field_path = None, enum_name = None,):
+        self.field_path = field_path
+        self.enum_name = enum_name
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.field_path = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.enum_name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('FieldEnumMapping')
+        if self.field_path is not None:
+            oprot.writeFieldBegin('field_path', TType.STRING, 1)
+            oprot.writeString(self.field_path.encode('utf-8') if sys.version_info[0] == 2 else self.field_path)
+            oprot.writeFieldEnd()
+        if self.enum_name is not None:
+            oprot.writeFieldBegin('enum_name', TType.STRING, 2)
+            oprot.writeString(self.enum_name.encode('utf-8') if sys.version_info[0] == 2 else self.enum_name)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class MethodDescription(object):
+    """
+    Attributes:
+     - method_name
+     - description
+     - example_request_json
+     - example_response_json
+     - request_enum_fields
+     - response_enum_fields
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, method_name = None, description = None, example_request_json = None, example_response_json = None, request_enum_fields = None, response_enum_fields = None,):
+        self.method_name = method_name
+        self.description = description
+        self.example_request_json = example_request_json
+        self.example_response_json = example_response_json
+        self.request_enum_fields = request_enum_fields
+        self.response_enum_fields = response_enum_fields
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.method_name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.description = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.example_request_json = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRING:
+                    self.example_response_json = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.LIST:
+                    self.request_enum_fields = []
+                    (_etype60, _size57) = iprot.readListBegin()
+                    for _i61 in range(_size57):
+                        _elem62 = FieldEnumMapping()
+                        _elem62.read(iprot)
+                        self.request_enum_fields.append(_elem62)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 6:
+                if ftype == TType.LIST:
+                    self.response_enum_fields = []
+                    (_etype66, _size63) = iprot.readListBegin()
+                    for _i67 in range(_size63):
+                        _elem68 = FieldEnumMapping()
+                        _elem68.read(iprot)
+                        self.response_enum_fields.append(_elem68)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('MethodDescription')
+        if self.method_name is not None:
+            oprot.writeFieldBegin('method_name', TType.STRING, 1)
+            oprot.writeString(self.method_name.encode('utf-8') if sys.version_info[0] == 2 else self.method_name)
+            oprot.writeFieldEnd()
+        if self.description is not None:
+            oprot.writeFieldBegin('description', TType.STRING, 2)
+            oprot.writeString(self.description.encode('utf-8') if sys.version_info[0] == 2 else self.description)
+            oprot.writeFieldEnd()
+        if self.example_request_json is not None:
+            oprot.writeFieldBegin('example_request_json', TType.STRING, 3)
+            oprot.writeString(self.example_request_json.encode('utf-8') if sys.version_info[0] == 2 else self.example_request_json)
+            oprot.writeFieldEnd()
+        if self.example_response_json is not None:
+            oprot.writeFieldBegin('example_response_json', TType.STRING, 4)
+            oprot.writeString(self.example_response_json.encode('utf-8') if sys.version_info[0] == 2 else self.example_response_json)
+            oprot.writeFieldEnd()
+        if self.request_enum_fields is not None:
+            oprot.writeFieldBegin('request_enum_fields', TType.LIST, 5)
+            oprot.writeListBegin(TType.STRUCT, len(self.request_enum_fields))
+            for iter69 in self.request_enum_fields:
+                iter69.write(oprot)
+            oprot.writeListEnd()
+            oprot.writeFieldEnd()
+        if self.response_enum_fields is not None:
+            oprot.writeFieldBegin('response_enum_fields', TType.LIST, 6)
+            oprot.writeListBegin(TType.STRUCT, len(self.response_enum_fields))
+            for iter70 in self.response_enum_fields:
+                iter70.write(oprot)
+            oprot.writeListEnd()
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class ServiceMetadata(object):
+    """
+    Attributes:
+     - service_name
+     - version
+     - description
+     - methods
+     - enums
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, service_name = None, version = None, description = None, methods = None, enums = None,):
+        self.service_name = service_name
+        self.version = version
+        self.description = description
+        self.methods = methods
+        self.enums = enums
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRING:
+                    self.service_name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.version = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.description = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.LIST:
+                    self.methods = []
+                    (_etype74, _size71) = iprot.readListBegin()
+                    for _i75 in range(_size71):
+                        _elem76 = MethodDescription()
+                        _elem76.read(iprot)
+                        self.methods.append(_elem76)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.LIST:
+                    self.enums = []
+                    (_etype80, _size77) = iprot.readListBegin()
+                    for _i81 in range(_size77):
+                        _elem82 = EnumDefinition()
+                        _elem82.read(iprot)
+                        self.enums.append(_elem82)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('ServiceMetadata')
+        if self.service_name is not None:
+            oprot.writeFieldBegin('service_name', TType.STRING, 1)
+            oprot.writeString(self.service_name.encode('utf-8') if sys.version_info[0] == 2 else self.service_name)
+            oprot.writeFieldEnd()
+        if self.version is not None:
+            oprot.writeFieldBegin('version', TType.STRING, 2)
+            oprot.writeString(self.version.encode('utf-8') if sys.version_info[0] == 2 else self.version)
+            oprot.writeFieldEnd()
+        if self.description is not None:
+            oprot.writeFieldBegin('description', TType.STRING, 3)
+            oprot.writeString(self.description.encode('utf-8') if sys.version_info[0] == 2 else self.description)
+            oprot.writeFieldEnd()
+        if self.methods is not None:
+            oprot.writeFieldBegin('methods', TType.LIST, 4)
+            oprot.writeListBegin(TType.STRUCT, len(self.methods))
+            for iter83 in self.methods:
+                iter83.write(oprot)
+            oprot.writeListEnd()
+            oprot.writeFieldEnd()
+        if self.enums is not None:
+            oprot.writeFieldBegin('enums', TType.LIST, 5)
+            oprot.writeListBegin(TType.STRUCT, len(self.enums))
+            for iter84 in self.enums:
+                iter84.write(oprot)
+            oprot.writeListEnd()
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
 all_structs.append(Owner)
 Owner.thrift_spec = (
     None,  # 0
@@ -2495,6 +2912,38 @@ Response.thrift_spec = (
     None,  # 0
     (1, TType.LIST, 'results', (TType.STRUCT, [GameResult, None], False), None, ),  # 1
     (2, TType.STRUCT, 'response_data', [ResponseData, None], None, ),  # 2
+)
+all_structs.append(EnumDefinition)
+EnumDefinition.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'enum_name', 'UTF8', None, ),  # 1
+    (2, TType.MAP, 'values', (TType.STRING, 'UTF8', TType.I32, None, False), None, ),  # 2
+    (3, TType.STRING, 'description', 'UTF8', None, ),  # 3
+)
+all_structs.append(FieldEnumMapping)
+FieldEnumMapping.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'field_path', 'UTF8', None, ),  # 1
+    (2, TType.STRING, 'enum_name', 'UTF8', None, ),  # 2
+)
+all_structs.append(MethodDescription)
+MethodDescription.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'method_name', 'UTF8', None, ),  # 1
+    (2, TType.STRING, 'description', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'example_request_json', 'UTF8', None, ),  # 3
+    (4, TType.STRING, 'example_response_json', 'UTF8', None, ),  # 4
+    (5, TType.LIST, 'request_enum_fields', (TType.STRUCT, [FieldEnumMapping, None], False), None, ),  # 5
+    (6, TType.LIST, 'response_enum_fields', (TType.STRUCT, [FieldEnumMapping, None], False), None, ),  # 6
+)
+all_structs.append(ServiceMetadata)
+ServiceMetadata.thrift_spec = (
+    None,  # 0
+    (1, TType.STRING, 'service_name', 'UTF8', None, ),  # 1
+    (2, TType.STRING, 'version', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'description', 'UTF8', None, ),  # 3
+    (4, TType.LIST, 'methods', (TType.STRUCT, [MethodDescription, None], False), None, ),  # 4
+    (5, TType.LIST, 'enums', (TType.STRUCT, [EnumDefinition, None], False), None, ),  # 5
 )
 fix_spec(all_structs)
 del all_structs

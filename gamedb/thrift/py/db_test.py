@@ -1,5 +1,5 @@
 import sys
-sys.path.append('gen-py')
+sys.path.append('../gen-py')
 
 from db import DB
 from game.ttypes import (

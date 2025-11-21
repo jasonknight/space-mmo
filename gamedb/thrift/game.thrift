@@ -143,6 +143,7 @@ enum GameError {
     INV_FULL_CANNOT_SPLIT = 9,
     INV_ITEM_NOT_FOUND = 10,
     INV_INSUFFICIENT_QUANTITY = 11,
+    INV_OPERATION_FAILED = 22,
     DB_CONNECTION_FAILED = 12,
     DB_TRANSACTION_FAILED = 13,
     DB_INSERT_FAILED = 14,
@@ -172,6 +173,7 @@ const map<GameError, string> INVERR2STRING = {
     GameError.INV_FULL_CANNOT_SPLIT: "inventory is full, cannot split entry",
     GameError.INV_ITEM_NOT_FOUND: "item not found in inventory",
     GameError.INV_INSUFFICIENT_QUANTITY: "insufficient quantity available",
+    GameError.INV_OPERATION_FAILED: "inventory operation failed",
     GameError.DB_CONNECTION_FAILED: "database connection failed",
     GameError.DB_TRANSACTION_FAILED: "database transaction failed",
     GameError.DB_INSERT_FAILED: "database insert operation failed",
@@ -274,10 +276,49 @@ struct Response {
 }
 
 // ============================================================================
+// Service Discovery and Metadata (for Fiddler)
+// ============================================================================
+
+// Enum definition with string-to-int mappings
+struct EnumDefinition {
+    1: string enum_name;
+    2: map<string, i32> values;  // e.g. {"SUCCESS": 1, "FAILURE": 2}
+    3: optional string description;
+}
+
+// Field-to-enum type mapping
+struct FieldEnumMapping {
+    1: string field_path;  // e.g. "results[].status" or "error_code"
+    2: string enum_name;   // e.g. "StatusType" or "GameError"
+}
+
+// Description of a single service method
+struct MethodDescription {
+    1: string method_name;
+    2: string description;
+    3: string example_request_json;   // Full example Request in JSON with enum strings
+    4: string example_response_json;  // Example Response in JSON with enum strings
+    5: list<FieldEnumMapping> request_enum_fields;   // Which request fields are enums
+    6: list<FieldEnumMapping> response_enum_fields;  // Which response fields are enums
+}
+
+// Complete service metadata for discovery
+struct ServiceMetadata {
+    1: string service_name;
+    2: string version;
+    3: string description;
+    4: list<MethodDescription> methods;
+    5: list<EnumDefinition> enums;  // All enums used by this service
+}
+
+// ============================================================================
 // Inventory Service Definition
 // ============================================================================
 
 service InventoryService {
+    // Service discovery method
+    ServiceMetadata describe(),
+
     // Load an inventory by ID
     Response load(1: Request request),
 

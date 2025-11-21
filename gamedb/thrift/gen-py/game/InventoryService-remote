@@ -24,6 +24,7 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('Usage: ' + sys.argv[0] + ' [-h host[:port]] [-u url] [-f[ramed]] [-s[sl]] [-novalidate] [-ca_certs certs] [-keyfile keyfile] [-certfile certfile] function [arg1 [arg2...]]')
     print('')
     print('Functions:')
+    print('  ServiceMetadata describe()')
     print('  Response load(Request request)')
     print('  Response create(Request request)')
     print('  Response save(Request request)')
@@ -108,7 +109,13 @@ protocol = TBinaryProtocol(transport)
 client = InventoryService.Client(protocol)
 transport.open()
 
-if cmd == 'load':
+if cmd == 'describe':
+    if len(args) != 0:
+        print('describe requires 0 args')
+        sys.exit(1)
+    pp.pprint(client.describe())
+
+elif cmd == 'load':
     if len(args) != 1:
         print('load requires 1 args')
         sys.exit(1)

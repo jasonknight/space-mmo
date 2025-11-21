@@ -2,7 +2,7 @@
 """Simple test to verify LRU cache functionality."""
 
 import sys
-sys.path.append('gen-py')
+sys.path.append('../gen-py')
 
 from inventory_service import LRUCache
 from game.ttypes import Inventory, Owner
