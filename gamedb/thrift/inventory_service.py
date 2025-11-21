@@ -1,6 +1,10 @@
 import sys
 sys.path.append('gen-py')
 
+from collections import OrderedDict
+from typing import Optional
+from copy import deepcopy
+
 from game.ttypes import (
     Request,
     Response,
@@ -28,18 +32,72 @@ from inventory import split_stack, transfer_item
 from common import is_ok
 
 
+class LRUCache:
+    """
+    Simple LRU (Least Recently Used) cache implementation using OrderedDict.
+    When the cache reaches max_size, the least recently used item is evicted.
+    """
+
+    def __init__(self, max_size: int = 1000):
+        self.cache = OrderedDict()
+        self.max_size = max_size
+
+    def get(self, key: int) -> Optional[Inventory]:
+        """
+        Get an inventory from the cache by ID.
+        Returns a deep copy to prevent modifications affecting the cached version.
+        Moves the item to the end (most recently used).
+        """
+        if key not in self.cache:
+            return None
+
+        # Move to end (most recently used)
+        self.cache.move_to_end(key)
+        # Return a deep copy to prevent external modifications
+        return deepcopy(self.cache[key])
+
+    def put(self, key: int, value: Inventory) -> None:
+        """
+        Add or update an inventory in the cache.
+        Stores a deep copy to prevent external modifications affecting the cache.
+        If cache is full, removes the least recently used item.
+        """
+        # Store a deep copy to prevent external modifications
+        self.cache[key] = deepcopy(value)
+        self.cache.move_to_end(key)
+
+        # Evict least recently used if over capacity
+        if len(self.cache) > self.max_size:
+            self.cache.popitem(last=False)
+
+    def invalidate(self, key: int) -> None:
+        """Remove an inventory from the cache."""
+        if key in self.cache:
+            del self.cache[key]
+
+    def clear(self) -> None:
+        """Clear all entries from the cache."""
+        self.cache.clear()
+
+    def size(self) -> int:
+        """Return the current size of the cache."""
+        return len(self.cache)
+
+
 class InventoryServiceHandler(InventoryServiceIface):
     """
     Implementation of the InventoryService thrift interface.
     Handles inventory operations using the DB layer and inventory.py functions.
+    Includes an LRU cache to reduce database queries for frequently accessed inventories.
     """
 
-    def __init__(self, db: DB, database: str):
+    def __init__(self, db: DB, database: str, cache_size: int = 1000):
         self.db = db
         self.database = database
+        self.cache = LRUCache(max_size=cache_size)
 
     def load(self, request: Request) -> Response:
-        """Load an inventory by ID."""
+        """Load an inventory by ID. Checks cache first before querying database."""
         try:
             if not request.data.load_inventory:
                 return Response(
@@ -54,12 +112,35 @@ class InventoryServiceHandler(InventoryServiceIface):
                 )
 
             load_data = request.data.load_inventory
+            inventory_id = load_data.inventory_id
+
+            # Check cache first
+            cached_inventory = self.cache.get(inventory_id)
+            if cached_inventory:
+                result = GameResult(
+                    status=StatusType.SUCCESS,
+                    message=f"Successfully loaded inventory id={inventory_id} from cache",
+                )
+                response_data = ResponseData(
+                    load_inventory=LoadInventoryResponseData(
+                        inventory=cached_inventory,
+                    ),
+                )
+                return Response(
+                    results=[result],
+                    response_data=response_data,
+                )
+
+            # Cache miss - load from database
             result, inventory = self.db.load_inventory(
                 self.database,
-                load_data.inventory_id,
+                inventory_id,
             )
 
             if inventory:
+                # Store in cache for future requests
+                self.cache.put(inventory_id, inventory)
+
                 response_data = ResponseData(
                     load_inventory=LoadInventoryResponseData(
                         inventory=inventory,
@@ -88,7 +169,7 @@ class InventoryServiceHandler(InventoryServiceIface):
             )
 
     def create(self, request: Request) -> Response:
-        """Create a new inventory."""
+        """Create a new inventory. Populates cache after successful creation."""
         try:
             if not request.data.create_inventory:
                 return Response(
@@ -109,6 +190,10 @@ class InventoryServiceHandler(InventoryServiceIface):
             )
 
             if is_ok(results):
+                # Add to cache after successful creation
+                if create_data.inventory.id is not None:
+                    self.cache.put(create_data.inventory.id, create_data.inventory)
+
                 response_data = ResponseData(
                     create_inventory=CreateInventoryResponseData(
                         inventory=create_data.inventory,
@@ -137,7 +222,7 @@ class InventoryServiceHandler(InventoryServiceIface):
             )
 
     def save(self, request: Request) -> Response:
-        """Save (create or update) an inventory."""
+        """Save (create or update) an inventory. Updates cache after successful save."""
         try:
             if not request.data.save_inventory:
                 return Response(
@@ -158,6 +243,10 @@ class InventoryServiceHandler(InventoryServiceIface):
             )
 
             if is_ok(results):
+                # Update cache after successful save
+                if save_data.inventory.id is not None:
+                    self.cache.put(save_data.inventory.id, save_data.inventory)
+
                 response_data = ResponseData(
                     save_inventory=SaveInventoryResponseData(
                         inventory=save_data.inventory,
@@ -186,7 +275,7 @@ class InventoryServiceHandler(InventoryServiceIface):
             )
 
     def split_stack(self, request: Request) -> Response:
-        """Split a stack of items within an inventory."""
+        """Split a stack of items within an inventory. Checks cache and updates it."""
         try:
             if not request.data.split_stack:
                 return Response(
@@ -201,46 +290,76 @@ class InventoryServiceHandler(InventoryServiceIface):
                 )
 
             split_data = request.data.split_stack
+            inventory_id = split_data.inventory_id
 
-            # Load the inventory
-            result, inventory = self.db.load_inventory(
-                self.database,
-                split_data.inventory_id,
-            )
+            # Check cache first
+            inventory = self.cache.get(inventory_id)
+            result = None
 
             if not inventory:
+                # Cache miss - load from database
+                result, inventory = self.db.load_inventory(
+                    self.database,
+                    inventory_id,
+                )
+
+                if not inventory:
+                    return Response(
+                        results=[result],
+                        response_data=None,
+                    )
+
+            # Find the entry index that matches the item_id
+            # inventory.split_stack expects entry_index, not item_id
+            entry_index = None
+            for idx, entry in enumerate(inventory.entries):
+                if entry.item_id == split_data.item_id:
+                    entry_index = idx
+                    break
+
+            if entry_index is None:
                 return Response(
-                    results=[result],
+                    results=[
+                        GameResult(
+                            status=StatusType.FAILURE,
+                            message=f"Item {split_data.item_id} not found in inventory {inventory_id}",
+                            error_code=GameError.INV_ITEM_NOT_FOUND,
+                        ),
+                    ],
                     response_data=None,
                 )
 
-            # Perform the split
-            split_result = split_stack(
+            # Perform the split - pass entry_index, not item_id
+            split_results = split_stack(
                 inventory,
-                split_data.item_id,
+                entry_index,
                 split_data.quantity_to_split,
             )
 
-            if not is_ok([split_result]):
+            if not is_ok(split_results):
                 return Response(
-                    results=[split_result],
+                    results=split_results,
                     response_data=None,
                 )
 
-            # Save the updated inventory
+            # Save the updated inventory to database
             save_results = self.db.save_inventory(
                 self.database,
                 inventory,
             )
 
             if is_ok(save_results):
+                # Update cache with modified inventory
+                self.cache.put(inventory_id, inventory)
+
                 response_data = ResponseData(
                     split_stack=SplitStackResponseData(
                         inventory=inventory,
                     ),
                 )
+                results = split_results + save_results
                 return Response(
-                    results=[split_result] + save_results,
+                    results=results,
                     response_data=response_data,
                 )
             else:
@@ -262,7 +381,7 @@ class InventoryServiceHandler(InventoryServiceIface):
             )
 
     def transfer_item(self, request: Request) -> Response:
-        """Transfer items between inventories."""
+        """Transfer items between inventories. Checks cache and updates both inventories."""
         try:
             if not request.data.transfer_item:
                 return Response(
@@ -277,43 +396,63 @@ class InventoryServiceHandler(InventoryServiceIface):
                 )
 
             transfer_data = request.data.transfer_item
+            source_id = transfer_data.source_inventory_id
+            dest_id = transfer_data.destination_inventory_id
 
-            # Load both inventories
-            result1, source_inv = self.db.load_inventory(
+            # Load the item from database - inventory.transfer_item needs Item object, not item_id
+            item_result, item = self.db.load_item(
                 self.database,
-                transfer_data.source_inventory_id,
+                transfer_data.item_id,
             )
+            if not item:
+                return Response(
+                    results=[item_result],
+                    response_data=None,
+                )
+
+            # Check cache for source inventory
+            source_inv = self.cache.get(source_id)
             if not source_inv:
-                return Response(
-                    results=[result1],
-                    response_data=None,
+                # Cache miss - load from database
+                result1, source_inv = self.db.load_inventory(
+                    self.database,
+                    source_id,
                 )
+                if not source_inv:
+                    return Response(
+                        results=[result1],
+                        response_data=None,
+                    )
 
-            result2, dest_inv = self.db.load_inventory(
-                self.database,
-                transfer_data.destination_inventory_id,
-            )
+            # Check cache for destination inventory
+            dest_inv = self.cache.get(dest_id)
             if not dest_inv:
-                return Response(
-                    results=[result2],
-                    response_data=None,
+                # Cache miss - load from database
+                result2, dest_inv = self.db.load_inventory(
+                    self.database,
+                    dest_id,
                 )
+                if not dest_inv:
+                    return Response(
+                        results=[result2],
+                        response_data=None,
+                    )
 
-            # Perform the transfer
-            transfer_result = transfer_item(
+            # Perform the transfer - pass Item object, not item_id
+            transfer_results = transfer_item(
                 source_inv,
                 dest_inv,
-                transfer_data.item_id,
+                item,
                 transfer_data.quantity,
             )
 
-            if not is_ok([transfer_result]):
+            if not is_ok(transfer_results):
                 return Response(
-                    results=[transfer_result],
+                    results=transfer_results,
                     response_data=None,
                 )
 
-            # Save both inventories
+            # Save both inventories to database
             save_results1 = self.db.save_inventory(
                 self.database,
                 source_inv,
@@ -324,6 +463,10 @@ class InventoryServiceHandler(InventoryServiceIface):
             )
 
             if is_ok(save_results1) and is_ok(save_results2):
+                # Update both inventories in cache
+                self.cache.put(source_id, source_inv)
+                self.cache.put(dest_id, dest_inv)
+
                 response_data = ResponseData(
                     transfer_item=TransferItemResponseData(
                         source_inventory=source_inv,
@@ -331,7 +474,7 @@ class InventoryServiceHandler(InventoryServiceIface):
                     ),
                 )
                 return Response(
-                    results=[transfer_result] + save_results1 + save_results2,
+                    results=transfer_results + save_results1 + save_results2,
                     response_data=response_data,
                 )
             else:
