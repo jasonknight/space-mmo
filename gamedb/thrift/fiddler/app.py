@@ -9,8 +9,17 @@ that implements the describe() method.
 import sys
 import json
 import re
+import logging
+import traceback
 from bottle import Bottle, request, response, static_file, TEMPLATE_PATH
 from bottle import jinja2_template as template
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
+logger = logging.getLogger(__name__)
 
 # Add paths for Thrift imports
 sys.path.append('../gen-py')
@@ -18,7 +27,7 @@ sys.path.append('../py')
 
 # Thrift imports
 from thrift.transport import TSocket, TTransport
-from thrift.protocol import TBinaryProtocol
+from thrift.protocol import TBinaryProtocol, TJSONProtocol
 from game.InventoryService import Client as InventoryServiceClient
 
 app = Bottle()
@@ -152,10 +161,14 @@ def index():
 def connect():
     """Connect to a Thrift service and load its metadata."""
     try:
+        logger.info("=== Connecting to Thrift service ===")
         data = request.json
         server_address = data.get('server')
 
+        logger.info(f"Server address: {server_address}")
+
         if not server_address:
+            logger.error("No server address provided")
             response.status = 400
             return {'error': 'Missing server address'}
 
@@ -165,14 +178,19 @@ def connect():
             try:
                 port = int(port_str)
             except ValueError:
+                logger.error(f"Invalid port number: {port_str}")
                 response.status = 400
                 return {'error': 'Invalid port number'}
         else:
             host = server_address
             port = 9090  # Default port
 
+        logger.info(f"Parsed connection: {host}:{port}")
+
         # Try to connect and load metadata
+        logger.debug("Loading service metadata...")
         load_service_metadata(host, port)
+        logger.info("Metadata loaded successfully")
 
         # Return the metadata
         return {
@@ -212,6 +230,10 @@ def connect():
         }
 
     except Exception as e:
+        logger.error("=== Connection failed ===")
+        logger.error(f"Exception type: {type(e).__name__}")
+        logger.error(f"Exception message: {str(e)}")
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
         response.status = 500
         return {'error': str(e)}
 
@@ -220,14 +242,20 @@ def connect():
 def invoke_method():
     """Invoke a service method with the provided request JSON."""
     try:
+        logger.info("=== Starting method invocation ===")
         method_name = request.json.get('method')
         request_json = request.json.get('request')
 
+        logger.info(f"Method: {method_name}")
+        logger.debug(f"Request JSON: {request_json}")
+
         if not method_name or not request_json:
+            logger.error("Missing method or request in payload")
             response.status = 400
             return {'error': 'Missing method or request'}
 
         # Find the method description
+        logger.debug(f"Looking for method '{method_name}' in service metadata")
         method_desc = None
         for m in service_metadata.methods:
             if m.method_name == method_name:
@@ -235,58 +263,190 @@ def invoke_method():
                 break
 
         if not method_desc:
+            logger.error(f"Method '{method_name}' not found in metadata")
             response.status = 404
             return {'error': f'Method {method_name} not found'}
 
+        logger.debug(f"Found method description: {method_desc.description}")
+
         # Parse the JSON request
+        logger.debug("Parsing JSON request")
         try:
             request_obj = json.loads(request_json)
+            logger.debug(f"Parsed request object: {request_obj}")
         except json.JSONDecodeError as e:
+            logger.error(f"JSON parsing failed: {e}")
             response.status = 400
             return {'error': f'Invalid JSON: {str(e)}'}
 
         # Check if we have a connection
         if not current_host or not current_port:
+            logger.error("No active connection to service")
             response.status = 400
             return {'error': 'Not connected to any service. Please connect first.'}
 
+        logger.info(f"Using connection: {current_host}:{current_port}")
+
         # Convert enum strings to ints
+        logger.debug(f"Converting enums to ints (field mappings: {len(method_desc.request_enum_fields)})")
         request_obj = convert_enums_to_ints(request_obj, method_desc.request_enum_fields)
+        logger.debug(f"Request after enum conversion: {request_obj}")
 
         # Connect and invoke
+        logger.debug(f"Connecting to service at {current_host}:{current_port}")
         client, transport = connect_to_service(current_host, current_port)
+        logger.debug("Connected successfully")
 
         # Call the appropriate method
+        logger.debug(f"Getting method function: {method_name}")
         method_func = getattr(client, method_name)
 
-        # Serialize request to thrift Request object
-        from thrift.protocol import TJSONProtocol
-        from thrift.TSerialization import deserialize
-        from game.ttypes import Request as ThriftRequest
+        # Build the Thrift Request object manually from JSON
+        logger.debug("Building Thrift Request object from JSON")
+        from game.ttypes import (
+            Request as ThriftRequest,
+            RequestData,
+            LoadInventoryRequestData,
+            CreateInventoryRequestData,
+            SaveInventoryRequestData,
+            SplitStackRequestData,
+            TransferItemRequestData,
+            Inventory,
+            InventoryEntry,
+            Owner,
+        )
 
-        json_str = json.dumps(request_obj)
-        thrift_request = deserialize(ThriftRequest(), json_str.encode('utf-8'),
-                                     protocol_factory=TJSONProtocol.TSimpleJSONProtocolFactory())
+        # Extract the data union field
+        data_dict = request_obj.get('data', {})
+        logger.debug(f"Data dict keys: {list(data_dict.keys())}")
+
+        # Build RequestData based on which field is present
+        request_data = RequestData()
+
+        if 'load_inventory' in data_dict:
+            load_data = LoadInventoryRequestData(
+                inventory_id=data_dict['load_inventory']['inventory_id'],
+            )
+            request_data.load_inventory = load_data
+
+        elif 'create_inventory' in data_dict:
+            inv_data = data_dict['create_inventory']['inventory']
+
+            # Build Owner
+            owner_dict = inv_data.get('owner', {})
+            owner = Owner()
+            if 'mobile_id' in owner_dict:
+                owner.mobile_id = owner_dict['mobile_id']
+            elif 'item_it' in owner_dict:
+                owner.item_it = owner_dict['item_it']
+            elif 'asset_id' in owner_dict:
+                owner.asset_id = owner_dict['asset_id']
+
+            # Build Inventory
+            inventory = Inventory(
+                max_entries=inv_data['max_entries'],
+                max_volume=inv_data['max_volume'],
+                entries=[],
+                last_calculated_volume=inv_data.get('last_calculated_volume', 0.0),
+                owner=owner,
+            )
+
+            create_data = CreateInventoryRequestData(inventory=inventory)
+            request_data.create_inventory = create_data
+
+        elif 'save_inventory' in data_dict:
+            inv_data = data_dict['save_inventory']['inventory']
+
+            # Build Owner
+            owner_dict = inv_data.get('owner', {})
+            owner = Owner()
+            if 'mobile_id' in owner_dict:
+                owner.mobile_id = owner_dict['mobile_id']
+            elif 'item_it' in owner_dict:
+                owner.item_it = owner_dict['item_it']
+            elif 'asset_id' in owner_dict:
+                owner.asset_id = owner_dict['asset_id']
+
+            # Build entries
+            entries = []
+            for entry_dict in inv_data.get('entries', []):
+                entry = InventoryEntry(
+                    item_id=entry_dict['item_id'],
+                    quantity=entry_dict['quantity'],
+                    is_max_stacked=entry_dict.get('is_max_stacked', False),
+                )
+                entries.append(entry)
+
+            # Build Inventory
+            inventory = Inventory(
+                id=inv_data.get('id'),
+                max_entries=inv_data['max_entries'],
+                max_volume=inv_data['max_volume'],
+                entries=entries,
+                last_calculated_volume=inv_data.get('last_calculated_volume', 0.0),
+                owner=owner,
+            )
+
+            save_data = SaveInventoryRequestData(inventory=inventory)
+            request_data.save_inventory = save_data
+
+        elif 'split_stack' in data_dict:
+            split_dict = data_dict['split_stack']
+            split_data = SplitStackRequestData(
+                inventory_id=split_dict['inventory_id'],
+                item_id=split_dict['item_id'],
+                quantity_to_split=split_dict['quantity_to_split'],
+            )
+            request_data.split_stack = split_data
+
+        elif 'transfer_item' in data_dict:
+            transfer_dict = data_dict['transfer_item']
+            transfer_data = TransferItemRequestData(
+                source_inventory_id=transfer_dict['source_inventory_id'],
+                destination_inventory_id=transfer_dict['destination_inventory_id'],
+                item_id=transfer_dict['item_id'],
+                quantity=transfer_dict['quantity'],
+            )
+            request_data.transfer_item = transfer_data
+
+        else:
+            raise ValueError(f"Unknown request type in data: {list(data_dict.keys())}")
+
+        # Build the final Request
+        thrift_request = ThriftRequest(data=request_data)
+        logger.debug("Thrift Request object built successfully")
 
         # Invoke method
+        logger.info(f"Invoking method: {method_name}")
         thrift_response = method_func(thrift_request)
+        logger.debug(f"Method invocation successful, response type: {type(thrift_response)}")
 
         transport.close()
+        logger.debug("Transport closed")
 
         # Serialize response back to JSON
+        logger.debug("Serializing Thrift response to JSON")
         from thrift.TSerialization import serialize
         response_json_bytes = serialize(thrift_response, TJSONProtocol.TSimpleJSONProtocolFactory())
         response_obj = json.loads(response_json_bytes)
+        logger.debug(f"Response before enum conversion: {response_obj}")
 
         # Convert enum ints to strings
+        logger.debug(f"Converting enums to strings (field mappings: {len(method_desc.response_enum_fields)})")
         response_obj = convert_enums_to_strings(response_obj, method_desc.response_enum_fields)
+        logger.debug(f"Response after enum conversion: {response_obj}")
 
+        logger.info("=== Method invocation completed successfully ===")
         return {
             'success': True,
             'response': response_obj,
         }
 
     except Exception as e:
+        logger.error("=== Method invocation failed ===")
+        logger.error(f"Exception type: {type(e).__name__}")
+        logger.error(f"Exception message: {str(e)}")
+        logger.error(f"Full traceback:\n{traceback.format_exc()}")
         response.status = 500
         return {'error': str(e)}
 

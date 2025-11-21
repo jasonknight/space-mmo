@@ -1,0 +1,71 @@
+[vagrant@gdb:fiddler]$ python3 app.py
+Starting Fiddler - Thrift Service Explorer
+============================================================
+Web UI: http://0.0.0.0:8080
+Connect to a Thrift service via the web interface
+============================================================
+Starting Fiddler - Thrift Service Explorer
+============================================================
+Web UI: http://0.0.0.0:8080
+Connect to a Thrift service via the web interface
+============================================================
+Bottle v0.12.25 server starting up (using WSGIRefServer())...
+Listening on http://0.0.0.0:8080/
+Hit Ctrl-C to quit.
+
+2025-11-21 13:51:16,696 - __main__ - INFO - === Connecting to Thrift service ===
+2025-11-21 13:51:16,696 - __main__ - INFO - Server address: localhost:9090
+2025-11-21 13:51:16,699 - __main__ - INFO - Parsed connection: localhost:9090
+2025-11-21 13:51:16,699 - __main__ - DEBUG - Loading service metadata...
+Loaded metadata for InventoryService v1.0 from localhost:9090
+2025-11-21 13:51:16,699 - __main__ - INFO - Metadata loaded successfully
+10.0.0.1 - - [21/Nov/2025 13:51:16] "POST /api/connect HTTP/1.1" 200 8373
+2025-11-21 13:51:20,305 - __main__ - INFO - === Starting method invocation ===
+2025-11-21 13:51:20,305 - __main__ - INFO - Method: create
+2025-11-21 13:51:20,308 - __main__ - DEBUG - Request JSON: {
+  "data": {
+    "create_inventory": {
+      "inventory": {
+        "max_entries": 10,
+        "max_volume": 500,
+        "entries": [],
+        "last_calculated_volume": 0,
+        "owner": {
+          "mobile_id": 100
+        }
+      }
+    }
+  }
+}
+2025-11-21 13:51:20,308 - __main__ - DEBUG - Looking for method 'create' in service metadata
+2025-11-21 13:51:20,308 - __main__ - DEBUG - Found method description: Create a new inventory in the database
+2025-11-21 13:51:20,308 - __main__ - DEBUG - Parsing JSON request
+2025-11-21 13:51:20,308 - __main__ - DEBUG - Parsed request object: {'data': {'create_inventory': {'inventory': {'max_entries': 10, 'max_volume': 500, 'entries': [], 'last_calculated_volume': 0, 'owner': {'mobile_id': 100}}}}}
+2025-11-21 13:51:20,308 - __main__ - INFO - Using connection: localhost:9090
+2025-11-21 13:51:20,308 - __main__ - DEBUG - Converting enums to ints (field mappings: 0)
+2025-11-21 13:51:20,308 - __main__ - DEBUG - Request after enum conversion: {'data': {'create_inventory': {'inventory': {'max_entries': 10, 'max_volume': 500, 'entries': [], 'last_calculated_volume': 0, 'owner': {'mobile_id': 100}}}}}
+2025-11-21 13:51:20,308 - __main__ - DEBUG - Connecting to service at localhost:9090
+2025-11-21 13:51:20,308 - __main__ - DEBUG - Connected successfully
+2025-11-21 13:51:20,308 - __main__ - DEBUG - Getting method function: create
+2025-11-21 13:51:20,308 - __main__ - DEBUG - Deserializing JSON to Thrift Request object
+2025-11-21 13:51:20,308 - __main__ - DEBUG - JSON string for deserialization: {"data": {"create_inventory": {"inventory": {"max_entries": 10, "max_volume": 500, "entries": [], "last_calculated_volume": 0, "owner": {"mobile_id": 100}}}}}
+2025-11-21 13:51:20,308 - __main__ - ERROR - === Method invocation failed ===
+2025-11-21 13:51:20,308 - __main__ - ERROR - Exception type: NotImplementedError
+2025-11-21 13:51:20,311 - __main__ - ERROR - Exception message:
+2025-11-21 13:51:20,331 - __main__ - ERROR - Full traceback:
+Traceback (most recent call last):
+  File "/vagrant/gamedb/thrift/fiddler/app.py", line 312, in invoke_method
+    thrift_request = deserialize(ThriftRequest(), json_str.encode('utf-8'),
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/TSerialization.py", line 37, in deserialize
+    base.read(protocol)
+  File "/vagrant/gamedb/thrift/fiddler/../gen-py/game/ttypes.py", line 2204, in read
+    iprot.readStructBegin()
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/protocol/TJSONProtocol.py", line 596, in readStructBegin
+    raise NotImplementedError()
+NotImplementedError
+
+/usr/lib/python3/dist-packages/bottle.py:1759: ResourceWarning: unclosed <socket.socket fd=5, family=2, type=1, proto=0, laddr=('127.0.0.1', 37002), raddr=('127.0.0.1', 9090)>
+  rv = callback(*a, **ka)
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+10.0.0.1 - - [21/Nov/2025 13:51:20] "POST /api/invoke HTTP/1.1" 500 13

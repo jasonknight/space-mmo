@@ -4,6 +4,14 @@ sys.path.append('../gen-py')
 from collections import OrderedDict
 from typing import Optional
 from copy import deepcopy
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
+logger = logging.getLogger(__name__)
 
 from game.ttypes import (
     Request,
@@ -53,8 +61,10 @@ class LRUCache:
         Moves the item to the end (most recently used).
         """
         if key not in self.cache:
+            logger.debug(f"Cache MISS for inventory_id={key}")
             return None
 
+        logger.debug(f"Cache HIT for inventory_id={key}")
         # Move to end (most recently used)
         self.cache.move_to_end(key)
         # Return a deep copy to prevent external modifications
@@ -72,12 +82,17 @@ class LRUCache:
 
         # Evict least recently used if over capacity
         if len(self.cache) > self.max_size:
+            evicted_key = next(iter(self.cache))
             self.cache.popitem(last=False)
+            logger.debug(f"Cache EVICTED inventory_id={evicted_key} (cache full, size={self.max_size})")
+
+        logger.debug(f"Cache PUT inventory_id={key} (cache size now {len(self.cache)})")
 
     def invalidate(self, key: int) -> None:
         """Remove an inventory from the cache."""
         if key in self.cache:
             del self.cache[key]
+            logger.debug(f"Cache INVALIDATED inventory_id={key}")
 
     def clear(self) -> None:
         """Clear all entries from the cache."""
@@ -357,8 +372,10 @@ class InventoryServiceHandler(InventoryServiceIface):
 
     def load(self, request: Request) -> Response:
         """Load an inventory by ID. Checks cache first before querying database."""
+        logger.info("=== LOAD inventory request ===")
         try:
             if not request.data.load_inventory:
+                logger.error("Request data missing load_inventory field")
                 return Response(
                     results=[
                         GameResult(
@@ -372,10 +389,13 @@ class InventoryServiceHandler(InventoryServiceIface):
 
             load_data = request.data.load_inventory
             inventory_id = load_data.inventory_id
+            logger.info(f"Loading inventory_id={inventory_id}")
 
             # Check cache first
+            logger.debug("Checking cache...")
             cached_inventory = self.cache.get(inventory_id)
             if cached_inventory:
+                logger.info(f"SUCCESS: Loaded inventory_id={inventory_id} from CACHE")
                 result = GameResult(
                     status=StatusType.SUCCESS,
                     message=f"Successfully loaded inventory id={inventory_id} from cache",
@@ -391,12 +411,14 @@ class InventoryServiceHandler(InventoryServiceIface):
                 )
 
             # Cache miss - load from database
+            logger.debug(f"Cache miss, loading from DATABASE for inventory_id={inventory_id}")
             result, inventory = self.db.load_inventory(
                 self.database,
                 inventory_id,
             )
 
             if inventory:
+                logger.info(f"SUCCESS: Loaded inventory_id={inventory_id} from DATABASE")
                 # Store in cache for future requests
                 self.cache.put(inventory_id, inventory)
 
@@ -410,12 +432,14 @@ class InventoryServiceHandler(InventoryServiceIface):
                     response_data=response_data,
                 )
             else:
+                logger.warning(f"FAILURE: Inventory_id={inventory_id} not found in database")
                 return Response(
                     results=[result],
                     response_data=None,
                 )
 
         except Exception as e:
+            logger.error(f"EXCEPTION in load: {type(e).__name__}: {str(e)}")
             return Response(
                 results=[
                     GameResult(
@@ -429,8 +453,10 @@ class InventoryServiceHandler(InventoryServiceIface):
 
     def create(self, request: Request) -> Response:
         """Create a new inventory. Populates cache after successful creation."""
+        logger.info("=== CREATE inventory request ===")
         try:
             if not request.data.create_inventory:
+                logger.error("Request data missing create_inventory field")
                 return Response(
                     results=[
                         GameResult(
@@ -443,12 +469,16 @@ class InventoryServiceHandler(InventoryServiceIface):
                 )
 
             create_data = request.data.create_inventory
+            logger.info(f"Creating inventory with max_entries={create_data.inventory.max_entries}, max_volume={create_data.inventory.max_volume}")
+            logger.debug(f"Inventory has {len(create_data.inventory.entries)} entries")
+
             results = self.db.create_inventory(
                 self.database,
                 create_data.inventory,
             )
 
             if is_ok(results):
+                logger.info(f"SUCCESS: Created inventory with id={create_data.inventory.id}")
                 # Add to cache after successful creation
                 if create_data.inventory.id is not None:
                     self.cache.put(create_data.inventory.id, create_data.inventory)
@@ -463,12 +493,14 @@ class InventoryServiceHandler(InventoryServiceIface):
                     response_data=response_data,
                 )
             else:
+                logger.warning(f"FAILURE: Could not create inventory - {results[0].message if results else 'unknown error'}")
                 return Response(
                     results=results,
                     response_data=None,
                 )
 
         except Exception as e:
+            logger.error(f"EXCEPTION in create: {type(e).__name__}: {str(e)}")
             return Response(
                 results=[
                     GameResult(
@@ -482,8 +514,10 @@ class InventoryServiceHandler(InventoryServiceIface):
 
     def save(self, request: Request) -> Response:
         """Save (create or update) an inventory. Updates cache after successful save."""
+        logger.info("=== SAVE inventory request ===")
         try:
             if not request.data.save_inventory:
+                logger.error("Request data missing save_inventory field")
                 return Response(
                     results=[
                         GameResult(
@@ -496,12 +530,17 @@ class InventoryServiceHandler(InventoryServiceIface):
                 )
 
             save_data = request.data.save_inventory
+            inventory_id = save_data.inventory.id if save_data.inventory.id else "NEW"
+            logger.info(f"Saving inventory_id={inventory_id}")
+            logger.debug(f"Inventory has {len(save_data.inventory.entries)} entries")
+
             results = self.db.save_inventory(
                 self.database,
                 save_data.inventory,
             )
 
             if is_ok(results):
+                logger.info(f"SUCCESS: Saved inventory_id={save_data.inventory.id}")
                 # Update cache after successful save
                 if save_data.inventory.id is not None:
                     self.cache.put(save_data.inventory.id, save_data.inventory)
@@ -516,12 +555,14 @@ class InventoryServiceHandler(InventoryServiceIface):
                     response_data=response_data,
                 )
             else:
+                logger.warning(f"FAILURE: Could not save inventory - {results[0].message if results else 'unknown error'}")
                 return Response(
                     results=results,
                     response_data=None,
                 )
 
         except Exception as e:
+            logger.error(f"EXCEPTION in save: {type(e).__name__}: {str(e)}")
             return Response(
                 results=[
                     GameResult(
@@ -535,8 +576,10 @@ class InventoryServiceHandler(InventoryServiceIface):
 
     def split_stack(self, request: Request) -> Response:
         """Split a stack of items within an inventory. Checks cache and updates it."""
+        logger.info("=== SPLIT_STACK request ===")
         try:
             if not request.data.split_stack:
+                logger.error("Request data missing split_stack field")
                 return Response(
                     results=[
                         GameResult(
@@ -550,19 +593,23 @@ class InventoryServiceHandler(InventoryServiceIface):
 
             split_data = request.data.split_stack
             inventory_id = split_data.inventory_id
+            logger.info(f"Splitting stack in inventory_id={inventory_id}, item_id={split_data.item_id}, quantity={split_data.quantity_to_split}")
 
             # Check cache first
+            logger.debug("Checking cache...")
             inventory = self.cache.get(inventory_id)
             result = None
 
             if not inventory:
                 # Cache miss - load from database
+                logger.debug(f"Cache miss, loading from DATABASE for inventory_id={inventory_id}")
                 result, inventory = self.db.load_inventory(
                     self.database,
                     inventory_id,
                 )
 
                 if not inventory:
+                    logger.error(f"Inventory_id={inventory_id} not found")
                     return Response(
                         results=[result],
                         response_data=None,
@@ -570,13 +617,16 @@ class InventoryServiceHandler(InventoryServiceIface):
 
             # Find the entry index that matches the item_id
             # inventory.split_stack expects entry_index, not item_id
+            logger.debug(f"Searching for item_id={split_data.item_id} in {len(inventory.entries)} entries")
             entry_index = None
             for idx, entry in enumerate(inventory.entries):
                 if entry.item_id == split_data.item_id:
                     entry_index = idx
+                    logger.debug(f"Found item at entry_index={idx}, current quantity={entry.quantity}")
                     break
 
             if entry_index is None:
+                logger.warning(f"Item_id={split_data.item_id} not found in inventory_id={inventory_id}")
                 return Response(
                     results=[
                         GameResult(
@@ -589,6 +639,7 @@ class InventoryServiceHandler(InventoryServiceIface):
                 )
 
             # Perform the split - pass entry_index, not item_id
+            logger.debug(f"Calling split_stack() with entry_index={entry_index}, quantity={split_data.quantity_to_split}")
             split_results = split_stack(
                 inventory,
                 entry_index,
@@ -596,18 +647,23 @@ class InventoryServiceHandler(InventoryServiceIface):
             )
 
             if not is_ok(split_results):
+                logger.warning(f"Split operation failed: {split_results[0].message if split_results else 'unknown'}")
                 return Response(
                     results=split_results,
                     response_data=None,
                 )
 
+            logger.debug(f"Split successful, now inventory has {len(inventory.entries)} entries")
+
             # Save the updated inventory to database
+            logger.debug("Saving updated inventory to database...")
             save_results = self.db.save_inventory(
                 self.database,
                 inventory,
             )
 
             if is_ok(save_results):
+                logger.info(f"SUCCESS: Split stack completed for inventory_id={inventory_id}")
                 # Update cache with modified inventory
                 self.cache.put(inventory_id, inventory)
 
@@ -622,12 +678,14 @@ class InventoryServiceHandler(InventoryServiceIface):
                     response_data=response_data,
                 )
             else:
+                logger.error(f"Failed to save inventory after split: {save_results[0].message if save_results else 'unknown'}")
                 return Response(
                     results=save_results,
                     response_data=None,
                 )
 
         except Exception as e:
+            logger.error(f"EXCEPTION in split_stack: {type(e).__name__}: {str(e)}")
             return Response(
                 results=[
                     GameResult(
@@ -641,8 +699,10 @@ class InventoryServiceHandler(InventoryServiceIface):
 
     def transfer_item(self, request: Request) -> Response:
         """Transfer items between inventories. Checks cache and updates both inventories."""
+        logger.info("=== TRANSFER_ITEM request ===")
         try:
             if not request.data.transfer_item:
+                logger.error("Request data missing transfer_item field")
                 return Response(
                     results=[
                         GameResult(
@@ -657,47 +717,59 @@ class InventoryServiceHandler(InventoryServiceIface):
             transfer_data = request.data.transfer_item
             source_id = transfer_data.source_inventory_id
             dest_id = transfer_data.destination_inventory_id
+            logger.info(f"Transferring item_id={transfer_data.item_id}, quantity={transfer_data.quantity} from inventory_id={source_id} to inventory_id={dest_id}")
 
             # Load the item from database - inventory.transfer_item needs Item object, not item_id
+            logger.debug(f"Loading item_id={transfer_data.item_id} from database...")
             item_result, item = self.db.load_item(
                 self.database,
                 transfer_data.item_id,
             )
             if not item:
+                logger.error(f"Item_id={transfer_data.item_id} not found in database")
                 return Response(
                     results=[item_result],
                     response_data=None,
                 )
+            logger.debug(f"Loaded item: {item.internal_name}")
 
             # Check cache for source inventory
+            logger.debug(f"Loading source inventory_id={source_id}...")
             source_inv = self.cache.get(source_id)
             if not source_inv:
                 # Cache miss - load from database
+                logger.debug(f"Cache miss, loading source from DATABASE")
                 result1, source_inv = self.db.load_inventory(
                     self.database,
                     source_id,
                 )
                 if not source_inv:
+                    logger.error(f"Source inventory_id={source_id} not found")
                     return Response(
                         results=[result1],
                         response_data=None,
                     )
 
             # Check cache for destination inventory
+            logger.debug(f"Loading destination inventory_id={dest_id}...")
             dest_inv = self.cache.get(dest_id)
             if not dest_inv:
                 # Cache miss - load from database
+                logger.debug(f"Cache miss, loading destination from DATABASE")
                 result2, dest_inv = self.db.load_inventory(
                     self.database,
                     dest_id,
                 )
                 if not dest_inv:
+                    logger.error(f"Destination inventory_id={dest_id} not found")
                     return Response(
                         results=[result2],
                         response_data=None,
                     )
 
             # Perform the transfer - pass Item object, not item_id
+            logger.debug(f"Calling transfer_item() with quantity={transfer_data.quantity}")
+            logger.debug(f"Source has {len(source_inv.entries)} entries, destination has {len(dest_inv.entries)} entries")
             transfer_results = transfer_item(
                 source_inv,
                 dest_inv,
@@ -706,12 +778,16 @@ class InventoryServiceHandler(InventoryServiceIface):
             )
 
             if not is_ok(transfer_results):
+                logger.warning(f"Transfer failed: {transfer_results[0].message if transfer_results else 'unknown'}")
                 return Response(
                     results=transfer_results,
                     response_data=None,
                 )
 
+            logger.debug(f"Transfer successful. Source now has {len(source_inv.entries)} entries, destination has {len(dest_inv.entries)} entries")
+
             # Save both inventories to database
+            logger.debug("Saving both inventories to database...")
             save_results1 = self.db.save_inventory(
                 self.database,
                 source_inv,
@@ -722,6 +798,7 @@ class InventoryServiceHandler(InventoryServiceIface):
             )
 
             if is_ok(save_results1) and is_ok(save_results2):
+                logger.info(f"SUCCESS: Transfer completed from inventory_id={source_id} to inventory_id={dest_id}")
                 # Update both inventories in cache
                 self.cache.put(source_id, source_inv)
                 self.cache.put(dest_id, dest_inv)
@@ -737,12 +814,14 @@ class InventoryServiceHandler(InventoryServiceIface):
                     response_data=response_data,
                 )
             else:
+                logger.error(f"Failed to save inventories after transfer")
                 return Response(
                     results=save_results1 + save_results2,
                     response_data=None,
                 )
 
         except Exception as e:
+            logger.error(f"EXCEPTION in transfer_item: {type(e).__name__}: {str(e)}")
             return Response(
                 results=[
                     GameResult(
