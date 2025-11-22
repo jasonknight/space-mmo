@@ -1,0 +1,13 @@
+{
+    "data": {
+        "create_player": {
+            "player": {
+                "full_name": "John Doe",
+                "what_we_call_you": "JohnD",
+                "security_token": "hashed_token",
+                "over_13": true,
+                "year_of_birth": 1990
+            }
+        }
+    }
+}

@@ -7,9 +7,22 @@ sys.path.append('../../gen-py')
 sys.path.append('..')
 
 import logging
+import os
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+def _load_snippet(filename: str) -> str:
+    """Load a JSON snippet from the snippets directory."""
+    snippet_path = os.path.join(
+        os.path.dirname(__file__),
+        'snippets',
+        filename,
+    )
+    with open(snippet_path, 'r') as f:
+        return f.read()
+
 
 from game.ttypes import (
     ServiceMetadata,
@@ -121,219 +134,48 @@ class BaseServiceHandler(BaseServiceIface):
             MethodDescription(
                 method_name="load",
                 description="Load an inventory from the database by ID",
-                example_request_json='''{
-    "data": {
-        "load_inventory": {
-            "inventory_id": 1
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully loaded Inventory id=1"
-    }],
-    "response_data": {
-        "load_inventory": {
-            "inventory": {
-                "id": 1,
-                "max_entries": 10,
-                "max_volume": 500.0,
-                "entries": [],
-                "last_calculated_volume": 0.0,
-                "owner": {"mobile_id": 100}
-            }
-        }
-    }
-}''',
+                example_request_json=_load_snippet('inventory_load_request.json'),
+                example_response_json=_load_snippet('inventory_load_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
             MethodDescription(
                 method_name="create",
                 description="Create a new inventory in the database",
-                example_request_json='''{
-    "data": {
-        "create_inventory": {
-            "inventory": {
-                "max_entries": 10,
-                "max_volume": 500.0,
-                "entries": [],
-                "last_calculated_volume": 0.0,
-                "owner": {"mobile_id": 100}
-            }
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully created Inventory id=1"
-    }],
-    "response_data": {
-        "create_inventory": {
-            "inventory": {
-                "id": 1,
-                "max_entries": 10,
-                "max_volume": 500.0,
-                "entries": [],
-                "last_calculated_volume": 0.0,
-                "owner": {"mobile_id": 100}
-            }
-        }
-    }
-}''',
+                example_request_json=_load_snippet('inventory_create_request.json'),
+                example_response_json=_load_snippet('inventory_create_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
             MethodDescription(
                 method_name="save",
                 description="Save (create or update) an inventory in the database",
-                example_request_json='''{
-    "data": {
-        "save_inventory": {
-            "inventory": {
-                "id": 1,
-                "max_entries": 20,
-                "max_volume": 1000.0,
-                "entries": [],
-                "last_calculated_volume": 0.0,
-                "owner": {"mobile_id": 100}
-            }
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully updated Inventory id=1"
-    }],
-    "response_data": {
-        "save_inventory": {
-            "inventory": {
-                "id": 1,
-                "max_entries": 20,
-                "max_volume": 1000.0,
-                "entries": [],
-                "last_calculated_volume": 0.0,
-                "owner": {"mobile_id": 100}
-            }
-        }
-    }
-}''',
+                example_request_json=_load_snippet('inventory_save_request.json'),
+                example_response_json=_load_snippet('inventory_save_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
             MethodDescription(
                 method_name="split_stack",
                 description="Split a stack of items within an inventory",
-                example_request_json='''{
-    "data": {
-        "split_stack": {
-            "inventory_id": 1,
-            "item_id": 5,
-            "quantity_to_split": 50.0
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "split entry"
-    }],
-    "response_data": {
-        "split_stack": {
-            "inventory": {
-                "id": 1,
-                "max_entries": 10,
-                "max_volume": 500.0,
-                "entries": [
-                    {"item_id": 5, "quantity": 50.0, "is_max_stacked": false},
-                    {"item_id": 5, "quantity": 50.0, "is_max_stacked": false}
-                ],
-                "last_calculated_volume": 0.0,
-                "owner": {"mobile_id": 100}
-            }
-        }
-    }
-}''',
+                example_request_json=_load_snippet('inventory_split_stack_request.json'),
+                example_response_json=_load_snippet('inventory_split_stack_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
             MethodDescription(
                 method_name="transfer_item",
                 description="Transfer items between two inventories",
-                example_request_json='''{
-    "data": {
-        "transfer_item": {
-            "source_inventory_id": 1,
-            "destination_inventory_id": 2,
-            "item_id": 5,
-            "quantity": 30.0
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "transferred 30.0 of 5 to 2"
-    }],
-    "response_data": {
-        "transfer_item": {
-            "source_inventory": {
-                "id": 1,
-                "max_entries": 10,
-                "max_volume": 500.0,
-                "entries": [{"item_id": 5, "quantity": 20.0, "is_max_stacked": false}],
-                "last_calculated_volume": 0.0,
-                "owner": {"mobile_id": 100}
-            },
-            "destination_inventory": {
-                "id": 2,
-                "max_entries": 10,
-                "max_volume": 500.0,
-                "entries": [{"item_id": 5, "quantity": 30.0, "is_max_stacked": false}],
-                "last_calculated_volume": 0.0,
-                "owner": {"mobile_id": 200}
-            }
-        }
-    }
-}''',
+                example_request_json=_load_snippet('inventory_transfer_item_request.json'),
+                example_response_json=_load_snippet('inventory_transfer_item_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
             MethodDescription(
                 method_name="list_records",
                 description="List inventories with pagination (no search - inventories have no searchable text fields)",
-                example_request_json='''{
-    "data": {
-        "list_inventory": {
-            "page": 0,
-            "results_per_page": 10
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully listed 10 inventories (total: 100)"
-    }],
-    "response_data": {
-        "list_inventory": {
-            "inventories": [
-                {
-                    "id": 1,
-                    "max_entries": 10,
-                    "max_volume": 500.0,
-                    "entries": [],
-                    "last_calculated_volume": 0.0,
-                    "owner": {"mobile_id": 100}
-                }
-            ],
-            "total_count": 100
-        }
-    }
-}''',
+                example_request_json=_load_snippet('inventory_list_records_request.json'),
+                example_response_json=_load_snippet('inventory_list_records_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
@@ -388,160 +230,40 @@ class BaseServiceHandler(BaseServiceIface):
             MethodDescription(
                 method_name="create",
                 description="Create a new item in the database",
-                example_request_json='''{
-    "data": {
-        "create_item": {
-            "item": {
-                "internal_name": "iron_ore",
-                "attributes": {},
-                "max_stack_size": 1000,
-                "item_type": "RAWMATERIAL"
-            }
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully created Item id=1, internal_name=iron_ore"
-    }],
-    "response_data": {
-        "create_item": {
-            "item": {
-                "id": 1,
-                "internal_name": "iron_ore",
-                "attributes": {},
-                "max_stack_size": 1000,
-                "item_type": "RAWMATERIAL"
-            }
-        }
-    }
-}''',
+                example_request_json=_load_snippet('item_create_request.json'),
+                example_response_json=_load_snippet('item_create_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
             MethodDescription(
                 method_name="load",
                 description="Load an item from the database by ID",
-                example_request_json='''{
-    "data": {
-        "load_item": {
-            "item_id": 1
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully loaded Item id=1"
-    }],
-    "response_data": {
-        "load_item": {
-            "item": {
-                "id": 1,
-                "internal_name": "iron_ore",
-                "attributes": {},
-                "max_stack_size": 1000,
-                "item_type": "RAWMATERIAL"
-            }
-        }
-    }
-}''',
+                example_request_json=_load_snippet('item_load_request.json'),
+                example_response_json=_load_snippet('item_load_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
             MethodDescription(
                 method_name="save",
                 description="Save (create or update) an item in the database",
-                example_request_json='''{
-    "data": {
-        "save_item": {
-            "item": {
-                "id": 1,
-                "internal_name": "iron_ore_refined",
-                "attributes": {},
-                "max_stack_size": 500,
-                "item_type": "REFINEDMATERIAL"
-            }
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully updated Item id=1"
-    }],
-    "response_data": {
-        "save_item": {
-            "item": {
-                "id": 1,
-                "internal_name": "iron_ore_refined",
-                "attributes": {},
-                "max_stack_size": 500,
-                "item_type": "REFINEDMATERIAL"
-            }
-        }
-    }
-}''',
+                example_request_json=_load_snippet('item_save_request.json'),
+                example_response_json=_load_snippet('item_save_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
             MethodDescription(
                 method_name="destroy",
                 description="Destroy (delete) an item from the database",
-                example_request_json='''{
-    "data": {
-        "destroy_item": {
-            "item_id": 1
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully destroyed Item id=1"
-    }],
-    "response_data": {
-        "destroy_item": {
-            "item_id": 1
-        }
-    }
-}''',
+                example_request_json=_load_snippet('item_destroy_request.json'),
+                example_response_json=_load_snippet('item_destroy_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
             MethodDescription(
                 method_name="list_records",
                 description="List items with pagination and optional search on internal_name",
-                example_request_json='''{
-    "data": {
-        "list_item": {
-            "page": 0,
-            "results_per_page": 10,
-            "search_string": "iron"
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully listed 10 items (total: 100)"
-    }],
-    "response_data": {
-        "list_item": {
-            "items": [
-                {
-                    "id": 1,
-                    "internal_name": "iron_ore",
-                    "attributes": {},
-                    "max_stack_size": 1000,
-                    "item_type": "RAWMATERIAL"
-                }
-            ],
-            "total_count": 100
-        }
-    }
-}''',
+                example_request_json=_load_snippet('item_list_records_request.json'),
+                example_response_json=_load_snippet('item_list_records_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
@@ -561,166 +283,40 @@ class BaseServiceHandler(BaseServiceIface):
             MethodDescription(
                 method_name="load",
                 description="Load a player from the database by ID",
-                example_request_json='''{
-    "data": {
-        "load_player": {
-            "player_id": 1
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully loaded Player id=1"
-    }],
-    "response_data": {
-        "load_player": {
-            "player": {
-                "id": 1,
-                "full_name": "John Doe",
-                "what_we_call_you": "JohnD",
-                "security_token": "hashed_token",
-                "over_13": true,
-                "year_of_birth": 1990
-            }
-        }
-    }
-}''',
+                example_request_json=_load_snippet('player_load_request.json'),
+                example_response_json=_load_snippet('player_load_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
             MethodDescription(
                 method_name="create",
                 description="Create a new player in the database",
-                example_request_json='''{
-    "data": {
-        "create_player": {
-            "player": {
-                "full_name": "John Doe",
-                "what_we_call_you": "JohnD",
-                "security_token": "hashed_token",
-                "over_13": true,
-                "year_of_birth": 1990
-            }
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully created Player id=1"
-    }],
-    "response_data": {
-        "create_player": {
-            "player": {
-                "id": 1,
-                "full_name": "John Doe",
-                "what_we_call_you": "JohnD",
-                "security_token": "hashed_token",
-                "over_13": true,
-                "year_of_birth": 1990
-            }
-        }
-    }
-}''',
+                example_request_json=_load_snippet('player_create_request.json'),
+                example_response_json=_load_snippet('player_create_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
             MethodDescription(
                 method_name="save",
                 description="Save (create or update) a player in the database",
-                example_request_json='''{
-    "data": {
-        "save_player": {
-            "player": {
-                "id": 1,
-                "full_name": "John Doe Updated",
-                "what_we_call_you": "JohnD",
-                "security_token": "new_hashed_token",
-                "over_13": true,
-                "year_of_birth": 1990
-            }
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully updated Player id=1"
-    }],
-    "response_data": {
-        "save_player": {
-            "player": {
-                "id": 1,
-                "full_name": "John Doe Updated",
-                "what_we_call_you": "JohnD",
-                "security_token": "new_hashed_token",
-                "over_13": true,
-                "year_of_birth": 1990
-            }
-        }
-    }
-}''',
+                example_request_json=_load_snippet('player_save_request.json'),
+                example_response_json=_load_snippet('player_save_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
             MethodDescription(
                 method_name="delete",
                 description="Delete a player from the database",
-                example_request_json='''{
-    "data": {
-        "delete_player": {
-            "player_id": 1
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully destroyed Player id=1"
-    }],
-    "response_data": {
-        "delete_player": {
-            "player_id": 1
-        }
-    }
-}''',
+                example_request_json=_load_snippet('player_delete_request.json'),
+                example_response_json=_load_snippet('player_delete_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),
             MethodDescription(
                 method_name="list_records",
                 description="List players with pagination and optional search on full_name or what_we_call_you",
-                example_request_json='''{
-    "data": {
-        "list_player": {
-            "page": 0,
-            "results_per_page": 10,
-            "search_string": "John"
-        }
-    }
-}''',
-                example_response_json='''{
-    "results": [{
-        "status": "SUCCESS",
-        "message": "Successfully listed 10 players (total: 100)"
-    }],
-    "response_data": {
-        "list_player": {
-            "players": [
-                {
-                    "id": 1,
-                    "full_name": "John Doe",
-                    "what_we_call_you": "JohnD",
-                    "security_token": "hashed_token",
-                    "over_13": true,
-                    "year_of_birth": 1990
-                }
-            ],
-            "total_count": 100
-        }
-    }
-}''',
+                example_request_json=_load_snippet('player_list_records_request.json'),
+                example_response_json=_load_snippet('player_list_records_response.json'),
                 request_enum_fields=[],
                 response_enum_fields=self._get_common_response_enum_fields(),
             ),

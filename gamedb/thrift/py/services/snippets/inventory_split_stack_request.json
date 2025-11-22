@@ -1,0 +1,9 @@
+{
+    "data": {
+        "split_stack": {
+            "inventory_id": 1,
+            "item_id": 5,
+            "quantity_to_split": 50.0
+        }
+    }
+}

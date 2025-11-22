@@ -1,0 +1,17 @@
+{
+    "results": [{
+        "status": "SUCCESS",
+        "message": "Successfully updated Item id=1"
+    }],
+    "response_data": {
+        "save_item": {
+            "item": {
+                "id": 1,
+                "internal_name": "iron_ore_refined",
+                "attributes": {},
+                "max_stack_size": 500,
+                "item_type": "REFINEDMATERIAL"
+            }
+        }
+    }
+}

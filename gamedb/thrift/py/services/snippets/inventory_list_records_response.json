@@ -1,0 +1,21 @@
+{
+    "results": [{
+        "status": "SUCCESS",
+        "message": "Successfully listed 10 inventories (total: 100)"
+    }],
+    "response_data": {
+        "list_inventory": {
+            "inventories": [
+                {
+                    "id": 1,
+                    "max_entries": 10,
+                    "max_volume": 500.0,
+                    "entries": [],
+                    "last_calculated_volume": 0.0,
+                    "owner": {"mobile_id": 100}
+                }
+            ],
+            "total_count": 100
+        }
+    }
+}

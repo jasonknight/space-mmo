@@ -1,0 +1,18 @@
+{
+    "results": [{
+        "status": "SUCCESS",
+        "message": "Successfully created Inventory id=1"
+    }],
+    "response_data": {
+        "create_inventory": {
+            "inventory": {
+                "id": 1,
+                "max_entries": 10,
+                "max_volume": 500.0,
+                "entries": [],
+                "last_calculated_volume": 0.0,
+                "owner": {"mobile_id": 100}
+            }
+        }
+    }
+}

@@ -1,0 +1,18 @@
+{
+    "results": [{
+        "status": "SUCCESS",
+        "message": "Successfully created Player id=1"
+    }],
+    "response_data": {
+        "create_player": {
+            "player": {
+                "id": 1,
+                "full_name": "John Doe",
+                "what_we_call_you": "JohnD",
+                "security_token": "hashed_token",
+                "over_13": true,
+                "year_of_birth": 1990
+            }
+        }
+    }
+}

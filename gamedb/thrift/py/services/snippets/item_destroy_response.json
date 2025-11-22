@@ -1,0 +1,11 @@
+{
+    "results": [{
+        "status": "SUCCESS",
+        "message": "Successfully destroyed Item id=1"
+    }],
+    "response_data": {
+        "destroy_item": {
+            "item_id": 1
+        }
+    }
+}

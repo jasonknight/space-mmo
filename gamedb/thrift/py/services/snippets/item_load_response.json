@@ -1,0 +1,17 @@
+{
+    "results": [{
+        "status": "SUCCESS",
+        "message": "Successfully loaded Item id=1"
+    }],
+    "response_data": {
+        "load_item": {
+            "item": {
+                "id": 1,
+                "internal_name": "iron_ore",
+                "attributes": {},
+                "max_stack_size": 1000,
+                "item_type": "RAWMATERIAL"
+            }
+        }
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "data": {
+        "create_item": {
+            "item": {
+                "internal_name": "iron_ore",
+                "attributes": {},
+                "max_stack_size": 1000,
+                "item_type": "RAWMATERIAL"
+            }
+        }
+    }
+}

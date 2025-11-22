@@ -1,0 +1,21 @@
+{
+    "results": [{
+        "status": "SUCCESS",
+        "message": "split entry"
+    }],
+    "response_data": {
+        "split_stack": {
+            "inventory": {
+                "id": 1,
+                "max_entries": 10,
+                "max_volume": 500.0,
+                "entries": [
+                    {"item_id": 5, "quantity": 50.0, "is_max_stacked": false},
+                    {"item_id": 5, "quantity": 50.0, "is_max_stacked": false}
+                ],
+                "last_calculated_volume": 0.0,
+                "owner": {"mobile_id": 100}
+            }
+        }
+    }
+}

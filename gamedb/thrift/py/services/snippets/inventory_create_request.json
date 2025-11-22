@@ -1,0 +1,13 @@
+{
+    "data": {
+        "create_inventory": {
+            "inventory": {
+                "max_entries": 10,
+                "max_volume": 500.0,
+                "entries": [],
+                "last_calculated_volume": 0.0,
+                "owner": {"mobile_id": 100}
+            }
+        }
+    }
+}

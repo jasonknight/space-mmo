@@ -1,0 +1,20 @@
+{
+    "results": [{
+        "status": "SUCCESS",
+        "message": "Successfully listed 10 items (total: 100)"
+    }],
+    "response_data": {
+        "list_item": {
+            "items": [
+                {
+                    "id": 1,
+                    "internal_name": "iron_ore",
+                    "attributes": {},
+                    "max_stack_size": 1000,
+                    "item_type": "RAWMATERIAL"
+                }
+            ],
+            "total_count": 100
+        }
+    }
+}

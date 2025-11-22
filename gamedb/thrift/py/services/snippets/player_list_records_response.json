@@ -1,0 +1,21 @@
+{
+    "results": [{
+        "status": "SUCCESS",
+        "message": "Successfully listed 10 players (total: 100)"
+    }],
+    "response_data": {
+        "list_player": {
+            "players": [
+                {
+                    "id": 1,
+                    "full_name": "John Doe",
+                    "what_we_call_you": "JohnD",
+                    "security_token": "hashed_token",
+                    "over_13": true,
+                    "year_of_birth": 1990
+                }
+            ],
+            "total_count": 100
+        }
+    }
+}

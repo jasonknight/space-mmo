@@ -1,0 +1,10 @@
+{
+    "data": {
+        "transfer_item": {
+            "source_inventory_id": 1,
+            "destination_inventory_id": 2,
+            "item_id": 5,
+            "quantity": 30.0
+        }
+    }
+}

@@ -1,0 +1,11 @@
+{
+    "results": [{
+        "status": "SUCCESS",
+        "message": "Successfully destroyed Player id=1"
+    }],
+    "response_data": {
+        "delete_player": {
+            "player_id": 1
+        }
+    }
+}
