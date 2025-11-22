@@ -29,6 +29,7 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('  ItemResponse load(ItemRequest request)')
     print('  ItemResponse save(ItemRequest request)')
     print('  ItemResponse destroy(ItemRequest request)')
+    print('  ItemResponse list_records(ItemRequest request)')
     print('')
     sys.exit(0)
 
@@ -137,6 +138,12 @@ elif cmd == 'destroy':
         print('destroy requires 1 args')
         sys.exit(1)
     pp.pprint(client.destroy(eval(args[0]),))
+
+elif cmd == 'list_records':
+    if len(args) != 1:
+        print('list_records requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.list_records(eval(args[0]),))
 
 else:
     print('Unrecognized method %s' % cmd)

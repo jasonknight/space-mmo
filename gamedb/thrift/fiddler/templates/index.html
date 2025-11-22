@@ -16,6 +16,13 @@
         <!-- Connection Panel -->
         <div class="connection-panel">
             <div class="connection-form">
+                <label for="service-type-select">Service Type:</label>
+                <select id="service-type-select">
+                    <option value="inventory">InventoryService</option>
+                    <option value="player">PlayerService</option>
+                    <option value="item">ItemService</option>
+                </select>
+
                 <label for="server-input">Thrift Service Address:</label>
                 <div class="input-group">
                     <input type="text"
@@ -91,6 +98,7 @@
         let enumReverseLookup = {};
 
         // DOM elements
+        const serviceTypeSelect = document.getElementById('service-type-select');
         const serverInput = document.getElementById('server-input');
         const connectBtn = document.getElementById('connect-btn');
         const connectionStatus = document.getElementById('connection-status');
@@ -112,6 +120,7 @@
         // Connect to service
         async function connectToService() {
             const serverAddress = serverInput.value.trim();
+            const serviceType = serviceTypeSelect.value;
 
             if (!serverAddress) {
                 connectionStatus.innerHTML = '<span class="error">❌ Please enter a server address</span>';
@@ -131,6 +140,7 @@
                     },
                     body: JSON.stringify({
                         server: serverAddress,
+                        service_type: serviceType,
                     }),
                 });
 

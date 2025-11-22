@@ -38,7 +38,7 @@ enum MobileType {
 
 union Owner {
     1: MobileId mobile_id;
-    2: ItemId item_it;
+    2: ItemId item_id;
     3: AssetId asset_id;
     4: PlayerId player_id;
 }
@@ -236,6 +236,12 @@ struct TransferItemRequestData {
     4: double quantity;
 }
 
+struct ListInventoryRequestData {
+    1: i32 page;
+    2: i32 results_per_page;
+    3: optional string search_string;
+}
+
 // Response data structures for each operation
 struct LoadInventoryResponseData {
     1: Inventory inventory;
@@ -258,6 +264,11 @@ struct TransferItemResponseData {
     2: Inventory destination_inventory;
 }
 
+struct ListInventoryResponseData {
+    1: list<Inventory> inventories;
+    2: i64 total_count;
+}
+
 // Union of all inventory request data types
 union InventoryRequestData {
     1: LoadInventoryRequestData load_inventory;
@@ -265,6 +276,7 @@ union InventoryRequestData {
     3: SaveInventoryRequestData save_inventory;
     4: SplitStackRequestData split_stack;
     5: TransferItemRequestData transfer_item;
+    6: ListInventoryRequestData list_inventory;
 }
 
 // Union of all inventory response data types
@@ -274,6 +286,7 @@ union InventoryResponseData {
     3: SaveInventoryResponseData save_inventory;
     4: SplitStackResponseData split_stack;
     5: TransferItemResponseData transfer_item;
+    6: ListInventoryResponseData list_inventory;
 }
 
 // Inventory Request structure (extensible for auth, tracing, etc.)
@@ -310,6 +323,12 @@ struct DestroyItemRequestData {
     1: i64 item_id;
 }
 
+struct ListItemRequestData {
+    1: i32 page;
+    2: i32 results_per_page;
+    3: optional string search_string;
+}
+
 // Response data structures for each operation
 struct CreateItemResponseData {
     1: Item item;
@@ -327,12 +346,18 @@ struct DestroyItemResponseData {
     1: i64 item_id;
 }
 
+struct ListItemResponseData {
+    1: list<Item> items;
+    2: i64 total_count;
+}
+
 // Union of all item request data types
 union ItemRequestData {
     1: CreateItemRequestData create_item;
     2: LoadItemRequestData load_item;
     3: SaveItemRequestData save_item;
     4: DestroyItemRequestData destroy_item;
+    5: ListItemRequestData list_item;
 }
 
 // Union of all item response data types
@@ -341,6 +366,7 @@ union ItemResponseData {
     2: LoadItemResponseData load_item;
     3: SaveItemResponseData save_item;
     4: DestroyItemResponseData destroy_item;
+    5: ListItemResponseData list_item;
 }
 
 // Item Request structure (extensible for auth, tracing, etc.)
@@ -353,6 +379,86 @@ struct ItemRequest {
 struct ItemResponse {
     1: list<GameResult> results;
     2: optional ItemResponseData response_data;
+    // Future fields: response_id, performance_metrics, etc.
+}
+
+// ============================================================================
+// Player Service Request/Response Structures
+// ============================================================================
+
+// Request data structures for each operation
+struct CreatePlayerRequestData {
+    1: Player player;
+}
+
+struct LoadPlayerRequestData {
+    1: i64 player_id;
+}
+
+struct SavePlayerRequestData {
+    1: Player player;
+}
+
+struct DeletePlayerRequestData {
+    1: i64 player_id;
+}
+
+struct ListPlayerRequestData {
+    1: i32 page;
+    2: i32 results_per_page;
+    3: optional string search_string;
+}
+
+// Response data structures for each operation
+struct CreatePlayerResponseData {
+    1: Player player;
+}
+
+struct LoadPlayerResponseData {
+    1: Player player;
+}
+
+struct SavePlayerResponseData {
+    1: Player player;
+}
+
+struct DeletePlayerResponseData {
+    1: i64 player_id;
+}
+
+struct ListPlayerResponseData {
+    1: list<Player> players;
+    2: i64 total_count;
+}
+
+// Union of all player request data types
+union PlayerRequestData {
+    1: CreatePlayerRequestData create_player;
+    2: LoadPlayerRequestData load_player;
+    3: SavePlayerRequestData save_player;
+    4: DeletePlayerRequestData delete_player;
+    5: ListPlayerRequestData list_player;
+}
+
+// Union of all player response data types
+union PlayerResponseData {
+    1: CreatePlayerResponseData create_player;
+    2: LoadPlayerResponseData load_player;
+    3: SavePlayerResponseData save_player;
+    4: DeletePlayerResponseData delete_player;
+    5: ListPlayerResponseData list_player;
+}
+
+// Player Request structure (extensible for auth, tracing, etc.)
+struct PlayerRequest {
+    1: PlayerRequestData data;
+    // Future fields: request_id, auth_token, trace_context, etc.
+}
+
+// Player Response structure (extensible for status, errors, etc.)
+struct PlayerResponse {
+    1: list<GameResult> results;
+    2: optional PlayerResponseData response_data;
     // Future fields: response_id, performance_metrics, etc.
 }
 
@@ -414,6 +520,9 @@ service InventoryService {
 
     // Transfer items between inventories
     InventoryResponse transfer_item(1: InventoryRequest request),
+
+    // List inventories with pagination
+    InventoryResponse list_records(1: InventoryRequest request),
 }
 
 // ============================================================================
@@ -435,4 +544,31 @@ service ItemService {
 
     // Destroy (delete) an item
     ItemResponse destroy(1: ItemRequest request),
+
+    // List items with pagination and search
+    ItemResponse list_records(1: ItemRequest request),
+}
+
+// ============================================================================
+// Player Service Definition
+// ============================================================================
+
+service PlayerService {
+    // Service discovery method
+    ServiceMetadata describe(),
+
+    // Create a new player
+    PlayerResponse create(1: PlayerRequest request),
+
+    // Load a player by ID
+    PlayerResponse load(1: PlayerRequest request),
+
+    // Save (create or update) a player
+    PlayerResponse save(1: PlayerRequest request),
+
+    // Delete a player
+    PlayerResponse delete(1: PlayerRequest request),
+
+    // List players with pagination and search
+    PlayerResponse list_records(1: PlayerRequest request),
 }

@@ -236,7 +236,7 @@ Owner::~Owner() noexcept {
 
 Owner::Owner() noexcept
    : mobile_id(0),
-     item_it(0),
+     item_id(0),
      asset_id(0) {
 }
 
@@ -245,9 +245,9 @@ void Owner::__set_mobile_id(const MobileId val) {
 __isset.mobile_id = true;
 }
 
-void Owner::__set_item_it(const ItemId val) {
-  this->item_it = val;
-__isset.item_it = true;
+void Owner::__set_item_id(const ItemId val) {
+  this->item_id = val;
+__isset.item_id = true;
 }
 
 void Owner::__set_asset_id(const AssetId val) {
@@ -292,8 +292,8 @@ uint32_t Owner::read(::apache::thrift::protocol::TProtocol* iprot) {
         break;
       case 2:
         if (ftype == ::apache::thrift::protocol::T_I64) {
-          xfer += iprot->readI64(this->item_it);
-          this->__isset.item_it = true;
+          xfer += iprot->readI64(this->item_id);
+          this->__isset.item_id = true;
         } else {
           xfer += iprot->skip(ftype);
         }
@@ -328,9 +328,9 @@ uint32_t Owner::write(::apache::thrift::protocol::TProtocol* oprot) const {
     xfer += oprot->writeI64(this->mobile_id);
     xfer += oprot->writeFieldEnd();
   }
-  if (this->__isset.item_it) {
-    xfer += oprot->writeFieldBegin("item_it", ::apache::thrift::protocol::T_I64, 2);
-    xfer += oprot->writeI64(this->item_it);
+  if (this->__isset.item_id) {
+    xfer += oprot->writeFieldBegin("item_id", ::apache::thrift::protocol::T_I64, 2);
+    xfer += oprot->writeI64(this->item_id);
     xfer += oprot->writeFieldEnd();
   }
   if (this->__isset.asset_id) {
@@ -346,7 +346,7 @@ uint32_t Owner::write(::apache::thrift::protocol::TProtocol* oprot) const {
 void swap(Owner &a, Owner &b) noexcept {
   using ::std::swap;
   swap(a.mobile_id, b.mobile_id);
-  swap(a.item_it, b.item_it);
+  swap(a.item_id, b.item_id);
   swap(a.asset_id, b.asset_id);
   swap(a.__isset, b.__isset);
 }
@@ -357,9 +357,9 @@ bool Owner::operator==(const Owner & rhs) const
     return false;
   else if (__isset.mobile_id && !(mobile_id == rhs.mobile_id))
     return false;
-  if (__isset.item_it != rhs.__isset.item_it)
+  if (__isset.item_id != rhs.__isset.item_id)
     return false;
-  else if (__isset.item_it && !(item_it == rhs.item_it))
+  else if (__isset.item_id && !(item_id == rhs.item_id))
     return false;
   if (__isset.asset_id != rhs.__isset.asset_id)
     return false;
@@ -370,13 +370,13 @@ bool Owner::operator==(const Owner & rhs) const
 
 Owner::Owner(const Owner& other0) noexcept {
   mobile_id = other0.mobile_id;
-  item_it = other0.item_it;
+  item_id = other0.item_id;
   asset_id = other0.asset_id;
   __isset = other0.__isset;
 }
 Owner& Owner::operator=(const Owner& other1) noexcept {
   mobile_id = other1.mobile_id;
-  item_it = other1.item_it;
+  item_id = other1.item_id;
   asset_id = other1.asset_id;
   __isset = other1.__isset;
   return *this;
@@ -385,7 +385,7 @@ void Owner::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "Owner(";
   out << "mobile_id="; (__isset.mobile_id ? (out << to_string(mobile_id)) : (out << "<null>"));
-  out << ", " << "item_it="; (__isset.item_it ? (out << to_string(item_it)) : (out << "<null>"));
+  out << ", " << "item_id="; (__isset.item_id ? (out << to_string(item_id)) : (out << "<null>"));
   out << ", " << "asset_id="; (__isset.asset_id ? (out << to_string(asset_id)) : (out << "<null>"));
   out << ")";
 }

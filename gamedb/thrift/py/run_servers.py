@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Start multiple Thrift servers (InventoryService and ItemService).
+Start multiple Thrift servers (InventoryService, ItemService, and PlayerService).
 Each service runs in a separate process on different ports.
 """
 
@@ -19,8 +19,10 @@ from thrift.server import TServer
 
 from game.InventoryService import Processor as InventoryProcessor
 from game.ItemService import Processor as ItemProcessor
+from game.PlayerService import Processor as PlayerProcessor
 from inventory_service import InventoryServiceHandler
 from item_service import ItemServiceHandler
+from player_service import PlayerServiceHandler
 from db import DB
 
 
@@ -147,6 +149,50 @@ def run_item_service(config: Dict[str, Any]):
         db.disconnect()
 
 
+def run_player_service(config: Dict[str, Any]):
+    """Run the PlayerService in a separate process."""
+    service_name = config['name']
+    setup_logging(service_name)
+
+    # Initialize database connection
+    db = DB(
+        host=config['db_host'],
+        user=config['db_user'],
+        password=config['db_password'],
+    )
+
+    # Create handler
+    handler = PlayerServiceHandler(
+        db=db,
+        database=config['database'],
+        cache_size=config.get('cache_size', 1000),
+    )
+
+    # Create processor and server
+    processor = PlayerProcessor(handler)
+    transport = TSocket.TServerSocket(host=config['host'], port=config['port'])
+    tfactory = TTransport.TBufferedTransportFactory()
+    pfactory = TBinaryProtocol.TBinaryProtocolFactory()
+    server = TServer.TSimpleServer(processor, transport, tfactory, pfactory)
+
+    # Print startup banner
+    print_prefixed(service_name, "=" * 60)
+    print_prefixed(service_name, f"Starting {service_name}...")
+    print_prefixed(service_name, f"Host: {config['host']}")
+    print_prefixed(service_name, f"Port: {config['port']}")
+    print_prefixed(service_name, f"Database: {config['database']}")
+    print_prefixed(service_name, f"Cache capacity: {config.get('cache_size', 1000)}")
+    print_prefixed(service_name, "=" * 60)
+
+    try:
+        server.serve()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        print_prefixed(service_name, "Shutting down...")
+        db.disconnect()
+
+
 # Service configuration - add new services here
 SERVICES = [
     {
@@ -174,6 +220,20 @@ SERVICES = [
             'db_user': 'admin',
             'db_password': 'minda',
             'database': 'gamedb',
+        },
+    },
+    {
+        'name': 'PlayerService',
+        'runner': run_player_service,
+        'config': {
+            'name': 'PlayerService',
+            'host': '0.0.0.0',
+            'port': 9092,
+            'db_host': 'localhost',
+            'db_user': 'admin',
+            'db_password': 'minda',
+            'database': 'gamedb',
+            'cache_size': 1000,
         },
     },
 ]

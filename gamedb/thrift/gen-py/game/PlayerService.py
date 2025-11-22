@@ -47,7 +47,7 @@ class Iface(object):
         """
         pass
 
-    def destroy(self, request):
+    def delete(self, request):
         """
         Parameters:
          - request
@@ -193,24 +193,24 @@ class Client(Iface):
             return result.success
         raise TApplicationException(TApplicationException.MISSING_RESULT, "save failed: unknown result")
 
-    def destroy(self, request):
+    def delete(self, request):
         """
         Parameters:
          - request
 
         """
-        self.send_destroy(request)
-        return self.recv_destroy()
+        self.send_delete(request)
+        return self.recv_delete()
 
-    def send_destroy(self, request):
-        self._oprot.writeMessageBegin('destroy', TMessageType.CALL, self._seqid)
-        args = destroy_args()
+    def send_delete(self, request):
+        self._oprot.writeMessageBegin('delete', TMessageType.CALL, self._seqid)
+        args = delete_args()
         args.request = request
         args.write(self._oprot)
         self._oprot.writeMessageEnd()
         self._oprot.trans.flush()
 
-    def recv_destroy(self):
+    def recv_delete(self):
         iprot = self._iprot
         (fname, mtype, rseqid) = iprot.readMessageBegin()
         if mtype == TMessageType.EXCEPTION:
@@ -218,12 +218,12 @@ class Client(Iface):
             x.read(iprot)
             iprot.readMessageEnd()
             raise x
-        result = destroy_result()
+        result = delete_result()
         result.read(iprot)
         iprot.readMessageEnd()
         if result.success is not None:
             return result.success
-        raise TApplicationException(TApplicationException.MISSING_RESULT, "destroy failed: unknown result")
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "delete failed: unknown result")
 
     def list_records(self, request):
         """
@@ -266,7 +266,7 @@ class Processor(Iface, TProcessor):
         self._processMap["create"] = Processor.process_create
         self._processMap["load"] = Processor.process_load
         self._processMap["save"] = Processor.process_save
-        self._processMap["destroy"] = Processor.process_destroy
+        self._processMap["delete"] = Processor.process_delete
         self._processMap["list_records"] = Processor.process_list_records
         self._on_message_begin = None
 
@@ -382,13 +382,13 @@ class Processor(Iface, TProcessor):
         oprot.writeMessageEnd()
         oprot.trans.flush()
 
-    def process_destroy(self, seqid, iprot, oprot):
-        args = destroy_args()
+    def process_delete(self, seqid, iprot, oprot):
+        args = delete_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = destroy_result()
+        result = delete_result()
         try:
-            result.success = self._handler.destroy(args.request)
+            result.success = self._handler.delete(args.request)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -400,7 +400,7 @@ class Processor(Iface, TProcessor):
             logging.exception('Unexpected exception in handler')
             msg_type = TMessageType.EXCEPTION
             result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
-        oprot.writeMessageBegin("destroy", msg_type, seqid)
+        oprot.writeMessageBegin("delete", msg_type, seqid)
         result.write(oprot)
         oprot.writeMessageEnd()
         oprot.trans.flush()
@@ -563,7 +563,7 @@ class create_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.request = ItemRequest()
+                    self.request = PlayerRequest()
                     self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -601,7 +601,7 @@ class create_args(object):
 all_structs.append(create_args)
 create_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRUCT, 'request', [ItemRequest, None], None, ),  # 1
+    (1, TType.STRUCT, 'request', [PlayerRequest, None], None, ),  # 1
 )
 
 
@@ -628,7 +628,7 @@ class create_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = ItemResponse()
+                    self.success = PlayerResponse()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -665,7 +665,7 @@ class create_result(object):
         return not (self == other)
 all_structs.append(create_result)
 create_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [ItemResponse, None], None, ),  # 0
+    (0, TType.STRUCT, 'success', [PlayerResponse, None], None, ),  # 0
 )
 
 
@@ -692,7 +692,7 @@ class load_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.request = ItemRequest()
+                    self.request = PlayerRequest()
                     self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -730,7 +730,7 @@ class load_args(object):
 all_structs.append(load_args)
 load_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRUCT, 'request', [ItemRequest, None], None, ),  # 1
+    (1, TType.STRUCT, 'request', [PlayerRequest, None], None, ),  # 1
 )
 
 
@@ -757,7 +757,7 @@ class load_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = ItemResponse()
+                    self.success = PlayerResponse()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -794,7 +794,7 @@ class load_result(object):
         return not (self == other)
 all_structs.append(load_result)
 load_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [ItemResponse, None], None, ),  # 0
+    (0, TType.STRUCT, 'success', [PlayerResponse, None], None, ),  # 0
 )
 
 
@@ -821,7 +821,7 @@ class save_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.request = ItemRequest()
+                    self.request = PlayerRequest()
                     self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -859,7 +859,7 @@ class save_args(object):
 all_structs.append(save_args)
 save_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRUCT, 'request', [ItemRequest, None], None, ),  # 1
+    (1, TType.STRUCT, 'request', [PlayerRequest, None], None, ),  # 1
 )
 
 
@@ -886,7 +886,7 @@ class save_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = ItemResponse()
+                    self.success = PlayerResponse()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -923,11 +923,11 @@ class save_result(object):
         return not (self == other)
 all_structs.append(save_result)
 save_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [ItemResponse, None], None, ),  # 0
+    (0, TType.STRUCT, 'success', [PlayerResponse, None], None, ),  # 0
 )
 
 
-class destroy_args(object):
+class delete_args(object):
     """
     Attributes:
      - request
@@ -950,7 +950,7 @@ class destroy_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.request = ItemRequest()
+                    self.request = PlayerRequest()
                     self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -964,7 +964,7 @@ class destroy_args(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('destroy_args')
+        oprot.writeStructBegin('delete_args')
         if self.request is not None:
             oprot.writeFieldBegin('request', TType.STRUCT, 1)
             self.request.write(oprot)
@@ -985,14 +985,14 @@ class destroy_args(object):
 
     def __ne__(self, other):
         return not (self == other)
-all_structs.append(destroy_args)
-destroy_args.thrift_spec = (
+all_structs.append(delete_args)
+delete_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRUCT, 'request', [ItemRequest, None], None, ),  # 1
+    (1, TType.STRUCT, 'request', [PlayerRequest, None], None, ),  # 1
 )
 
 
-class destroy_result(object):
+class delete_result(object):
     """
     Attributes:
      - success
@@ -1015,7 +1015,7 @@ class destroy_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = ItemResponse()
+                    self.success = PlayerResponse()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -1029,7 +1029,7 @@ class destroy_result(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('destroy_result')
+        oprot.writeStructBegin('delete_result')
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.STRUCT, 0)
             self.success.write(oprot)
@@ -1050,9 +1050,9 @@ class destroy_result(object):
 
     def __ne__(self, other):
         return not (self == other)
-all_structs.append(destroy_result)
-destroy_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [ItemResponse, None], None, ),  # 0
+all_structs.append(delete_result)
+delete_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [PlayerResponse, None], None, ),  # 0
 )
 
 
@@ -1079,7 +1079,7 @@ class list_records_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.request = ItemRequest()
+                    self.request = PlayerRequest()
                     self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -1117,7 +1117,7 @@ class list_records_args(object):
 all_structs.append(list_records_args)
 list_records_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRUCT, 'request', [ItemRequest, None], None, ),  # 1
+    (1, TType.STRUCT, 'request', [PlayerRequest, None], None, ),  # 1
 )
 
 
@@ -1144,7 +1144,7 @@ class list_records_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = ItemResponse()
+                    self.success = PlayerResponse()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -1181,7 +1181,7 @@ class list_records_result(object):
         return not (self == other)
 all_structs.append(list_records_result)
 list_records_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [ItemResponse, None], None, ),  # 0
+    (0, TType.STRUCT, 'success', [PlayerResponse, None], None, ),  # 0
 )
 fix_spec(all_structs)
 del all_structs

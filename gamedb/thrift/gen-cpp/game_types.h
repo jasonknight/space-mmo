@@ -189,9 +189,9 @@ class MethodDescription;
 class ServiceMetadata;
 
 typedef struct _Owner__isset {
-  _Owner__isset() : mobile_id(false), item_it(false), asset_id(false) {}
+  _Owner__isset() : mobile_id(false), item_id(false), asset_id(false) {}
   bool mobile_id :1;
-  bool item_it :1;
+  bool item_id :1;
   bool asset_id :1;
 } _Owner__isset;
 
@@ -204,14 +204,14 @@ class Owner : public virtual ::apache::thrift::TBase {
 
   virtual ~Owner() noexcept;
   MobileId mobile_id;
-  ItemId item_it;
+  ItemId item_id;
   AssetId asset_id;
 
   _Owner__isset __isset;
 
   void __set_mobile_id(const MobileId val);
 
-  void __set_item_it(const ItemId val);
+  void __set_item_id(const ItemId val);
 
   void __set_asset_id(const AssetId val);
 

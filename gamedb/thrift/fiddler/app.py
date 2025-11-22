@@ -29,6 +29,8 @@ sys.path.append('../py')
 from thrift.transport import TSocket, TTransport
 from thrift.protocol import TBinaryProtocol, TJSONProtocol
 from game.InventoryService import Client as InventoryServiceClient
+from game.PlayerService import Client as PlayerServiceClient
+from game.ItemService import Client as ItemServiceClient
 
 app = Bottle()
 
@@ -38,24 +40,34 @@ enum_lookup = {}  # enum_name -> {string_value -> int_value}
 enum_reverse_lookup = {}  # enum_name -> {int_value -> string_value}
 current_host = None
 current_port = None
+current_service_type = None  # 'inventory', 'player', or 'item'
 
 
-def connect_to_service(host, port):
+def connect_to_service(host, port, service_type='inventory'):
     """Create and return a Thrift client connection."""
     transport = TSocket.TSocket(host, port)
     transport = TTransport.TBufferedTransport(transport)
     protocol = TBinaryProtocol.TBinaryProtocol(transport)
-    client = InventoryServiceClient(protocol)
+
+    if service_type == 'inventory':
+        client = InventoryServiceClient(protocol)
+    elif service_type == 'player':
+        client = PlayerServiceClient(protocol)
+    elif service_type == 'item':
+        client = ItemServiceClient(protocol)
+    else:
+        raise ValueError(f"Unknown service type: {service_type}")
+
     transport.open()
     return client, transport
 
 
-def load_service_metadata(host, port):
+def load_service_metadata(host, port, service_type='inventory'):
     """Load service metadata by calling describe()."""
-    global service_metadata, enum_lookup, enum_reverse_lookup, current_host, current_port
+    global service_metadata, enum_lookup, enum_reverse_lookup, current_host, current_port, current_service_type
 
     try:
-        client, transport = connect_to_service(host, port)
+        client, transport = connect_to_service(host, port, service_type)
         service_metadata = client.describe()
         transport.close()
 
@@ -71,6 +83,7 @@ def load_service_metadata(host, port):
         # Store current connection info
         current_host = host
         current_port = port
+        current_service_type = service_type
 
         print(f"Loaded metadata for {service_metadata.service_name} v{service_metadata.version} from {host}:{port}")
         return True
@@ -164,8 +177,10 @@ def connect():
         logger.info("=== Connecting to Thrift service ===")
         data = request.json
         server_address = data.get('server')
+        service_type = data.get('service_type', 'inventory')  # Default to inventory
 
         logger.info(f"Server address: {server_address}")
+        logger.info(f"Service type: {service_type}")
 
         if not server_address:
             logger.error("No server address provided")
@@ -189,7 +204,7 @@ def connect():
 
         # Try to connect and load metadata
         logger.debug("Loading service metadata...")
-        load_service_metadata(host, port)
+        load_service_metadata(host, port, service_type)
         logger.info("Metadata loaded successfully")
 
         # Return the metadata
@@ -238,6 +253,316 @@ def connect():
         return {'error': str(e)}
 
 
+def build_inventory_request(request_obj):
+    """Build an InventoryRequest from a JSON object."""
+    from game.ttypes import (
+        InventoryRequest,
+        InventoryRequestData,
+        LoadInventoryRequestData,
+        CreateInventoryRequestData,
+        SaveInventoryRequestData,
+        SplitStackRequestData,
+        TransferItemRequestData,
+        ListInventoryRequestData,
+        Inventory,
+        InventoryEntry,
+        Owner,
+    )
+
+    # Extract the data union field
+    data_dict = request_obj.get('data', {})
+    logger.debug(f"Data dict keys: {list(data_dict.keys())}")
+
+    # Build InventoryRequestData based on which field is present
+    request_data = InventoryRequestData()
+
+    if 'load_inventory' in data_dict:
+        load_data = LoadInventoryRequestData(
+            inventory_id=data_dict['load_inventory']['inventory_id'],
+        )
+        request_data.load_inventory = load_data
+
+    elif 'create_inventory' in data_dict:
+        inv_data = data_dict['create_inventory']['inventory']
+
+        # Build Owner
+        owner_dict = inv_data.get('owner', {})
+        owner = Owner()
+        if 'mobile_id' in owner_dict:
+            owner.mobile_id = owner_dict['mobile_id']
+        elif 'item_id' in owner_dict:
+            owner.item_id = owner_dict['item_id']
+        elif 'asset_id' in owner_dict:
+            owner.asset_id = owner_dict['asset_id']
+        elif 'player_id' in owner_dict:
+            owner.player_id = owner_dict['player_id']
+
+        # Build Inventory
+        inventory = Inventory(
+            max_entries=inv_data['max_entries'],
+            max_volume=inv_data['max_volume'],
+            entries=[],
+            last_calculated_volume=inv_data.get('last_calculated_volume', 0.0),
+            owner=owner,
+        )
+
+        create_data = CreateInventoryRequestData(inventory=inventory)
+        request_data.create_inventory = create_data
+
+    elif 'save_inventory' in data_dict:
+        inv_data = data_dict['save_inventory']['inventory']
+
+        # Build Owner
+        owner_dict = inv_data.get('owner', {})
+        owner = Owner()
+        if 'mobile_id' in owner_dict:
+            owner.mobile_id = owner_dict['mobile_id']
+        elif 'item_id' in owner_dict:
+            owner.item_id = owner_dict['item_id']
+        elif 'asset_id' in owner_dict:
+            owner.asset_id = owner_dict['asset_id']
+        elif 'player_id' in owner_dict:
+            owner.player_id = owner_dict['player_id']
+
+        # Build entries
+        entries = []
+        for entry_dict in inv_data.get('entries', []):
+            entry = InventoryEntry(
+                item_id=entry_dict['item_id'],
+                quantity=entry_dict['quantity'],
+                is_max_stacked=entry_dict.get('is_max_stacked', False),
+            )
+            entries.append(entry)
+
+        # Build Inventory
+        inventory = Inventory(
+            id=inv_data.get('id'),
+            max_entries=inv_data['max_entries'],
+            max_volume=inv_data['max_volume'],
+            entries=entries,
+            last_calculated_volume=inv_data.get('last_calculated_volume', 0.0),
+            owner=owner,
+        )
+
+        save_data = SaveInventoryRequestData(inventory=inventory)
+        request_data.save_inventory = save_data
+
+    elif 'split_stack' in data_dict:
+        split_dict = data_dict['split_stack']
+        split_data = SplitStackRequestData(
+            inventory_id=split_dict['inventory_id'],
+            item_id=split_dict['item_id'],
+            quantity_to_split=split_dict['quantity_to_split'],
+        )
+        request_data.split_stack = split_data
+
+    elif 'transfer_item' in data_dict:
+        transfer_dict = data_dict['transfer_item']
+        transfer_data = TransferItemRequestData(
+            source_inventory_id=transfer_dict['source_inventory_id'],
+            destination_inventory_id=transfer_dict['destination_inventory_id'],
+            item_id=transfer_dict['item_id'],
+            quantity=transfer_dict['quantity'],
+        )
+        request_data.transfer_item = transfer_data
+
+    elif 'list_inventory' in data_dict:
+        list_dict = data_dict['list_inventory']
+        list_data = ListInventoryRequestData(
+            page=list_dict['page'],
+            results_per_page=list_dict['results_per_page'],
+        )
+        if 'search_string' in list_dict and list_dict['search_string']:
+            list_data.search_string = list_dict['search_string']
+        request_data.list_inventory = list_data
+
+    else:
+        raise ValueError(f"Unknown request type in data: {list(data_dict.keys())}")
+
+    # Build the final InventoryRequest
+    return InventoryRequest(data=request_data)
+
+
+def build_item_request(request_obj):
+    """Build an ItemRequest from a JSON object."""
+    from game.ttypes import (
+        ItemRequest,
+        ItemRequestData,
+        LoadItemRequestData,
+        CreateItemRequestData,
+        SaveItemRequestData,
+        DestroyItemRequestData,
+        ListItemRequestData,
+        Item,
+        ItemType,
+        Attribute,
+    )
+
+    # Extract the data union field
+    data_dict = request_obj.get('data', {})
+    logger.debug(f"Data dict keys: {list(data_dict.keys())}")
+
+    # Build ItemRequestData based on which field is present
+    request_data = ItemRequestData()
+
+    if 'load_item' in data_dict:
+        load_data = LoadItemRequestData(
+            item_id=data_dict['load_item']['item_id'],
+        )
+        request_data.load_item = load_data
+
+    elif 'create_item' in data_dict:
+        item_dict = data_dict['create_item']['item']
+
+        # Build attributes dictionary
+        attributes = {}
+        if 'attributes' in item_dict:
+            for attr_id, attr_val in item_dict['attributes'].items():
+                if isinstance(attr_val, dict):
+                    attributes[int(attr_id)] = Attribute(**attr_val)
+                else:
+                    attributes[int(attr_id)] = attr_val
+
+        item = Item(
+            internal_name=item_dict['internal_name'],
+            attributes=attributes,
+            max_stack_size=item_dict['max_stack_size'],
+            item_type=item_dict['item_type'],
+        )
+        if 'id' in item_dict and item_dict['id'] is not None:
+            item.id = item_dict['id']
+
+        create_data = CreateItemRequestData(item=item)
+        request_data.create_item = create_data
+
+    elif 'save_item' in data_dict:
+        item_dict = data_dict['save_item']['item']
+
+        # Build attributes dictionary
+        attributes = {}
+        if 'attributes' in item_dict:
+            for attr_id, attr_val in item_dict['attributes'].items():
+                if isinstance(attr_val, dict):
+                    attributes[int(attr_id)] = Attribute(**attr_val)
+                else:
+                    attributes[int(attr_id)] = attr_val
+
+        item = Item(
+            internal_name=item_dict['internal_name'],
+            attributes=attributes,
+            max_stack_size=item_dict['max_stack_size'],
+            item_type=item_dict['item_type'],
+        )
+        if 'id' in item_dict and item_dict['id'] is not None:
+            item.id = item_dict['id']
+
+        save_data = SaveItemRequestData(item=item)
+        request_data.save_item = save_data
+
+    elif 'destroy_item' in data_dict:
+        destroy_dict = data_dict['destroy_item']
+        destroy_data = DestroyItemRequestData(
+            item_id=destroy_dict['item_id'],
+        )
+        request_data.destroy_item = destroy_data
+
+    elif 'list_item' in data_dict:
+        list_dict = data_dict['list_item']
+        list_data = ListItemRequestData(
+            page=list_dict['page'],
+            results_per_page=list_dict['results_per_page'],
+        )
+        if 'search_string' in list_dict and list_dict['search_string']:
+            list_data.search_string = list_dict['search_string']
+        request_data.list_item = list_data
+
+    else:
+        raise ValueError(f"Unknown request type in data: {list(data_dict.keys())}")
+
+    # Build the final ItemRequest
+    return ItemRequest(data=request_data)
+
+
+def build_player_request(request_obj):
+    """Build a PlayerRequest from a JSON object."""
+    from game.ttypes import (
+        PlayerRequest,
+        PlayerRequestData,
+        LoadPlayerRequestData,
+        CreatePlayerRequestData,
+        SavePlayerRequestData,
+        DeletePlayerRequestData,
+        ListPlayerRequestData,
+        Player,
+    )
+
+    # Extract the data union field
+    data_dict = request_obj.get('data', {})
+    logger.debug(f"Data dict keys: {list(data_dict.keys())}")
+
+    # Build PlayerRequestData based on which field is present
+    request_data = PlayerRequestData()
+
+    if 'load_player' in data_dict:
+        load_data = LoadPlayerRequestData(
+            player_id=data_dict['load_player']['player_id'],
+        )
+        request_data.load_player = load_data
+
+    elif 'create_player' in data_dict:
+        player_dict = data_dict['create_player']['player']
+        player = Player(
+            full_name=player_dict['full_name'],
+            what_we_call_you=player_dict['what_we_call_you'],
+            security_token=player_dict['security_token'],
+            over_13=player_dict['over_13'],
+            year_of_birth=player_dict['year_of_birth'],
+        )
+        if 'id' in player_dict and player_dict['id'] is not None:
+            player.id = player_dict['id']
+
+        create_data = CreatePlayerRequestData(player=player)
+        request_data.create_player = create_data
+
+    elif 'save_player' in data_dict:
+        player_dict = data_dict['save_player']['player']
+        player = Player(
+            full_name=player_dict['full_name'],
+            what_we_call_you=player_dict['what_we_call_you'],
+            security_token=player_dict['security_token'],
+            over_13=player_dict['over_13'],
+            year_of_birth=player_dict['year_of_birth'],
+        )
+        if 'id' in player_dict and player_dict['id'] is not None:
+            player.id = player_dict['id']
+
+        save_data = SavePlayerRequestData(player=player)
+        request_data.save_player = save_data
+
+    elif 'delete_player' in data_dict:
+        delete_dict = data_dict['delete_player']
+        delete_data = DeletePlayerRequestData(
+            player_id=delete_dict['player_id'],
+        )
+        request_data.delete_player = delete_data
+
+    elif 'list_player' in data_dict:
+        list_dict = data_dict['list_player']
+        list_data = ListPlayerRequestData(
+            page=list_dict['page'],
+            results_per_page=list_dict['results_per_page'],
+        )
+        if 'search_string' in list_dict and list_dict['search_string']:
+            list_data.search_string = list_dict['search_string']
+        request_data.list_player = list_data
+
+    else:
+        raise ValueError(f"Unknown request type in data: {list(data_dict.keys())}")
+
+    # Build the final PlayerRequest
+    return PlayerRequest(data=request_data)
+
+
 @app.route('/api/invoke', method='POST')
 def invoke_method():
     """Invoke a service method with the provided request JSON."""
@@ -280,12 +605,12 @@ def invoke_method():
             return {'error': f'Invalid JSON: {str(e)}'}
 
         # Check if we have a connection
-        if not current_host or not current_port:
+        if not current_host or not current_port or not current_service_type:
             logger.error("No active connection to service")
             response.status = 400
             return {'error': 'Not connected to any service. Please connect first.'}
 
-        logger.info(f"Using connection: {current_host}:{current_port}")
+        logger.info(f"Using connection: {current_host}:{current_port} (service: {current_service_type})")
 
         # Convert enum strings to ints
         logger.debug(f"Converting enums to ints (field mappings: {len(method_desc.request_enum_fields)})")
@@ -294,131 +619,25 @@ def invoke_method():
 
         # Connect and invoke
         logger.debug(f"Connecting to service at {current_host}:{current_port}")
-        client, transport = connect_to_service(current_host, current_port)
+        client, transport = connect_to_service(current_host, current_port, current_service_type)
         logger.debug("Connected successfully")
 
         # Call the appropriate method
         logger.debug(f"Getting method function: {method_name}")
         method_func = getattr(client, method_name)
 
-        # Build the Thrift InventoryRequest object manually from JSON
-        logger.debug("Building Thrift InventoryRequest object from JSON")
-        from game.ttypes import (
-            InventoryRequest,
-            InventoryRequestData,
-            LoadInventoryRequestData,
-            CreateInventoryRequestData,
-            SaveInventoryRequestData,
-            SplitStackRequestData,
-            TransferItemRequestData,
-            Inventory,
-            InventoryEntry,
-            Owner,
-        )
-
-        # Extract the data union field
-        data_dict = request_obj.get('data', {})
-        logger.debug(f"Data dict keys: {list(data_dict.keys())}")
-
-        # Build InventoryRequestData based on which field is present
-        request_data = InventoryRequestData()
-
-        if 'load_inventory' in data_dict:
-            load_data = LoadInventoryRequestData(
-                inventory_id=data_dict['load_inventory']['inventory_id'],
-            )
-            request_data.load_inventory = load_data
-
-        elif 'create_inventory' in data_dict:
-            inv_data = data_dict['create_inventory']['inventory']
-
-            # Build Owner
-            owner_dict = inv_data.get('owner', {})
-            owner = Owner()
-            if 'mobile_id' in owner_dict:
-                owner.mobile_id = owner_dict['mobile_id']
-            elif 'item_it' in owner_dict:
-                owner.item_it = owner_dict['item_it']
-            elif 'asset_id' in owner_dict:
-                owner.asset_id = owner_dict['asset_id']
-            elif 'player_id' in owner_dict:
-                owner.player_id = owner_dict['player_id']
-
-            # Build Inventory
-            inventory = Inventory(
-                max_entries=inv_data['max_entries'],
-                max_volume=inv_data['max_volume'],
-                entries=[],
-                last_calculated_volume=inv_data.get('last_calculated_volume', 0.0),
-                owner=owner,
-            )
-
-            create_data = CreateInventoryRequestData(inventory=inventory)
-            request_data.create_inventory = create_data
-
-        elif 'save_inventory' in data_dict:
-            inv_data = data_dict['save_inventory']['inventory']
-
-            # Build Owner
-            owner_dict = inv_data.get('owner', {})
-            owner = Owner()
-            if 'mobile_id' in owner_dict:
-                owner.mobile_id = owner_dict['mobile_id']
-            elif 'item_it' in owner_dict:
-                owner.item_it = owner_dict['item_it']
-            elif 'asset_id' in owner_dict:
-                owner.asset_id = owner_dict['asset_id']
-            elif 'player_id' in owner_dict:
-                owner.player_id = owner_dict['player_id']
-
-            # Build entries
-            entries = []
-            for entry_dict in inv_data.get('entries', []):
-                entry = InventoryEntry(
-                    item_id=entry_dict['item_id'],
-                    quantity=entry_dict['quantity'],
-                    is_max_stacked=entry_dict.get('is_max_stacked', False),
-                )
-                entries.append(entry)
-
-            # Build Inventory
-            inventory = Inventory(
-                id=inv_data.get('id'),
-                max_entries=inv_data['max_entries'],
-                max_volume=inv_data['max_volume'],
-                entries=entries,
-                last_calculated_volume=inv_data.get('last_calculated_volume', 0.0),
-                owner=owner,
-            )
-
-            save_data = SaveInventoryRequestData(inventory=inventory)
-            request_data.save_inventory = save_data
-
-        elif 'split_stack' in data_dict:
-            split_dict = data_dict['split_stack']
-            split_data = SplitStackRequestData(
-                inventory_id=split_dict['inventory_id'],
-                item_id=split_dict['item_id'],
-                quantity_to_split=split_dict['quantity_to_split'],
-            )
-            request_data.split_stack = split_data
-
-        elif 'transfer_item' in data_dict:
-            transfer_dict = data_dict['transfer_item']
-            transfer_data = TransferItemRequestData(
-                source_inventory_id=transfer_dict['source_inventory_id'],
-                destination_inventory_id=transfer_dict['destination_inventory_id'],
-                item_id=transfer_dict['item_id'],
-                quantity=transfer_dict['quantity'],
-            )
-            request_data.transfer_item = transfer_data
-
+        # Build the Thrift Request object based on service type
+        logger.debug(f"Building Thrift {current_service_type} Request object from JSON")
+        if current_service_type == 'inventory':
+            thrift_request = build_inventory_request(request_obj)
+        elif current_service_type == 'player':
+            thrift_request = build_player_request(request_obj)
+        elif current_service_type == 'item':
+            thrift_request = build_item_request(request_obj)
         else:
-            raise ValueError(f"Unknown request type in data: {list(data_dict.keys())}")
+            raise ValueError(f"Unknown service type: {current_service_type}")
 
-        # Build the final InventoryRequest
-        thrift_request = InventoryRequest(data=request_data)
-        logger.debug("Thrift InventoryRequest object built successfully")
+        logger.debug(f"Thrift {current_service_type} Request object built successfully")
 
         # Invoke method
         logger.info(f"Invoking method: {method_name}")

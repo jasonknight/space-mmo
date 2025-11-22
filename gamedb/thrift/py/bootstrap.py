@@ -35,9 +35,29 @@ def main():
 
         print(f"\n3. Creating tables in '{database_name}'...")
 
+        # Create players table
+        print("   - Creating players table...")
+        for stmt in db.get_players_table_sql(database_name):
+            cursor.execute(stmt)
+
+        # Create mobiles table
+        print("   - Creating mobiles table...")
+        for stmt in db.get_mobiles_table_sql(database_name):
+            cursor.execute(stmt)
+
         # Create items table
         print("   - Creating items table...")
         for stmt in db.get_items_table_sql(database_name):
+            cursor.execute(stmt)
+
+        # Create item_blueprints table
+        print("   - Creating item_blueprints table...")
+        for stmt in db.get_item_blueprints_table_sql(database_name):
+            cursor.execute(stmt)
+
+        # Create item_blueprint_components table
+        print("   - Creating item_blueprint_components table...")
+        for stmt in db.get_item_blueprint_components_table_sql(database_name):
             cursor.execute(stmt)
 
         # Create attributes table

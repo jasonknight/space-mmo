@@ -28,6 +28,8 @@ from game.ttypes import (
     SplitStackResponseData,
     TransferItemRequestData,
     TransferItemResponseData,
+    ListInventoryRequestData,
+    ListInventoryResponseData,
     Inventory,
     InventoryEntry,
     GameResult,
@@ -360,12 +362,50 @@ class InventoryServiceHandler(InventoryServiceIface):
                     FieldEnumMapping(field_path="results[].error_code", enum_name="GameError"),
                 ],
             ),
+            MethodDescription(
+                method_name="list_records",
+                description="List inventories with pagination (no search - inventories have no searchable text fields)",
+                example_request_json='''{
+    "data": {
+        "list_inventory": {
+            "page": 0,
+            "results_per_page": 10
+        }
+    }
+}''',
+                example_response_json='''{
+    "results": [{
+        "status": "SUCCESS",
+        "message": "Successfully listed 10 inventories (total: 100)"
+    }],
+    "response_data": {
+        "list_inventory": {
+            "inventories": [
+                {
+                    "id": 1,
+                    "max_entries": 10,
+                    "max_volume": 500.0,
+                    "entries": [],
+                    "last_calculated_volume": 0.0,
+                    "owner": {"mobile_id": 100}
+                }
+            ],
+            "total_count": 100
+        }
+    }
+}''',
+                request_enum_fields=[],
+                response_enum_fields=[
+                    FieldEnumMapping(field_path="results[].status", enum_name="StatusType"),
+                    FieldEnumMapping(field_path="results[].error_code", enum_name="GameError"),
+                ],
+            ),
         ]
 
         return ServiceMetadata(
             service_name="InventoryService",
             version="1.0",
-            description="Service for managing game inventories with create, load, save, split, and transfer operations",
+            description="Service for managing game inventories with create, load, save, split, transfer, and list operations",
             methods=methods,
             enums=enums,
         )
@@ -828,6 +868,69 @@ class InventoryServiceHandler(InventoryServiceIface):
                         status=StatusType.FAILURE,
                         message=f"Failed to transfer item: {str(e)}",
                         error_code=GameError.INV_OPERATION_FAILED,
+                    ),
+                ],
+                response_data=None,
+            )
+
+    def list_records(self, request: InventoryRequest) -> InventoryResponse:
+        """List inventories with pagination."""
+        logger.info("=== LIST inventory records request ===")
+        try:
+            if not request.data.list_inventory:
+                logger.error("Request data missing list_inventory field")
+                return InventoryResponse(
+                    results=[
+                        GameResult(
+                            status=StatusType.FAILURE,
+                            message="Request data must contain list_inventory",
+                            error_code=GameError.DB_INVALID_DATA,
+                        ),
+                    ],
+                    response_data=None,
+                )
+
+            list_data = request.data.list_inventory
+            page = list_data.page
+            results_per_page = list_data.results_per_page
+            search_string = list_data.search_string if hasattr(list_data, 'search_string') else None
+
+            logger.info(f"Listing inventories: page={page}, results_per_page={results_per_page}, search_string={search_string}")
+
+            result, inventories, total_count = self.db.list_inventory(
+                self.database,
+                page,
+                results_per_page,
+                search_string=search_string,
+            )
+
+            if inventories is not None:
+                logger.info(f"SUCCESS: Listed {len(inventories)} inventories (total: {total_count})")
+                response_data = InventoryResponseData(
+                    list_inventory=ListInventoryResponseData(
+                        inventories=inventories,
+                        total_count=total_count,
+                    ),
+                )
+                return InventoryResponse(
+                    results=[result],
+                    response_data=response_data,
+                )
+            else:
+                logger.warning(f"FAILURE: Could not list inventories - {result.message}")
+                return InventoryResponse(
+                    results=[result],
+                    response_data=None,
+                )
+
+        except Exception as e:
+            logger.error(f"EXCEPTION in list_records: {type(e).__name__}: {str(e)}")
+            return InventoryResponse(
+                results=[
+                    GameResult(
+                        status=StatusType.FAILURE,
+                        message=f"Failed to list inventories: {str(e)}",
+                        error_code=GameError.DB_QUERY_FAILED,
                     ),
                 ],
                 response_data=None,

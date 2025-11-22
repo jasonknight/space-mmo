@@ -24,6 +24,8 @@ from game.ttypes import (
     SaveItemResponseData,
     DestroyItemRequestData,
     DestroyItemResponseData,
+    ListItemRequestData,
+    ListItemResponseData,
     Item,
     GameResult,
     StatusType,
@@ -255,6 +257,45 @@ class ItemServiceHandler(ItemServiceIface):
                 response_enum_fields=[
                     FieldEnumMapping(field_path="results[].status", enum_name="StatusType"),
                     FieldEnumMapping(field_path="results[].error_code", enum_name="GameError"),
+                ],
+            ),
+            MethodDescription(
+                method_name="list_records",
+                description="List items with pagination and optional search on internal_name",
+                example_request_json='''{
+    "data": {
+        "list_item": {
+            "page": 0,
+            "results_per_page": 10,
+            "search_string": "iron"
+        }
+    }
+}''',
+                example_response_json='''{
+    "results": [{
+        "status": "SUCCESS",
+        "message": "Successfully listed 10 items (total: 100)"
+    }],
+    "response_data": {
+        "list_item": {
+            "items": [
+                {
+                    "id": 1,
+                    "internal_name": "iron_ore",
+                    "attributes": {},
+                    "max_stack_size": 1000,
+                    "item_type": "RAWMATERIAL"
+                }
+            ],
+            "total_count": 100
+        }
+    }
+}''',
+                request_enum_fields=[],
+                response_enum_fields=[
+                    FieldEnumMapping(field_path="results[].status", enum_name="StatusType"),
+                    FieldEnumMapping(field_path="results[].error_code", enum_name="GameError"),
+                    FieldEnumMapping(field_path="response_data.list_item.items[].item_type", enum_name="ItemType"),
                 ],
             ),
         ]
@@ -489,6 +530,69 @@ class ItemServiceHandler(ItemServiceIface):
                         status=StatusType.FAILURE,
                         message=f"Failed to destroy item: {str(e)}",
                         error_code=GameError.DB_DELETE_FAILED,
+                    ),
+                ],
+                response_data=None,
+            )
+
+    def list_records(self, request: ItemRequest) -> ItemResponse:
+        """List items with pagination and optional search."""
+        logger.info("=== LIST item records request ===")
+        try:
+            if not request.data.list_item:
+                logger.error("Request data missing list_item field")
+                return ItemResponse(
+                    results=[
+                        GameResult(
+                            status=StatusType.FAILURE,
+                            message="Request data must contain list_item",
+                            error_code=GameError.DB_INVALID_DATA,
+                        ),
+                    ],
+                    response_data=None,
+                )
+
+            list_data = request.data.list_item
+            page = list_data.page
+            results_per_page = list_data.results_per_page
+            search_string = list_data.search_string if hasattr(list_data, 'search_string') else None
+
+            logger.info(f"Listing items: page={page}, results_per_page={results_per_page}, search_string={search_string}")
+
+            result, items, total_count = self.db.list_item(
+                self.database,
+                page,
+                results_per_page,
+                search_string=search_string,
+            )
+
+            if items is not None:
+                logger.info(f"SUCCESS: Listed {len(items)} items (total: {total_count})")
+                response_data = ItemResponseData(
+                    list_item=ListItemResponseData(
+                        items=items,
+                        total_count=total_count,
+                    ),
+                )
+                return ItemResponse(
+                    results=[result],
+                    response_data=response_data,
+                )
+            else:
+                logger.warning(f"FAILURE: Could not list items - {result.message}")
+                return ItemResponse(
+                    results=[result],
+                    response_data=None,
+                )
+
+        except Exception as e:
+            logger.error(f"EXCEPTION in list_records: {type(e).__name__}: {str(e)}")
+            return ItemResponse(
+                results=[
+                    GameResult(
+                        status=StatusType.FAILURE,
+                        message=f"Failed to list items: {str(e)}",
+                        error_code=GameError.DB_QUERY_FAILED,
                     ),
                 ],
                 response_data=None,
