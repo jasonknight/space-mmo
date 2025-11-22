@@ -3,9 +3,10 @@
 Simple test script for ItemService to verify basic functionality.
 """
 import sys
-sys.path.append('../gen-py')
+sys.path.append('../../gen-py')
+sys.path.append('..')
 
-from item_service import ItemServiceHandler
+from services.item_service import ItemServiceHandler
 from db import DB
 from game.ttypes import (
     ItemRequest,

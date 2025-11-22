@@ -12,6 +12,7 @@ from thrift.TRecursive import fix_spec
 from uuid import UUID
 
 import sys
+import game.BaseService
 import logging
 from .ttypes import *
 from thrift.Thrift import TProcessor
@@ -19,10 +20,7 @@ from thrift.transport import TTransport
 all_structs = []
 
 
-class Iface(object):
-    def describe(self):
-        pass
-
+class Iface(game.BaseService.Iface):
     def load(self, request):
         """
         Parameters:
@@ -72,38 +70,9 @@ class Iface(object):
         pass
 
 
-class Client(Iface):
+class Client(game.BaseService.Client, Iface):
     def __init__(self, iprot, oprot=None):
-        self._iprot = self._oprot = iprot
-        if oprot is not None:
-            self._oprot = oprot
-        self._seqid = 0
-
-    def describe(self):
-        self.send_describe()
-        return self.recv_describe()
-
-    def send_describe(self):
-        self._oprot.writeMessageBegin('describe', TMessageType.CALL, self._seqid)
-        args = describe_args()
-        args.write(self._oprot)
-        self._oprot.writeMessageEnd()
-        self._oprot.trans.flush()
-
-    def recv_describe(self):
-        iprot = self._iprot
-        (fname, mtype, rseqid) = iprot.readMessageBegin()
-        if mtype == TMessageType.EXCEPTION:
-            x = TApplicationException()
-            x.read(iprot)
-            iprot.readMessageEnd()
-            raise x
-        result = describe_result()
-        result.read(iprot)
-        iprot.readMessageEnd()
-        if result.success is not None:
-            return result.success
-        raise TApplicationException(TApplicationException.MISSING_RESULT, "describe failed: unknown result")
+        game.BaseService.Client.__init__(self, iprot, oprot)
 
     def load(self, request):
         """
@@ -298,11 +267,9 @@ class Client(Iface):
         raise TApplicationException(TApplicationException.MISSING_RESULT, "list_records failed: unknown result")
 
 
-class Processor(Iface, TProcessor):
+class Processor(game.BaseService.Processor, Iface, TProcessor):
     def __init__(self, handler):
-        self._handler = handler
-        self._processMap = {}
-        self._processMap["describe"] = Processor.process_describe
+        game.BaseService.Processor.__init__(self, handler)
         self._processMap["load"] = Processor.process_load
         self._processMap["create"] = Processor.process_create
         self._processMap["save"] = Processor.process_save
@@ -330,29 +297,6 @@ class Processor(Iface, TProcessor):
         else:
             self._processMap[name](self, seqid, iprot, oprot)
         return True
-
-    def process_describe(self, seqid, iprot, oprot):
-        args = describe_args()
-        args.read(iprot)
-        iprot.readMessageEnd()
-        result = describe_result()
-        try:
-            result.success = self._handler.describe()
-            msg_type = TMessageType.REPLY
-        except TTransport.TTransportException:
-            raise
-        except TApplicationException as ex:
-            logging.exception('TApplication exception in handler')
-            msg_type = TMessageType.EXCEPTION
-            result = ex
-        except Exception:
-            logging.exception('Unexpected exception in handler')
-            msg_type = TMessageType.EXCEPTION
-            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
-        oprot.writeMessageBegin("describe", msg_type, seqid)
-        result.write(oprot)
-        oprot.writeMessageEnd()
-        oprot.trans.flush()
 
     def process_load(self, seqid, iprot, oprot):
         args = load_args()
@@ -493,115 +437,6 @@ class Processor(Iface, TProcessor):
         oprot.trans.flush()
 
 # HELPER FUNCTIONS AND STRUCTURES
-
-
-class describe_args(object):
-    thrift_spec = None
-
-
-    def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
-            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
-            return
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-
-    def write(self, oprot):
-        self.validate()
-        if oprot._fast_encode is not None and self.thrift_spec is not None:
-            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
-            return
-        oprot.writeStructBegin('describe_args')
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-all_structs.append(describe_args)
-describe_args.thrift_spec = (
-)
-
-
-class describe_result(object):
-    """
-    Attributes:
-     - success
-
-    """
-    thrift_spec = None
-
-
-    def __init__(self, success = None,):
-        self.success = success
-
-    def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
-            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
-            return
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 0:
-                if ftype == TType.STRUCT:
-                    self.success = ServiceMetadata()
-                    self.success.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-
-    def write(self, oprot):
-        self.validate()
-        if oprot._fast_encode is not None and self.thrift_spec is not None:
-            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
-            return
-        oprot.writeStructBegin('describe_result')
-        if self.success is not None:
-            oprot.writeFieldBegin('success', TType.STRUCT, 0)
-            self.success.write(oprot)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-all_structs.append(describe_result)
-describe_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [ServiceMetadata, None], None, ),  # 0
-)
 
 
 class load_args(object):

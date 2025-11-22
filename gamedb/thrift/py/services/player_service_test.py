@@ -2,10 +2,11 @@
 """Tests for PlayerService with cache validation."""
 
 import sys
-sys.path.append('../gen-py')
+sys.path.append('../../gen-py')
+sys.path.append('..')
 
 from db import DB
-from player_service import PlayerServiceHandler, LRUCache
+from services.player_service import PlayerServiceHandler, LRUCache
 from game.ttypes import (
     PlayerRequest,
     PlayerResponse,

@@ -16,7 +16,7 @@ else:
 from thrift.transport import TTransport, TSocket, TSSLSocket, THttpClient
 from thrift.protocol.TBinaryProtocol import TBinaryProtocol
 
-from game import InventoryService
+from game import BaseService
 from game.ttypes import *
 
 if len(sys.argv) <= 1 or sys.argv[1] == '--help':
@@ -24,12 +24,6 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('Usage: ' + sys.argv[0] + ' [-h host[:port]] [-u url] [-f[ramed]] [-s[sl]] [-novalidate] [-ca_certs certs] [-keyfile keyfile] [-certfile certfile] function [arg1 [arg2...]]')
     print('')
     print('Functions:')
-    print('  InventoryResponse load(InventoryRequest request)')
-    print('  InventoryResponse create(InventoryRequest request)')
-    print('  InventoryResponse save(InventoryRequest request)')
-    print('  InventoryResponse split_stack(InventoryRequest request)')
-    print('  InventoryResponse transfer_item(InventoryRequest request)')
-    print('  InventoryResponse list_records(InventoryRequest request)')
     print('  ServiceMetadata describe()')
     print('')
     sys.exit(0)
@@ -107,46 +101,10 @@ else:
     else:
         transport = TTransport.TBufferedTransport(socket)
 protocol = TBinaryProtocol(transport)
-client = InventoryService.Client(protocol)
+client = BaseService.Client(protocol)
 transport.open()
 
-if cmd == 'load':
-    if len(args) != 1:
-        print('load requires 1 args')
-        sys.exit(1)
-    pp.pprint(client.load(eval(args[0]),))
-
-elif cmd == 'create':
-    if len(args) != 1:
-        print('create requires 1 args')
-        sys.exit(1)
-    pp.pprint(client.create(eval(args[0]),))
-
-elif cmd == 'save':
-    if len(args) != 1:
-        print('save requires 1 args')
-        sys.exit(1)
-    pp.pprint(client.save(eval(args[0]),))
-
-elif cmd == 'split_stack':
-    if len(args) != 1:
-        print('split_stack requires 1 args')
-        sys.exit(1)
-    pp.pprint(client.split_stack(eval(args[0]),))
-
-elif cmd == 'transfer_item':
-    if len(args) != 1:
-        print('transfer_item requires 1 args')
-        sys.exit(1)
-    pp.pprint(client.transfer_item(eval(args[0]),))
-
-elif cmd == 'list_records':
-    if len(args) != 1:
-        print('list_records requires 1 args')
-        sys.exit(1)
-    pp.pprint(client.list_records(eval(args[0]),))
-
-elif cmd == 'describe':
+if cmd == 'describe':
     if len(args) != 0:
         print('describe requires 0 args')
         sys.exit(1)

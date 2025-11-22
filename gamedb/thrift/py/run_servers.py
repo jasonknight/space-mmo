@@ -20,9 +20,9 @@ from thrift.server import TServer
 from game.InventoryService import Processor as InventoryProcessor
 from game.ItemService import Processor as ItemProcessor
 from game.PlayerService import Processor as PlayerProcessor
-from inventory_service import InventoryServiceHandler
-from item_service import ItemServiceHandler
-from player_service import PlayerServiceHandler
+from services.inventory_service import InventoryServiceHandler
+from services.item_service import ItemServiceHandler
+from services.player_service import PlayerServiceHandler
 from db import DB
 
 

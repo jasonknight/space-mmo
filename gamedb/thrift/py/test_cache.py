@@ -4,7 +4,7 @@
 import sys
 sys.path.append('../gen-py')
 
-from inventory_service import LRUCache
+from services.lru_cache import LRUCache
 from game.ttypes import Inventory, Owner
 
 def test_lru_cache():

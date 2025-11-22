@@ -499,13 +499,19 @@ struct ServiceMetadata {
 }
 
 // ============================================================================
+// Base Service Definition
+// ============================================================================
+
+service BaseService {
+    // Service discovery method
+    ServiceMetadata describe(),
+}
+
+// ============================================================================
 // Inventory Service Definition
 // ============================================================================
 
-service InventoryService {
-    // Service discovery method
-    ServiceMetadata describe(),
-
+service InventoryService extends BaseService {
     // Load an inventory by ID
     InventoryResponse load(1: InventoryRequest request),
 
@@ -529,10 +535,7 @@ service InventoryService {
 // Item Service Definition
 // ============================================================================
 
-service ItemService {
-    // Service discovery method
-    ServiceMetadata describe(),
-
+service ItemService extends BaseService {
     // Create a new item
     ItemResponse create(1: ItemRequest request),
 
@@ -553,10 +556,7 @@ service ItemService {
 // Player Service Definition
 // ============================================================================
 
-service PlayerService {
-    // Service discovery method
-    ServiceMetadata describe(),
-
+service PlayerService extends BaseService {
     // Create a new player
     PlayerResponse create(1: PlayerRequest request),
 
