@@ -200,21 +200,137 @@ class GameError(object):
     }
 
 
+class Player(object):
+    """
+    Attributes:
+     - id
+     - full_name
+     - what_we_call_you
+     - security_token
+     - over_13
+     - year_of_birth
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, id = None, full_name = None, what_we_call_you = None, security_token = None, over_13 = None, year_of_birth = None,):
+        self.id = id
+        self.full_name = full_name
+        self.what_we_call_you = what_we_call_you
+        self.security_token = security_token
+        self.over_13 = over_13
+        self.year_of_birth = year_of_birth
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.full_name = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.what_we_call_you = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRING:
+                    self.security_token = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.BOOL:
+                    self.over_13 = iprot.readBool()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 6:
+                if ftype == TType.I64:
+                    self.year_of_birth = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('Player')
+        if self.id is not None:
+            oprot.writeFieldBegin('id', TType.I64, 1)
+            oprot.writeI64(self.id)
+            oprot.writeFieldEnd()
+        if self.full_name is not None:
+            oprot.writeFieldBegin('full_name', TType.STRING, 2)
+            oprot.writeString(self.full_name.encode('utf-8') if sys.version_info[0] == 2 else self.full_name)
+            oprot.writeFieldEnd()
+        if self.what_we_call_you is not None:
+            oprot.writeFieldBegin('what_we_call_you', TType.STRING, 3)
+            oprot.writeString(self.what_we_call_you.encode('utf-8') if sys.version_info[0] == 2 else self.what_we_call_you)
+            oprot.writeFieldEnd()
+        if self.security_token is not None:
+            oprot.writeFieldBegin('security_token', TType.STRING, 4)
+            oprot.writeString(self.security_token.encode('utf-8') if sys.version_info[0] == 2 else self.security_token)
+            oprot.writeFieldEnd()
+        if self.over_13 is not None:
+            oprot.writeFieldBegin('over_13', TType.BOOL, 5)
+            oprot.writeBool(self.over_13)
+            oprot.writeFieldEnd()
+        if self.year_of_birth is not None:
+            oprot.writeFieldBegin('year_of_birth', TType.I64, 6)
+            oprot.writeI64(self.year_of_birth)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
 class Owner(object):
     """
     Attributes:
      - mobile_id
      - item_it
      - asset_id
+     - player_id
 
     """
     thrift_spec = None
 
 
-    def __init__(self, mobile_id = None, item_it = None, asset_id = None,):
+    def __init__(self, mobile_id = None, item_it = None, asset_id = None, player_id = None,):
         self.mobile_id = mobile_id
         self.item_it = item_it
         self.asset_id = asset_id
+        self.player_id = player_id
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -240,6 +356,11 @@ class Owner(object):
                     self.asset_id = iprot.readI64()
                 else:
                     iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.I64:
+                    self.player_id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -262,6 +383,10 @@ class Owner(object):
         if self.asset_id is not None:
             oprot.writeFieldBegin('asset_id', TType.I64, 3)
             oprot.writeI64(self.asset_id)
+            oprot.writeFieldEnd()
+        if self.player_id is not None:
+            oprot.writeFieldBegin('player_id', TType.I64, 4)
+            oprot.writeI64(self.player_id)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -1219,15 +1344,17 @@ class Mobile(object):
      - id
      - mobile_type
      - attributes
+     - owner
 
     """
     thrift_spec = None
 
 
-    def __init__(self, id = None, mobile_type = None, attributes = None,):
+    def __init__(self, id = None, mobile_type = None, attributes = None, owner = None,):
         self.id = id
         self.mobile_type = mobile_type
         self.attributes = attributes
+        self.owner = owner
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -1260,6 +1387,12 @@ class Mobile(object):
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRUCT:
+                    self.owner = Owner()
+                    self.owner.read(iprot)
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -1286,6 +1419,10 @@ class Mobile(object):
                 oprot.writeI32(kiter39)
                 viter40.write(oprot)
             oprot.writeMapEnd()
+            oprot.writeFieldEnd()
+        if self.owner is not None:
+            oprot.writeFieldBegin('owner', TType.STRUCT, 4)
+            self.owner.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -2737,12 +2874,23 @@ class ServiceMetadata(object):
 
     def __ne__(self, other):
         return not (self == other)
+all_structs.append(Player)
+Player.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'id', None, None, ),  # 1
+    (2, TType.STRING, 'full_name', 'UTF8', None, ),  # 2
+    (3, TType.STRING, 'what_we_call_you', 'UTF8', None, ),  # 3
+    (4, TType.STRING, 'security_token', 'UTF8', None, ),  # 4
+    (5, TType.BOOL, 'over_13', None, None, ),  # 5
+    (6, TType.I64, 'year_of_birth', None, None, ),  # 6
+)
 all_structs.append(Owner)
 Owner.thrift_spec = (
     None,  # 0
     (1, TType.I64, 'mobile_id', None, None, ),  # 1
     (2, TType.I64, 'item_it', None, None, ),  # 2
     (3, TType.I64, 'asset_id', None, None, ),  # 3
+    (4, TType.I64, 'player_id', None, None, ),  # 4
 )
 all_structs.append(ItemVector3)
 ItemVector3.thrift_spec = (
@@ -2827,6 +2975,7 @@ Mobile.thrift_spec = (
     (1, TType.I64, 'id', None, None, ),  # 1
     (2, TType.I32, 'mobile_type', None, None, ),  # 2
     (3, TType.MAP, 'attributes', (TType.I32, None, TType.STRUCT, [Attribute, None], False), None, ),  # 3
+    (4, TType.STRUCT, 'owner', [Owner, None], None, ),  # 4
 )
 all_structs.append(LoadInventoryRequestData)
 LoadInventoryRequestData.thrift_spec = (

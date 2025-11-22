@@ -1,6 +1,20 @@
 typedef i64 AssetId
 typedef i64 ItemId
 typedef i64 MobileId
+typedef i64 PlayerId
+
+struct Player {
+    1: optional PlayerId id;
+    // Whatever the player's full legal name is
+    2: string full_name;
+    // The actual string we should use to refer to the player
+    3: string what_we_call_you;
+    // A hash of a security word
+    4: string security_token;
+    // Whether or not the player is over 13
+    5: bool over_13;
+    6: i64 year_of_birth;
+}
 // The general item type is something like a parent item
 // class, it gives some broad category to the item, is it 
 // a consumable, virtual, weapon, These are special, globally
@@ -26,6 +40,7 @@ union Owner {
     1: MobileId mobile_id;
     2: ItemId item_it;
     3: AssetId asset_id;
+    4: PlayerId player_id;
 }
 
 enum AttributeType {
@@ -56,13 +71,12 @@ enum AttributeType {
     VOLUME=14, // how many mm3 is 1 unit
 }
 
-
-
 struct ItemVector3 {
     1: double x;
     2: double y;
     3: double z;
 }
+
 union AttributeValue {
     1: bool bool_value;
     2: double double_value;
@@ -104,7 +118,6 @@ struct ItemBlueprint {
     1: optional i64 id;
     2: map<ItemId, ItemBlueprintComponent> components;
     3: i64 bake_time_ms;
-
 }
 
 struct ItemDb {
@@ -190,6 +203,7 @@ struct Mobile {
     1: optional MobileId id;
     2: MobileType mobile_type;
     3: map<AttributeType, Attribute> attributes;
+    4: Owner owner;
 }
 
 // ============================================================================

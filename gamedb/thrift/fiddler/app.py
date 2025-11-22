@@ -341,6 +341,8 @@ def invoke_method():
                 owner.item_it = owner_dict['item_it']
             elif 'asset_id' in owner_dict:
                 owner.asset_id = owner_dict['asset_id']
+            elif 'player_id' in owner_dict:
+                owner.player_id = owner_dict['player_id']
 
             # Build Inventory
             inventory = Inventory(
@@ -366,6 +368,8 @@ def invoke_method():
                 owner.item_it = owner_dict['item_it']
             elif 'asset_id' in owner_dict:
                 owner.asset_id = owner_dict['asset_id']
+            elif 'player_id' in owner_dict:
+                owner.player_id = owner_dict['player_id']
 
             # Build entries
             entries = []

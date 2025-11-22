@@ -16,6 +16,7 @@ from game.ttypes import (
     InventoryEntry,
     Mobile,
     MobileType,
+    Player,
     StatusType,
     GameError,
 )
@@ -57,6 +58,9 @@ def setup_database(db: DB, database_name: str):
         cursor.execute(stmt)
 
     for stmt in db.get_mobiles_table_sql(database_name):
+        cursor.execute(stmt)
+
+    for stmt in db.get_players_table_sql(database_name):
         cursor.execute(stmt)
 
     db.connection.commit()
@@ -432,7 +436,7 @@ def test_mobile(db: DB, database_name: str):
     """Test Mobile save and load."""
     print("Testing Mobile...")
 
-    # Create mobile with attributes
+    # Create mobile with attributes and owner
     attributes = {
         AttributeType.TRANSLATED_NAME: Attribute(
             id=None,
@@ -452,10 +456,15 @@ def test_mobile(db: DB, database_name: str):
         ),
     }
 
+    # Create owner for mobile
+    owner = Owner()
+    owner.mobile_id = 999
+
     mobile = Mobile(
         id=None,
         mobile_type=MobileType.PLAYER,
         attributes=attributes,
+        owner=owner,
     )
 
     # Save mobile
@@ -472,6 +481,11 @@ def test_mobile(db: DB, database_name: str):
     assert loaded_mobile.id == mobile.id, "ID mismatch"
     assert loaded_mobile.mobile_type == mobile.mobile_type, "mobile_type mismatch"
     assert len(loaded_mobile.attributes) == len(mobile.attributes), "Attributes count mismatch"
+
+    # Verify owner was saved and loaded correctly
+    assert loaded_mobile.owner is not None, "Owner is None"
+    assert hasattr(loaded_mobile.owner, 'mobile_id'), "Owner should have mobile_id"
+    assert loaded_mobile.owner.mobile_id == 999, f"Owner mobile_id mismatch: {loaded_mobile.owner.mobile_id}"
 
     # Test update
     print("  Testing update...")
@@ -502,6 +516,72 @@ def test_mobile(db: DB, database_name: str):
     print("  ✓ Destroy verified: load failed with DB_RECORD_NOT_FOUND")
 
     print("  ✓ All assertions passed for Mobile\n")
+
+
+def test_player(db: DB, database_name: str):
+    """Test Player save and load."""
+    print("Testing Player...")
+
+    # Create player
+    player = Player(
+        id=None,
+        full_name="John Doe",
+        what_we_call_you="Johnny",
+        security_token="abc123def456",
+        over_13=True,
+        year_of_birth=1990,
+    )
+
+    # Save player
+    save_results = db.save_player(database_name, player)
+    assert is_ok(save_results), f"Failed to save Player: {save_results[0].message}"
+    print(f"  ✓ Saved: {save_results[0].message}")
+
+    # Load player
+    load_result, loaded_player = db.load_player(database_name, player.id)
+    assert is_true(load_result), f"Failed to load Player: {load_result.message}"
+    print(f"  ✓ Loaded: {load_result.message}")
+
+    # Compare
+    assert loaded_player.id == player.id, "ID mismatch"
+    assert loaded_player.full_name == player.full_name, "full_name mismatch"
+    assert loaded_player.what_we_call_you == player.what_we_call_you, "what_we_call_you mismatch"
+    assert loaded_player.security_token == player.security_token, "security_token mismatch"
+    assert loaded_player.over_13 == player.over_13, "over_13 mismatch"
+    assert loaded_player.year_of_birth == player.year_of_birth, "year_of_birth mismatch"
+
+    # Test update
+    print("  Testing update...")
+    loaded_player.full_name = "Jane Smith"
+    loaded_player.what_we_call_you = "Janie"
+    loaded_player.year_of_birth = 1995
+
+    update_results = db.save_player(database_name, loaded_player)
+    assert is_ok(update_results), f"Failed to update Player: {update_results[0].message}"
+    print(f"  ✓ Updated: {update_results[0].message}")
+
+    # Load again and verify updates
+    load_result2, updated_player = db.load_player(database_name, loaded_player.id)
+    assert is_true(load_result2), f"Failed to load updated Player: {load_result2.message}"
+    assert updated_player.full_name == "Jane Smith", "Updated full_name mismatch"
+    assert updated_player.what_we_call_you == "Janie", "Updated what_we_call_you mismatch"
+    assert updated_player.year_of_birth == 1995, "Updated year_of_birth mismatch"
+    print("  ✓ Update verified")
+
+    # Test destroy
+    print("  Testing destroy...")
+    destroy_results = db.destroy_player(database_name, loaded_player.id)
+    assert is_ok(destroy_results), f"Failed to destroy Player: {destroy_results[0].message}"
+    print(f"  ✓ Destroyed: {destroy_results[0].message}")
+
+    # Verify load fails after destroy
+    load_result3, destroyed_player = db.load_player(database_name, loaded_player.id)
+    assert not is_true(load_result3), "Load should fail after destroy"
+    assert destroyed_player is None, "Destroyed player should be None"
+    assert load_result3.error_code == GameError.DB_RECORD_NOT_FOUND, f"Expected DB_RECORD_NOT_FOUND, got {load_result3.error_code}"
+    print("  ✓ Destroy verified: load failed with DB_RECORD_NOT_FOUND")
+
+    print("  ✓ All assertions passed for Player\n")
 
 
 def test_unified_dispatchers(db: DB, database_name: str):
@@ -581,6 +661,7 @@ def main():
         test_item(db, database_name)
         test_inventory(db, database_name)
         test_mobile(db, database_name)
+        test_player(db, database_name)
         test_unified_dispatchers(db, database_name)
 
         print("=" * 60)

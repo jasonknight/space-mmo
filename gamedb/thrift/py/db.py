@@ -17,6 +17,7 @@ from game.ttypes import (
     InventoryEntry,
     Inventory,
     Mobile,
+    Player,
 )
 from common import is_ok, is_true
 
@@ -35,6 +36,7 @@ TABLE_INVENTORIES = "inventories"
 TABLE_INVENTORY_ENTRIES = "inventory_entries"
 TABLE_INVENTORY_OWNERS = "inventory_owners"
 TABLE_MOBILES = "mobiles"
+TABLE_PLAYERS = "players"
 
 # Error message templates
 MSG_CREATED = "Successfully created {type} id={id}"
@@ -112,6 +114,7 @@ TYPE_REGISTRY = {
     'ItemBlueprint': ItemBlueprint,
     'Inventory': Inventory,
     'Mobile': Mobile,
+    'Player': Player,
 }
 
 
@@ -214,6 +217,7 @@ class DB:
                 mobile_id BIGINT,
                 item_id BIGINT,
                 asset_id BIGINT,
+                player_id BIGINT,
                 FOREIGN KEY (attribute_id) REFERENCES {database}.attributes(id)
             );""",
         ]
@@ -304,6 +308,7 @@ class DB:
                 mobile_id BIGINT,
                 item_id BIGINT,
                 asset_id BIGINT,
+                player_id BIGINT,
                 FOREIGN KEY (inventory_id) REFERENCES {database}.inventories(id)
             );""",
         ]
@@ -316,11 +321,31 @@ class DB:
             f"CREATE DATABASE IF NOT EXISTS {database};",
             f"""CREATE TABLE IF NOT EXISTS {database}.mobiles (
                 id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                mobile_type VARCHAR(50) NOT NULL
+                mobile_type VARCHAR(50) NOT NULL,
+                owner_mobile_id BIGINT,
+                owner_item_id BIGINT,
+                owner_asset_id BIGINT,
+                owner_player_id BIGINT
             );""",
         ]
 
-    
+    def get_players_table_sql(
+        self,
+        database: str,
+    ) -> list[str]:
+        return [
+            f"CREATE DATABASE IF NOT EXISTS {database};",
+            f"""CREATE TABLE IF NOT EXISTS {database}.players (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                full_name VARCHAR(255) NOT NULL,
+                what_we_call_you VARCHAR(255) NOT NULL,
+                security_token VARCHAR(255) NOT NULL,
+                over_13 BOOLEAN NOT NULL,
+                year_of_birth BIGINT NOT NULL
+            );""",
+        ]
+
+
     def get_attribute_sql(
         self,
         database: str,
@@ -383,6 +408,7 @@ class DB:
         mobile_id = "NULL"
         item_id = "NULL"
         asset_id = "NULL"
+        player_id = "NULL"
 
         if obj.owner:
             if hasattr(obj.owner, 'mobile_id') and obj.owner.mobile_id is not None:
@@ -391,11 +417,13 @@ class DB:
                 item_id = str(obj.owner.item_it)
             elif hasattr(obj.owner, 'asset_id') and obj.owner.asset_id is not None:
                 asset_id = str(obj.owner.asset_id)
+            elif hasattr(obj.owner, 'player_id') and obj.owner.player_id is not None:
+                player_id = str(obj.owner.player_id)
 
         statements.append(
             f"INSERT INTO {database}.{attribute_owners_table} "
-            f"(attribute_id, mobile_id, item_id, asset_id) "
-            f"VALUES ({{last_insert_id}}, {mobile_id}, {item_id}, {asset_id});"
+            f"(attribute_id, mobile_id, item_id, asset_id, player_id) "
+            f"VALUES ({{last_insert_id}}, {mobile_id}, {item_id}, {asset_id}, {player_id});"
         )
 
         return statements
@@ -462,6 +490,7 @@ class DB:
                     mobile_id = None
                     item_id = None
                     asset_id = None
+                    player_id = None
 
                     if hasattr(obj.owner, 'mobile_id') and obj.owner.mobile_id is not None:
                         mobile_id = obj.owner.mobile_id
@@ -469,12 +498,14 @@ class DB:
                         item_id = obj.owner.item_it
                     elif hasattr(obj.owner, 'asset_id') and obj.owner.asset_id is not None:
                         asset_id = obj.owner.asset_id
+                    elif hasattr(obj.owner, 'player_id') and obj.owner.player_id is not None:
+                        player_id = obj.owner.player_id
 
                     cursor.execute(
                         f"INSERT INTO {database}.{TABLE_ATTRIBUTE_OWNERS} "
-                        f"(attribute_id, mobile_id, item_id, asset_id) "
-                        f"VALUES (%s, %s, %s, %s)",
-                        (obj.id, mobile_id, item_id, asset_id),
+                        f"(attribute_id, mobile_id, item_id, asset_id, player_id) "
+                        f"VALUES (%s, %s, %s, %s, %s)",
+                        (obj.id, mobile_id, item_id, asset_id, player_id),
                     )
 
             return [
@@ -563,6 +594,7 @@ class DB:
             mobile_id = "NULL"
             item_id = "NULL"
             asset_id = "NULL"
+            player_id = "NULL"
 
             if obj.owner:
                 if hasattr(obj.owner, 'mobile_id') and obj.owner.mobile_id is not None:
@@ -571,11 +603,13 @@ class DB:
                     item_id = str(obj.owner.item_it)
                 elif hasattr(obj.owner, 'asset_id') and obj.owner.asset_id is not None:
                     asset_id = str(obj.owner.asset_id)
+                elif hasattr(obj.owner, 'player_id') and obj.owner.player_id is not None:
+                    player_id = str(obj.owner.player_id)
 
             cursor.execute(
                 f"INSERT INTO {database}.{attribute_owners_table} "
-                f"(attribute_id, mobile_id, item_id, asset_id) "
-                f"VALUES ({obj.id}, {mobile_id}, {item_id}, {asset_id});"
+                f"(attribute_id, mobile_id, item_id, asset_id, player_id) "
+                f"VALUES ({obj.id}, {mobile_id}, {item_id}, {asset_id}, {player_id});"
             )
 
             # Commit transaction
@@ -663,6 +697,8 @@ class DB:
                     owner = owner_row['item_id']
                 elif owner_row['asset_id']:
                     owner = owner_row['asset_id']
+                elif owner_row['player_id']:
+                    owner = owner_row['player_id']
 
             # Import AttributeType enum
             from game.ttypes import AttributeType
@@ -1093,6 +1129,8 @@ class DB:
                         owner = owner_row['item_id']
                     elif owner_row['asset_id']:
                         owner = owner_row['asset_id']
+                    elif owner_row['player_id']:
+                        owner = owner_row['player_id']
 
                 # Import AttributeType enum
                 from game.ttypes import AttributeType
@@ -1437,6 +1475,7 @@ class DB:
         mobile_id = "NULL"
         item_id = "NULL"
         asset_id = "NULL"
+        player_id = "NULL"
         owner_type = "NULL"
         owner_id = "NULL"
 
@@ -1456,6 +1495,10 @@ class DB:
                     asset_id = str(obj.owner.asset_id)
                     owner_id = asset_id
                     owner_type = "'ASSET'"
+                elif hasattr(obj.owner, 'player_id') and obj.owner.player_id is not None:
+                    player_id = str(obj.owner.player_id)
+                    owner_id = player_id
+                    owner_type = "'PLAYER'"
             elif isinstance(obj.owner, int):
                 # It's a plain int, assume it's a mobile_id for backwards compatibility
                 mobile_id = str(obj.owner)
@@ -1491,8 +1534,8 @@ class DB:
         # Insert inventory owner (one-to-one)
         statements.append(
             f"INSERT INTO {database}.{inventory_owners_table} "
-            f"(inventory_id, mobile_id, item_id, asset_id) "
-            f"VALUES ({{inventory_id}}, {mobile_id}, {item_id}, {asset_id});"
+            f"(inventory_id, mobile_id, item_id, asset_id, player_id) "
+            f"VALUES ({{inventory_id}}, {mobile_id}, {item_id}, {asset_id}, {player_id});"
         )
 
         return statements
@@ -1589,6 +1632,7 @@ class DB:
             mobile_id = "NULL"
             item_id = "NULL"
             asset_id = "NULL"
+            player_id = "NULL"
             owner_type = "NULL"
             owner_id = "NULL"
 
@@ -1606,6 +1650,10 @@ class DB:
                         asset_id = str(obj.owner.asset_id)
                         owner_id = asset_id
                         owner_type = "'ASSET'"
+                    elif hasattr(obj.owner, 'player_id') and obj.owner.player_id is not None:
+                        player_id = str(obj.owner.player_id)
+                        owner_id = player_id
+                        owner_type = "'PLAYER'"
                 elif isinstance(obj.owner, int):
                     mobile_id = str(obj.owner)
                     owner_id = mobile_id
@@ -1644,8 +1692,8 @@ class DB:
 
             cursor.execute(
                 f"INSERT INTO {database}.{inventory_owners_table} "
-                f"(inventory_id, mobile_id, item_id, asset_id) "
-                f"VALUES ({obj.id}, {mobile_id}, {item_id}, {asset_id});"
+                f"(inventory_id, mobile_id, item_id, asset_id, player_id) "
+                f"VALUES ({obj.id}, {mobile_id}, {item_id}, {asset_id}, {player_id});"
             )
 
             # Commit transaction
@@ -1736,6 +1784,8 @@ class DB:
                     owner = owner_row['item_id']
                 elif owner_row['asset_id']:
                     owner = owner_row['asset_id']
+                elif owner_row['player_id']:
+                    owner = owner_row['player_id']
 
             # Create Inventory object
             inventory = Inventory(
@@ -1798,18 +1848,39 @@ class DB:
             statements.append(f"TRUNCATE TABLE {database}.{mobile_table};")
 
         # Insert the mobile
-        from game.ttypes import MobileType as MobileTypeEnum
+        from game.ttypes import MobileType as MobileTypeEnum, Owner
         mobile_type_name = MobileTypeEnum._VALUES_TO_NAMES[obj.mobile_type]
+
+        # Extract owner information
+        owner_mobile_id = "NULL"
+        owner_item_id = "NULL"
+        owner_asset_id = "NULL"
+        owner_player_id = "NULL"
+
+        if hasattr(obj, 'owner') and obj.owner is not None:
+            if isinstance(obj.owner, Owner):
+                if hasattr(obj.owner, 'mobile_id') and obj.owner.mobile_id is not None:
+                    owner_mobile_id = str(obj.owner.mobile_id)
+                elif hasattr(obj.owner, 'item_it') and obj.owner.item_it is not None:
+                    owner_item_id = str(obj.owner.item_it)
+                elif hasattr(obj.owner, 'asset_id') and obj.owner.asset_id is not None:
+                    owner_asset_id = str(obj.owner.asset_id)
+                elif hasattr(obj.owner, 'player_id') and obj.owner.player_id is not None:
+                    owner_player_id = str(obj.owner.player_id)
+            elif isinstance(obj.owner, int):
+                owner_mobile_id = str(obj.owner)
 
         if obj.id is None:
             statements.append(
-                f"INSERT INTO {database}.{mobile_table} (mobile_type) "
-                f"VALUES ('{mobile_type_name}');"
+                f"INSERT INTO {database}.{mobile_table} "
+                f"(mobile_type, owner_mobile_id, owner_item_id, owner_asset_id, owner_player_id) "
+                f"VALUES ('{mobile_type_name}', {owner_mobile_id}, {owner_item_id}, {owner_asset_id}, {owner_player_id});"
             )
         else:
             statements.append(
-                f"INSERT INTO {database}.{mobile_table} (id, mobile_type) "
-                f"VALUES ({obj.id}, '{mobile_type_name}');"
+                f"INSERT INTO {database}.{mobile_table} "
+                f"(id, mobile_type, owner_mobile_id, owner_item_id, owner_asset_id, owner_player_id) "
+                f"VALUES ({obj.id}, '{mobile_type_name}', {owner_mobile_id}, {owner_item_id}, {owner_asset_id}, {owner_player_id});"
             )
 
         # Insert attributes (one-to-many relationship via attribute_owners)
@@ -1950,13 +2021,36 @@ class DB:
             attributes_table = "attributes"
             attribute_owners_table = "attribute_owners"
 
-            from game.ttypes import MobileType as MobileTypeEnum
+            from game.ttypes import MobileType as MobileTypeEnum, Owner
             mobile_type_name = MobileTypeEnum._VALUES_TO_NAMES[obj.mobile_type]
+
+            # Extract owner information
+            owner_mobile_id = "NULL"
+            owner_item_id = "NULL"
+            owner_asset_id = "NULL"
+            owner_player_id = "NULL"
+
+            if hasattr(obj, 'owner') and obj.owner is not None:
+                if isinstance(obj.owner, Owner):
+                    if hasattr(obj.owner, 'mobile_id') and obj.owner.mobile_id is not None:
+                        owner_mobile_id = str(obj.owner.mobile_id)
+                    elif hasattr(obj.owner, 'item_it') and obj.owner.item_it is not None:
+                        owner_item_id = str(obj.owner.item_it)
+                    elif hasattr(obj.owner, 'asset_id') and obj.owner.asset_id is not None:
+                        owner_asset_id = str(obj.owner.asset_id)
+                    elif hasattr(obj.owner, 'player_id') and obj.owner.player_id is not None:
+                        owner_player_id = str(obj.owner.player_id)
+                elif isinstance(obj.owner, int):
+                    owner_mobile_id = str(obj.owner)
 
             # Update mobile
             cursor.execute(
                 f"UPDATE {database}.{mobile_table} SET "
-                f"mobile_type = '{mobile_type_name}' "
+                f"mobile_type = '{mobile_type_name}', "
+                f"owner_mobile_id = {owner_mobile_id}, "
+                f"owner_item_id = {owner_item_id}, "
+                f"owner_asset_id = {owner_asset_id}, "
+                f"owner_player_id = {owner_player_id} "
                 f"WHERE id = {obj.id};"
             )
 
@@ -2136,14 +2230,30 @@ class DB:
                 attributes[attr_type] = attribute
 
             # Import MobileType enum
-            from game.ttypes import MobileType
+            from game.ttypes import MobileType, Owner
             mobile_type = MobileType._NAMES_TO_VALUES[mobile_row['mobile_type']]
+
+            # Reconstruct owner
+            owner = None
+            if mobile_row['owner_mobile_id']:
+                owner = Owner()
+                owner.mobile_id = mobile_row['owner_mobile_id']
+            elif mobile_row['owner_item_id']:
+                owner = Owner()
+                owner.item_it = mobile_row['owner_item_id']
+            elif mobile_row['owner_asset_id']:
+                owner = Owner()
+                owner.asset_id = mobile_row['owner_asset_id']
+            elif mobile_row['owner_player_id']:
+                owner = Owner()
+                owner.player_id = mobile_row['owner_player_id']
 
             # Create Mobile object
             mobile = Mobile(
                 id=mobile_row['id'],
                 mobile_type=mobile_type,
                 attributes=attributes,
+                owner=owner,
             )
 
             cursor.close()
@@ -2167,6 +2277,203 @@ class DB:
         finally:
             if cursor:
                 cursor.close()
+
+    def create_player(
+        self,
+        database: str,
+        obj: Player,
+        table: Optional[str] = None,
+    ) -> list[GameResult]:
+        try:
+            with self.transaction() as cursor:
+                players_table = table if table else TABLE_PLAYERS
+
+                if obj.id is None:
+                    cursor.execute(
+                        f"INSERT INTO {database}.{players_table} "
+                        f"(full_name, what_we_call_you, security_token, over_13, year_of_birth) "
+                        f"VALUES (%s, %s, %s, %s, %s)",
+                        (
+                            obj.full_name,
+                            obj.what_we_call_you,
+                            obj.security_token,
+                            obj.over_13,
+                            obj.year_of_birth,
+                        ),
+                    )
+                    obj.id = cursor.lastrowid
+                else:
+                    cursor.execute(
+                        f"INSERT INTO {database}.{players_table} "
+                        f"(id, full_name, what_we_call_you, security_token, over_13, year_of_birth) "
+                        f"VALUES (%s, %s, %s, %s, %s, %s)",
+                        (
+                            obj.id,
+                            obj.full_name,
+                            obj.what_we_call_you,
+                            obj.security_token,
+                            obj.over_13,
+                            obj.year_of_birth,
+                        ),
+                    )
+
+            return [
+                GameResult(
+                    status=StatusType.SUCCESS,
+                    message=MSG_CREATED.format(type="Player", id=obj.id),
+                ),
+            ]
+        except Exception as e:
+            return [
+                GameResult(
+                    status=StatusType.FAILURE,
+                    message=MSG_CREATE_FAILED.format(type="Player", database=database, error=str(e)),
+                    error_code=GameError.DB_INSERT_FAILED,
+                ),
+            ]
+
+    def update_player(
+        self,
+        database: str,
+        obj: Player,
+        table: Optional[str] = None,
+    ) -> list[GameResult]:
+        try:
+            if obj.id is None:
+                return [
+                    GameResult(
+                        status=StatusType.FAILURE,
+                        message=f"Cannot update Player with id=None",
+                        error_code=GameError.DB_INVALID_DATA,
+                    ),
+                ]
+
+            with self.transaction() as cursor:
+                players_table = table if table else TABLE_PLAYERS
+
+                cursor.execute(
+                    f"UPDATE {database}.{players_table} SET "
+                    f"full_name = %s, "
+                    f"what_we_call_you = %s, "
+                    f"security_token = %s, "
+                    f"over_13 = %s, "
+                    f"year_of_birth = %s "
+                    f"WHERE id = %s",
+                    (
+                        obj.full_name,
+                        obj.what_we_call_you,
+                        obj.security_token,
+                        obj.over_13,
+                        obj.year_of_birth,
+                        obj.id,
+                    ),
+                )
+
+            return [
+                GameResult(
+                    status=StatusType.SUCCESS,
+                    message=MSG_UPDATED.format(type="Player", id=obj.id),
+                ),
+            ]
+        except Exception as e:
+            return [
+                GameResult(
+                    status=StatusType.FAILURE,
+                    message=MSG_UPDATE_FAILED.format(type="Player", id=obj.id, database=database, error=str(e)),
+                    error_code=GameError.DB_UPDATE_FAILED,
+                ),
+            ]
+
+    def load_player(
+        self,
+        database: str,
+        player_id: int,
+        table: Optional[str] = None,
+    ) -> Tuple[GameResult, Optional[Player]]:
+        try:
+            with self.transaction_dict() as cursor:
+                players_table = table if table else TABLE_PLAYERS
+
+                cursor.execute(
+                    f"SELECT * FROM {database}.{players_table} WHERE id = %s;",
+                    (player_id,),
+                )
+                player_row = cursor.fetchone()
+
+                if not player_row:
+                    return (
+                        GameResult(
+                            status=StatusType.FAILURE,
+                            message=MSG_NOT_FOUND.format(type="Player", id=player_id, database=database),
+                            error_code=GameError.DB_RECORD_NOT_FOUND,
+                        ),
+                        None,
+                    )
+
+                player = Player(
+                    id=player_row['id'],
+                    full_name=player_row['full_name'],
+                    what_we_call_you=player_row['what_we_call_you'],
+                    security_token=player_row['security_token'],
+                    over_13=player_row['over_13'],
+                    year_of_birth=player_row['year_of_birth'],
+                )
+
+            return (
+                GameResult(
+                    status=StatusType.SUCCESS,
+                    message=MSG_LOADED.format(type="Player", id=player_id),
+                ),
+                player,
+            )
+        except Exception as e:
+            return (
+                GameResult(
+                    status=StatusType.FAILURE,
+                    message=MSG_LOAD_FAILED.format(type="Player", id=player_id, database=database, error=str(e)),
+                    error_code=GameError.DB_QUERY_FAILED,
+                ),
+                None,
+            )
+
+    def destroy_player(
+        self,
+        database: str,
+        player_id: int,
+        table: Optional[str] = None,
+    ) -> list[GameResult]:
+        try:
+            with self.transaction() as cursor:
+                players_table = table if table else TABLE_PLAYERS
+
+                cursor.execute(
+                    f"DELETE FROM {database}.{players_table} WHERE id = %s;",
+                    (player_id,),
+                )
+
+                if cursor.rowcount == 0:
+                    return [
+                        GameResult(
+                            status=StatusType.FAILURE,
+                            message=MSG_NOT_FOUND.format(type="Player", id=player_id, database=database),
+                            error_code=GameError.DB_RECORD_NOT_FOUND,
+                        ),
+                    ]
+
+            return [
+                GameResult(
+                    status=StatusType.SUCCESS,
+                    message=MSG_DESTROYED.format(type="Player", id=player_id),
+                ),
+            ]
+        except Exception as e:
+            return [
+                GameResult(
+                    status=StatusType.FAILURE,
+                    message=MSG_DESTROY_FAILED.format(type="Player", id=player_id, database=database, error=str(e)),
+                    error_code=GameError.DB_DELETE_FAILED,
+                ),
+            ]
 
     # Save functions that delegate to create or update based on id
     def save_attribute(
@@ -2223,6 +2530,17 @@ class DB:
             return self.create_mobile(database, obj, table)
         else:
             return self.update_mobile(database, obj, table)
+
+    def save_player(
+        self,
+        database: str,
+        obj: Player,
+        table: Optional[str] = None,
+    ) -> list[GameResult]:
+        if obj.id is None:
+            return self.create_player(database, obj, table)
+        else:
+            return self.update_player(database, obj, table)
 
     # Destroy functions to delete records from database
     def destroy_attribute(
@@ -2586,6 +2904,7 @@ class DB:
             'ItemBlueprint': self.save_item_blueprint,
             'Inventory': self.save_inventory,
             'Mobile': self.save_mobile,
+            'Player': self.save_player,
         }
 
         if type_name not in dispatch_map:
@@ -2617,6 +2936,7 @@ class DB:
             'ItemBlueprint': self.create_item_blueprint,
             'Inventory': self.create_inventory,
             'Mobile': self.create_mobile,
+            'Player': self.create_player,
         }
 
         if type_name not in dispatch_map:
@@ -2648,6 +2968,7 @@ class DB:
             'ItemBlueprint': self.update_item_blueprint,
             'Inventory': self.update_inventory,
             'Mobile': self.update_mobile,
+            'Player': self.update_player,
         }
 
         if type_name not in dispatch_map:
@@ -2694,6 +3015,7 @@ class DB:
             'ItemBlueprint': self.destroy_item_blueprint,
             'Inventory': self.destroy_inventory,
             'Mobile': self.destroy_mobile,
+            'Player': self.destroy_player,
         }
 
         if type_name not in dispatch_map:
@@ -2724,6 +3046,7 @@ class DB:
             'ItemBlueprint': self.load_item_blueprint,
             'Inventory': self.load_inventory,
             'Mobile': self.load_mobile,
+            'Player': self.load_player,
         }
 
         if obj_type not in dispatch_map:
