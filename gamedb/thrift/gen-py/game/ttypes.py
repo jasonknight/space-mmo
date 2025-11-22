@@ -2106,7 +2106,7 @@ class TransferItemResponseData(object):
         return not (self == other)
 
 
-class RequestData(object):
+class InventoryRequestData(object):
     """
     Attributes:
      - load_inventory
@@ -2175,7 +2175,7 @@ class RequestData(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('RequestData')
+        oprot.writeStructBegin('InventoryRequestData')
         if self.load_inventory is not None:
             oprot.writeFieldBegin('load_inventory', TType.STRUCT, 1)
             self.load_inventory.write(oprot)
@@ -2214,7 +2214,7 @@ class RequestData(object):
         return not (self == other)
 
 
-class ResponseData(object):
+class InventoryResponseData(object):
     """
     Attributes:
      - load_inventory
@@ -2283,7 +2283,7 @@ class ResponseData(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('ResponseData')
+        oprot.writeStructBegin('InventoryResponseData')
         if self.load_inventory is not None:
             oprot.writeFieldBegin('load_inventory', TType.STRUCT, 1)
             self.load_inventory.write(oprot)
@@ -2322,7 +2322,7 @@ class ResponseData(object):
         return not (self == other)
 
 
-class Request(object):
+class InventoryRequest(object):
     """
     Attributes:
      - data
@@ -2345,7 +2345,7 @@ class Request(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.data = RequestData()
+                    self.data = InventoryRequestData()
                     self.data.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -2359,7 +2359,7 @@ class Request(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('Request')
+        oprot.writeStructBegin('InventoryRequest')
         if self.data is not None:
             oprot.writeFieldBegin('data', TType.STRUCT, 1)
             self.data.write(oprot)
@@ -2382,7 +2382,7 @@ class Request(object):
         return not (self == other)
 
 
-class Response(object):
+class InventoryResponse(object):
     """
     Attributes:
      - results
@@ -2418,7 +2418,7 @@ class Response(object):
                     iprot.skip(ftype)
             elif fid == 2:
                 if ftype == TType.STRUCT:
-                    self.response_data = ResponseData()
+                    self.response_data = InventoryResponseData()
                     self.response_data.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -2432,12 +2432,821 @@ class Response(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('Response')
+        oprot.writeStructBegin('InventoryResponse')
         if self.results is not None:
             oprot.writeFieldBegin('results', TType.LIST, 1)
             oprot.writeListBegin(TType.STRUCT, len(self.results))
             for iter47 in self.results:
                 iter47.write(oprot)
+            oprot.writeListEnd()
+            oprot.writeFieldEnd()
+        if self.response_data is not None:
+            oprot.writeFieldBegin('response_data', TType.STRUCT, 2)
+            self.response_data.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class CreateItemRequestData(object):
+    """
+    Attributes:
+     - item
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, item = None,):
+        self.item = item
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.item = Item()
+                    self.item.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('CreateItemRequestData')
+        if self.item is not None:
+            oprot.writeFieldBegin('item', TType.STRUCT, 1)
+            self.item.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class LoadItemRequestData(object):
+    """
+    Attributes:
+     - item_id
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, item_id = None,):
+        self.item_id = item_id
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.item_id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('LoadItemRequestData')
+        if self.item_id is not None:
+            oprot.writeFieldBegin('item_id', TType.I64, 1)
+            oprot.writeI64(self.item_id)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class SaveItemRequestData(object):
+    """
+    Attributes:
+     - item
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, item = None,):
+        self.item = item
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.item = Item()
+                    self.item.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('SaveItemRequestData')
+        if self.item is not None:
+            oprot.writeFieldBegin('item', TType.STRUCT, 1)
+            self.item.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class DestroyItemRequestData(object):
+    """
+    Attributes:
+     - item_id
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, item_id = None,):
+        self.item_id = item_id
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.item_id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('DestroyItemRequestData')
+        if self.item_id is not None:
+            oprot.writeFieldBegin('item_id', TType.I64, 1)
+            oprot.writeI64(self.item_id)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class CreateItemResponseData(object):
+    """
+    Attributes:
+     - item
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, item = None,):
+        self.item = item
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.item = Item()
+                    self.item.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('CreateItemResponseData')
+        if self.item is not None:
+            oprot.writeFieldBegin('item', TType.STRUCT, 1)
+            self.item.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class LoadItemResponseData(object):
+    """
+    Attributes:
+     - item
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, item = None,):
+        self.item = item
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.item = Item()
+                    self.item.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('LoadItemResponseData')
+        if self.item is not None:
+            oprot.writeFieldBegin('item', TType.STRUCT, 1)
+            self.item.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class SaveItemResponseData(object):
+    """
+    Attributes:
+     - item
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, item = None,):
+        self.item = item
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.item = Item()
+                    self.item.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('SaveItemResponseData')
+        if self.item is not None:
+            oprot.writeFieldBegin('item', TType.STRUCT, 1)
+            self.item.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class DestroyItemResponseData(object):
+    """
+    Attributes:
+     - item_id
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, item_id = None,):
+        self.item_id = item_id
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.item_id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('DestroyItemResponseData')
+        if self.item_id is not None:
+            oprot.writeFieldBegin('item_id', TType.I64, 1)
+            oprot.writeI64(self.item_id)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class ItemRequestData(object):
+    """
+    Attributes:
+     - create_item
+     - load_item
+     - save_item
+     - destroy_item
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, create_item = None, load_item = None, save_item = None, destroy_item = None,):
+        self.create_item = create_item
+        self.load_item = load_item
+        self.save_item = save_item
+        self.destroy_item = destroy_item
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.create_item = CreateItemRequestData()
+                    self.create_item.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRUCT:
+                    self.load_item = LoadItemRequestData()
+                    self.load_item.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRUCT:
+                    self.save_item = SaveItemRequestData()
+                    self.save_item.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRUCT:
+                    self.destroy_item = DestroyItemRequestData()
+                    self.destroy_item.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('ItemRequestData')
+        if self.create_item is not None:
+            oprot.writeFieldBegin('create_item', TType.STRUCT, 1)
+            self.create_item.write(oprot)
+            oprot.writeFieldEnd()
+        if self.load_item is not None:
+            oprot.writeFieldBegin('load_item', TType.STRUCT, 2)
+            self.load_item.write(oprot)
+            oprot.writeFieldEnd()
+        if self.save_item is not None:
+            oprot.writeFieldBegin('save_item', TType.STRUCT, 3)
+            self.save_item.write(oprot)
+            oprot.writeFieldEnd()
+        if self.destroy_item is not None:
+            oprot.writeFieldBegin('destroy_item', TType.STRUCT, 4)
+            self.destroy_item.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class ItemResponseData(object):
+    """
+    Attributes:
+     - create_item
+     - load_item
+     - save_item
+     - destroy_item
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, create_item = None, load_item = None, save_item = None, destroy_item = None,):
+        self.create_item = create_item
+        self.load_item = load_item
+        self.save_item = save_item
+        self.destroy_item = destroy_item
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.create_item = CreateItemResponseData()
+                    self.create_item.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRUCT:
+                    self.load_item = LoadItemResponseData()
+                    self.load_item.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRUCT:
+                    self.save_item = SaveItemResponseData()
+                    self.save_item.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRUCT:
+                    self.destroy_item = DestroyItemResponseData()
+                    self.destroy_item.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('ItemResponseData')
+        if self.create_item is not None:
+            oprot.writeFieldBegin('create_item', TType.STRUCT, 1)
+            self.create_item.write(oprot)
+            oprot.writeFieldEnd()
+        if self.load_item is not None:
+            oprot.writeFieldBegin('load_item', TType.STRUCT, 2)
+            self.load_item.write(oprot)
+            oprot.writeFieldEnd()
+        if self.save_item is not None:
+            oprot.writeFieldBegin('save_item', TType.STRUCT, 3)
+            self.save_item.write(oprot)
+            oprot.writeFieldEnd()
+        if self.destroy_item is not None:
+            oprot.writeFieldBegin('destroy_item', TType.STRUCT, 4)
+            self.destroy_item.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class ItemRequest(object):
+    """
+    Attributes:
+     - data
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, data = None,):
+        self.data = data
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.data = ItemRequestData()
+                    self.data.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('ItemRequest')
+        if self.data is not None:
+            oprot.writeFieldBegin('data', TType.STRUCT, 1)
+            self.data.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class ItemResponse(object):
+    """
+    Attributes:
+     - results
+     - response_data
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, results = None, response_data = None,):
+        self.results = results
+        self.response_data = response_data
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.LIST:
+                    self.results = []
+                    (_etype51, _size48) = iprot.readListBegin()
+                    for _i52 in range(_size48):
+                        _elem53 = GameResult()
+                        _elem53.read(iprot)
+                        self.results.append(_elem53)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRUCT:
+                    self.response_data = ItemResponseData()
+                    self.response_data.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('ItemResponse')
+        if self.results is not None:
+            oprot.writeFieldBegin('results', TType.LIST, 1)
+            oprot.writeListBegin(TType.STRUCT, len(self.results))
+            for iter54 in self.results:
+                iter54.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.response_data is not None:
@@ -2495,11 +3304,11 @@ class EnumDefinition(object):
             elif fid == 2:
                 if ftype == TType.MAP:
                     self.values = {}
-                    (_ktype49, _vtype50, _size48) = iprot.readMapBegin()
-                    for _i52 in range(_size48):
-                        _key53 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        _val54 = iprot.readI32()
-                        self.values[_key53] = _val54
+                    (_ktype56, _vtype57, _size55) = iprot.readMapBegin()
+                    for _i59 in range(_size55):
+                        _key60 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        _val61 = iprot.readI32()
+                        self.values[_key60] = _val61
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -2526,9 +3335,9 @@ class EnumDefinition(object):
         if self.values is not None:
             oprot.writeFieldBegin('values', TType.MAP, 2)
             oprot.writeMapBegin(TType.STRING, TType.I32, len(self.values))
-            for kiter55, viter56 in self.values.items():
-                oprot.writeString(kiter55.encode('utf-8') if sys.version_info[0] == 2 else kiter55)
-                oprot.writeI32(viter56)
+            for kiter62, viter63 in self.values.items():
+                oprot.writeString(kiter62.encode('utf-8') if sys.version_info[0] == 2 else kiter62)
+                oprot.writeI32(viter63)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         if self.description is not None:
@@ -2677,22 +3486,22 @@ class MethodDescription(object):
             elif fid == 5:
                 if ftype == TType.LIST:
                     self.request_enum_fields = []
-                    (_etype60, _size57) = iprot.readListBegin()
-                    for _i61 in range(_size57):
-                        _elem62 = FieldEnumMapping()
-                        _elem62.read(iprot)
-                        self.request_enum_fields.append(_elem62)
+                    (_etype67, _size64) = iprot.readListBegin()
+                    for _i68 in range(_size64):
+                        _elem69 = FieldEnumMapping()
+                        _elem69.read(iprot)
+                        self.request_enum_fields.append(_elem69)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 6:
                 if ftype == TType.LIST:
                     self.response_enum_fields = []
-                    (_etype66, _size63) = iprot.readListBegin()
-                    for _i67 in range(_size63):
-                        _elem68 = FieldEnumMapping()
-                        _elem68.read(iprot)
-                        self.response_enum_fields.append(_elem68)
+                    (_etype73, _size70) = iprot.readListBegin()
+                    for _i74 in range(_size70):
+                        _elem75 = FieldEnumMapping()
+                        _elem75.read(iprot)
+                        self.response_enum_fields.append(_elem75)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -2726,15 +3535,15 @@ class MethodDescription(object):
         if self.request_enum_fields is not None:
             oprot.writeFieldBegin('request_enum_fields', TType.LIST, 5)
             oprot.writeListBegin(TType.STRUCT, len(self.request_enum_fields))
-            for iter69 in self.request_enum_fields:
-                iter69.write(oprot)
+            for iter76 in self.request_enum_fields:
+                iter76.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.response_enum_fields is not None:
             oprot.writeFieldBegin('response_enum_fields', TType.LIST, 6)
             oprot.writeListBegin(TType.STRUCT, len(self.response_enum_fields))
-            for iter70 in self.response_enum_fields:
-                iter70.write(oprot)
+            for iter77 in self.response_enum_fields:
+                iter77.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -2802,22 +3611,22 @@ class ServiceMetadata(object):
             elif fid == 4:
                 if ftype == TType.LIST:
                     self.methods = []
-                    (_etype74, _size71) = iprot.readListBegin()
-                    for _i75 in range(_size71):
-                        _elem76 = MethodDescription()
-                        _elem76.read(iprot)
-                        self.methods.append(_elem76)
+                    (_etype81, _size78) = iprot.readListBegin()
+                    for _i82 in range(_size78):
+                        _elem83 = MethodDescription()
+                        _elem83.read(iprot)
+                        self.methods.append(_elem83)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 5:
                 if ftype == TType.LIST:
                     self.enums = []
-                    (_etype80, _size77) = iprot.readListBegin()
-                    for _i81 in range(_size77):
-                        _elem82 = EnumDefinition()
-                        _elem82.read(iprot)
-                        self.enums.append(_elem82)
+                    (_etype87, _size84) = iprot.readListBegin()
+                    for _i88 in range(_size84):
+                        _elem89 = EnumDefinition()
+                        _elem89.read(iprot)
+                        self.enums.append(_elem89)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -2847,15 +3656,15 @@ class ServiceMetadata(object):
         if self.methods is not None:
             oprot.writeFieldBegin('methods', TType.LIST, 4)
             oprot.writeListBegin(TType.STRUCT, len(self.methods))
-            for iter83 in self.methods:
-                iter83.write(oprot)
+            for iter90 in self.methods:
+                iter90.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.enums is not None:
             oprot.writeFieldBegin('enums', TType.LIST, 5)
             oprot.writeListBegin(TType.STRUCT, len(self.enums))
-            for iter84 in self.enums:
-                iter84.write(oprot)
+            for iter91 in self.enums:
+                iter91.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -3033,8 +3842,8 @@ TransferItemResponseData.thrift_spec = (
     (1, TType.STRUCT, 'source_inventory', [Inventory, None], None, ),  # 1
     (2, TType.STRUCT, 'destination_inventory', [Inventory, None], None, ),  # 2
 )
-all_structs.append(RequestData)
-RequestData.thrift_spec = (
+all_structs.append(InventoryRequestData)
+InventoryRequestData.thrift_spec = (
     None,  # 0
     (1, TType.STRUCT, 'load_inventory', [LoadInventoryRequestData, None], None, ),  # 1
     (2, TType.STRUCT, 'create_inventory', [CreateInventoryRequestData, None], None, ),  # 2
@@ -3042,8 +3851,8 @@ RequestData.thrift_spec = (
     (4, TType.STRUCT, 'split_stack', [SplitStackRequestData, None], None, ),  # 4
     (5, TType.STRUCT, 'transfer_item', [TransferItemRequestData, None], None, ),  # 5
 )
-all_structs.append(ResponseData)
-ResponseData.thrift_spec = (
+all_structs.append(InventoryResponseData)
+InventoryResponseData.thrift_spec = (
     None,  # 0
     (1, TType.STRUCT, 'load_inventory', [LoadInventoryResponseData, None], None, ),  # 1
     (2, TType.STRUCT, 'create_inventory', [CreateInventoryResponseData, None], None, ),  # 2
@@ -3051,16 +3860,83 @@ ResponseData.thrift_spec = (
     (4, TType.STRUCT, 'split_stack', [SplitStackResponseData, None], None, ),  # 4
     (5, TType.STRUCT, 'transfer_item', [TransferItemResponseData, None], None, ),  # 5
 )
-all_structs.append(Request)
-Request.thrift_spec = (
+all_structs.append(InventoryRequest)
+InventoryRequest.thrift_spec = (
     None,  # 0
-    (1, TType.STRUCT, 'data', [RequestData, None], None, ),  # 1
+    (1, TType.STRUCT, 'data', [InventoryRequestData, None], None, ),  # 1
 )
-all_structs.append(Response)
-Response.thrift_spec = (
+all_structs.append(InventoryResponse)
+InventoryResponse.thrift_spec = (
     None,  # 0
     (1, TType.LIST, 'results', (TType.STRUCT, [GameResult, None], False), None, ),  # 1
-    (2, TType.STRUCT, 'response_data', [ResponseData, None], None, ),  # 2
+    (2, TType.STRUCT, 'response_data', [InventoryResponseData, None], None, ),  # 2
+)
+all_structs.append(CreateItemRequestData)
+CreateItemRequestData.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'item', [Item, None], None, ),  # 1
+)
+all_structs.append(LoadItemRequestData)
+LoadItemRequestData.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'item_id', None, None, ),  # 1
+)
+all_structs.append(SaveItemRequestData)
+SaveItemRequestData.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'item', [Item, None], None, ),  # 1
+)
+all_structs.append(DestroyItemRequestData)
+DestroyItemRequestData.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'item_id', None, None, ),  # 1
+)
+all_structs.append(CreateItemResponseData)
+CreateItemResponseData.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'item', [Item, None], None, ),  # 1
+)
+all_structs.append(LoadItemResponseData)
+LoadItemResponseData.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'item', [Item, None], None, ),  # 1
+)
+all_structs.append(SaveItemResponseData)
+SaveItemResponseData.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'item', [Item, None], None, ),  # 1
+)
+all_structs.append(DestroyItemResponseData)
+DestroyItemResponseData.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'item_id', None, None, ),  # 1
+)
+all_structs.append(ItemRequestData)
+ItemRequestData.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'create_item', [CreateItemRequestData, None], None, ),  # 1
+    (2, TType.STRUCT, 'load_item', [LoadItemRequestData, None], None, ),  # 2
+    (3, TType.STRUCT, 'save_item', [SaveItemRequestData, None], None, ),  # 3
+    (4, TType.STRUCT, 'destroy_item', [DestroyItemRequestData, None], None, ),  # 4
+)
+all_structs.append(ItemResponseData)
+ItemResponseData.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'create_item', [CreateItemResponseData, None], None, ),  # 1
+    (2, TType.STRUCT, 'load_item', [LoadItemResponseData, None], None, ),  # 2
+    (3, TType.STRUCT, 'save_item', [SaveItemResponseData, None], None, ),  # 3
+    (4, TType.STRUCT, 'destroy_item', [DestroyItemResponseData, None], None, ),  # 4
+)
+all_structs.append(ItemRequest)
+ItemRequest.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'data', [ItemRequestData, None], None, ),  # 1
+)
+all_structs.append(ItemResponse)
+ItemResponse.thrift_spec = (
+    None,  # 0
+    (1, TType.LIST, 'results', (TType.STRUCT, [GameResult, None], False), None, ),  # 1
+    (2, TType.STRUCT, 'response_data', [ItemResponseData, None], None, ),  # 2
 )
 all_structs.append(EnumDefinition)
 EnumDefinition.thrift_spec = (

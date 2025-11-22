@@ -301,11 +301,11 @@ def invoke_method():
         logger.debug(f"Getting method function: {method_name}")
         method_func = getattr(client, method_name)
 
-        # Build the Thrift Request object manually from JSON
-        logger.debug("Building Thrift Request object from JSON")
+        # Build the Thrift InventoryRequest object manually from JSON
+        logger.debug("Building Thrift InventoryRequest object from JSON")
         from game.ttypes import (
-            Request as ThriftRequest,
-            RequestData,
+            InventoryRequest,
+            InventoryRequestData,
             LoadInventoryRequestData,
             CreateInventoryRequestData,
             SaveInventoryRequestData,
@@ -320,8 +320,8 @@ def invoke_method():
         data_dict = request_obj.get('data', {})
         logger.debug(f"Data dict keys: {list(data_dict.keys())}")
 
-        # Build RequestData based on which field is present
-        request_data = RequestData()
+        # Build InventoryRequestData based on which field is present
+        request_data = InventoryRequestData()
 
         if 'load_inventory' in data_dict:
             load_data = LoadInventoryRequestData(
@@ -416,9 +416,9 @@ def invoke_method():
         else:
             raise ValueError(f"Unknown request type in data: {list(data_dict.keys())}")
 
-        # Build the final Request
-        thrift_request = ThriftRequest(data=request_data)
-        logger.debug("Thrift Request object built successfully")
+        # Build the final InventoryRequest
+        thrift_request = InventoryRequest(data=request_data)
+        logger.debug("Thrift InventoryRequest object built successfully")
 
         # Invoke method
         logger.info(f"Invoking method: {method_name}")

@@ -258,8 +258,8 @@ struct TransferItemResponseData {
     2: Inventory destination_inventory;
 }
 
-// Union of all request data types
-union RequestData {
+// Union of all inventory request data types
+union InventoryRequestData {
     1: LoadInventoryRequestData load_inventory;
     2: CreateInventoryRequestData create_inventory;
     3: SaveInventoryRequestData save_inventory;
@@ -267,8 +267,8 @@ union RequestData {
     5: TransferItemRequestData transfer_item;
 }
 
-// Union of all response data types
-union ResponseData {
+// Union of all inventory response data types
+union InventoryResponseData {
     1: LoadInventoryResponseData load_inventory;
     2: CreateInventoryResponseData create_inventory;
     3: SaveInventoryResponseData save_inventory;
@@ -276,16 +276,83 @@ union ResponseData {
     5: TransferItemResponseData transfer_item;
 }
 
-// Generic Request structure (extensible for auth, tracing, etc.)
-struct Request {
-    1: RequestData data;
+// Inventory Request structure (extensible for auth, tracing, etc.)
+struct InventoryRequest {
+    1: InventoryRequestData data;
     // Future fields: request_id, auth_token, trace_context, etc.
 }
 
-// Generic Response structure (extensible for status, errors, etc.)
-struct Response {
+// Inventory Response structure (extensible for status, errors, etc.)
+struct InventoryResponse {
     1: list<GameResult> results;
-    2: optional ResponseData response_data;
+    2: optional InventoryResponseData response_data;
+    // Future fields: response_id, performance_metrics, etc.
+}
+
+// ============================================================================
+// Item Service Request/Response Structures
+// ============================================================================
+
+// Request data structures for each operation
+struct CreateItemRequestData {
+    1: Item item;
+}
+
+struct LoadItemRequestData {
+    1: i64 item_id;
+}
+
+struct SaveItemRequestData {
+    1: Item item;
+}
+
+struct DestroyItemRequestData {
+    1: i64 item_id;
+}
+
+// Response data structures for each operation
+struct CreateItemResponseData {
+    1: Item item;
+}
+
+struct LoadItemResponseData {
+    1: Item item;
+}
+
+struct SaveItemResponseData {
+    1: Item item;
+}
+
+struct DestroyItemResponseData {
+    1: i64 item_id;
+}
+
+// Union of all item request data types
+union ItemRequestData {
+    1: CreateItemRequestData create_item;
+    2: LoadItemRequestData load_item;
+    3: SaveItemRequestData save_item;
+    4: DestroyItemRequestData destroy_item;
+}
+
+// Union of all item response data types
+union ItemResponseData {
+    1: CreateItemResponseData create_item;
+    2: LoadItemResponseData load_item;
+    3: SaveItemResponseData save_item;
+    4: DestroyItemResponseData destroy_item;
+}
+
+// Item Request structure (extensible for auth, tracing, etc.)
+struct ItemRequest {
+    1: ItemRequestData data;
+    // Future fields: request_id, auth_token, trace_context, etc.
+}
+
+// Item Response structure (extensible for status, errors, etc.)
+struct ItemResponse {
+    1: list<GameResult> results;
+    2: optional ItemResponseData response_data;
     // Future fields: response_id, performance_metrics, etc.
 }
 
@@ -334,17 +401,38 @@ service InventoryService {
     ServiceMetadata describe(),
 
     // Load an inventory by ID
-    Response load(1: Request request),
+    InventoryResponse load(1: InventoryRequest request),
 
     // Create a new inventory
-    Response create(1: Request request),
+    InventoryResponse create(1: InventoryRequest request),
 
     // Save (create or update) an inventory
-    Response save(1: Request request),
+    InventoryResponse save(1: InventoryRequest request),
 
     // Split a stack of items within an inventory
-    Response split_stack(1: Request request),
+    InventoryResponse split_stack(1: InventoryRequest request),
 
     // Transfer items between inventories
-    Response transfer_item(1: Request request),
+    InventoryResponse transfer_item(1: InventoryRequest request),
+}
+
+// ============================================================================
+// Item Service Definition
+// ============================================================================
+
+service ItemService {
+    // Service discovery method
+    ServiceMetadata describe(),
+
+    // Create a new item
+    ItemResponse create(1: ItemRequest request),
+
+    // Load an item by ID
+    ItemResponse load(1: ItemRequest request),
+
+    // Save (create or update) an item
+    ItemResponse save(1: ItemRequest request),
+
+    // Destroy (delete) an item
+    ItemResponse destroy(1: ItemRequest request),
 }

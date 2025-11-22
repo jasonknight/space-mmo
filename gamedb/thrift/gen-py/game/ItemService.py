@@ -23,7 +23,7 @@ class Iface(object):
     def describe(self):
         pass
 
-    def load(self, request):
+    def create(self, request):
         """
         Parameters:
          - request
@@ -31,7 +31,7 @@ class Iface(object):
         """
         pass
 
-    def create(self, request):
+    def load(self, request):
         """
         Parameters:
          - request
@@ -47,15 +47,7 @@ class Iface(object):
         """
         pass
 
-    def split_stack(self, request):
-        """
-        Parameters:
-         - request
-
-        """
-        pass
-
-    def transfer_item(self, request):
+    def destroy(self, request):
         """
         Parameters:
          - request
@@ -97,38 +89,6 @@ class Client(Iface):
             return result.success
         raise TApplicationException(TApplicationException.MISSING_RESULT, "describe failed: unknown result")
 
-    def load(self, request):
-        """
-        Parameters:
-         - request
-
-        """
-        self.send_load(request)
-        return self.recv_load()
-
-    def send_load(self, request):
-        self._oprot.writeMessageBegin('load', TMessageType.CALL, self._seqid)
-        args = load_args()
-        args.request = request
-        args.write(self._oprot)
-        self._oprot.writeMessageEnd()
-        self._oprot.trans.flush()
-
-    def recv_load(self):
-        iprot = self._iprot
-        (fname, mtype, rseqid) = iprot.readMessageBegin()
-        if mtype == TMessageType.EXCEPTION:
-            x = TApplicationException()
-            x.read(iprot)
-            iprot.readMessageEnd()
-            raise x
-        result = load_result()
-        result.read(iprot)
-        iprot.readMessageEnd()
-        if result.success is not None:
-            return result.success
-        raise TApplicationException(TApplicationException.MISSING_RESULT, "load failed: unknown result")
-
     def create(self, request):
         """
         Parameters:
@@ -160,6 +120,38 @@ class Client(Iface):
         if result.success is not None:
             return result.success
         raise TApplicationException(TApplicationException.MISSING_RESULT, "create failed: unknown result")
+
+    def load(self, request):
+        """
+        Parameters:
+         - request
+
+        """
+        self.send_load(request)
+        return self.recv_load()
+
+    def send_load(self, request):
+        self._oprot.writeMessageBegin('load', TMessageType.CALL, self._seqid)
+        args = load_args()
+        args.request = request
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_load(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = load_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "load failed: unknown result")
 
     def save(self, request):
         """
@@ -193,24 +185,24 @@ class Client(Iface):
             return result.success
         raise TApplicationException(TApplicationException.MISSING_RESULT, "save failed: unknown result")
 
-    def split_stack(self, request):
+    def destroy(self, request):
         """
         Parameters:
          - request
 
         """
-        self.send_split_stack(request)
-        return self.recv_split_stack()
+        self.send_destroy(request)
+        return self.recv_destroy()
 
-    def send_split_stack(self, request):
-        self._oprot.writeMessageBegin('split_stack', TMessageType.CALL, self._seqid)
-        args = split_stack_args()
+    def send_destroy(self, request):
+        self._oprot.writeMessageBegin('destroy', TMessageType.CALL, self._seqid)
+        args = destroy_args()
         args.request = request
         args.write(self._oprot)
         self._oprot.writeMessageEnd()
         self._oprot.trans.flush()
 
-    def recv_split_stack(self):
+    def recv_destroy(self):
         iprot = self._iprot
         (fname, mtype, rseqid) = iprot.readMessageBegin()
         if mtype == TMessageType.EXCEPTION:
@@ -218,44 +210,12 @@ class Client(Iface):
             x.read(iprot)
             iprot.readMessageEnd()
             raise x
-        result = split_stack_result()
+        result = destroy_result()
         result.read(iprot)
         iprot.readMessageEnd()
         if result.success is not None:
             return result.success
-        raise TApplicationException(TApplicationException.MISSING_RESULT, "split_stack failed: unknown result")
-
-    def transfer_item(self, request):
-        """
-        Parameters:
-         - request
-
-        """
-        self.send_transfer_item(request)
-        return self.recv_transfer_item()
-
-    def send_transfer_item(self, request):
-        self._oprot.writeMessageBegin('transfer_item', TMessageType.CALL, self._seqid)
-        args = transfer_item_args()
-        args.request = request
-        args.write(self._oprot)
-        self._oprot.writeMessageEnd()
-        self._oprot.trans.flush()
-
-    def recv_transfer_item(self):
-        iprot = self._iprot
-        (fname, mtype, rseqid) = iprot.readMessageBegin()
-        if mtype == TMessageType.EXCEPTION:
-            x = TApplicationException()
-            x.read(iprot)
-            iprot.readMessageEnd()
-            raise x
-        result = transfer_item_result()
-        result.read(iprot)
-        iprot.readMessageEnd()
-        if result.success is not None:
-            return result.success
-        raise TApplicationException(TApplicationException.MISSING_RESULT, "transfer_item failed: unknown result")
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "destroy failed: unknown result")
 
 
 class Processor(Iface, TProcessor):
@@ -263,11 +223,10 @@ class Processor(Iface, TProcessor):
         self._handler = handler
         self._processMap = {}
         self._processMap["describe"] = Processor.process_describe
-        self._processMap["load"] = Processor.process_load
         self._processMap["create"] = Processor.process_create
+        self._processMap["load"] = Processor.process_load
         self._processMap["save"] = Processor.process_save
-        self._processMap["split_stack"] = Processor.process_split_stack
-        self._processMap["transfer_item"] = Processor.process_transfer_item
+        self._processMap["destroy"] = Processor.process_destroy
         self._on_message_begin = None
 
     def on_message_begin(self, func):
@@ -313,29 +272,6 @@ class Processor(Iface, TProcessor):
         oprot.writeMessageEnd()
         oprot.trans.flush()
 
-    def process_load(self, seqid, iprot, oprot):
-        args = load_args()
-        args.read(iprot)
-        iprot.readMessageEnd()
-        result = load_result()
-        try:
-            result.success = self._handler.load(args.request)
-            msg_type = TMessageType.REPLY
-        except TTransport.TTransportException:
-            raise
-        except TApplicationException as ex:
-            logging.exception('TApplication exception in handler')
-            msg_type = TMessageType.EXCEPTION
-            result = ex
-        except Exception:
-            logging.exception('Unexpected exception in handler')
-            msg_type = TMessageType.EXCEPTION
-            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
-        oprot.writeMessageBegin("load", msg_type, seqid)
-        result.write(oprot)
-        oprot.writeMessageEnd()
-        oprot.trans.flush()
-
     def process_create(self, seqid, iprot, oprot):
         args = create_args()
         args.read(iprot)
@@ -355,6 +291,29 @@ class Processor(Iface, TProcessor):
             msg_type = TMessageType.EXCEPTION
             result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
         oprot.writeMessageBegin("create", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_load(self, seqid, iprot, oprot):
+        args = load_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = load_result()
+        try:
+            result.success = self._handler.load(args.request)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("load", msg_type, seqid)
         result.write(oprot)
         oprot.writeMessageEnd()
         oprot.trans.flush()
@@ -382,13 +341,13 @@ class Processor(Iface, TProcessor):
         oprot.writeMessageEnd()
         oprot.trans.flush()
 
-    def process_split_stack(self, seqid, iprot, oprot):
-        args = split_stack_args()
+    def process_destroy(self, seqid, iprot, oprot):
+        args = destroy_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = split_stack_result()
+        result = destroy_result()
         try:
-            result.success = self._handler.split_stack(args.request)
+            result.success = self._handler.destroy(args.request)
             msg_type = TMessageType.REPLY
         except TTransport.TTransportException:
             raise
@@ -400,30 +359,7 @@ class Processor(Iface, TProcessor):
             logging.exception('Unexpected exception in handler')
             msg_type = TMessageType.EXCEPTION
             result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
-        oprot.writeMessageBegin("split_stack", msg_type, seqid)
-        result.write(oprot)
-        oprot.writeMessageEnd()
-        oprot.trans.flush()
-
-    def process_transfer_item(self, seqid, iprot, oprot):
-        args = transfer_item_args()
-        args.read(iprot)
-        iprot.readMessageEnd()
-        result = transfer_item_result()
-        try:
-            result.success = self._handler.transfer_item(args.request)
-            msg_type = TMessageType.REPLY
-        except TTransport.TTransportException:
-            raise
-        except TApplicationException as ex:
-            logging.exception('TApplication exception in handler')
-            msg_type = TMessageType.EXCEPTION
-            result = ex
-        except Exception:
-            logging.exception('Unexpected exception in handler')
-            msg_type = TMessageType.EXCEPTION
-            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
-        oprot.writeMessageBegin("transfer_item", msg_type, seqid)
+        oprot.writeMessageBegin("destroy", msg_type, seqid)
         result.write(oprot)
         oprot.writeMessageEnd()
         oprot.trans.flush()
@@ -540,135 +476,6 @@ describe_result.thrift_spec = (
 )
 
 
-class load_args(object):
-    """
-    Attributes:
-     - request
-
-    """
-    thrift_spec = None
-
-
-    def __init__(self, request = None,):
-        self.request = request
-
-    def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
-            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
-            return
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 1:
-                if ftype == TType.STRUCT:
-                    self.request = InventoryRequest()
-                    self.request.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-
-    def write(self, oprot):
-        self.validate()
-        if oprot._fast_encode is not None and self.thrift_spec is not None:
-            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
-            return
-        oprot.writeStructBegin('load_args')
-        if self.request is not None:
-            oprot.writeFieldBegin('request', TType.STRUCT, 1)
-            self.request.write(oprot)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-all_structs.append(load_args)
-load_args.thrift_spec = (
-    None,  # 0
-    (1, TType.STRUCT, 'request', [InventoryRequest, None], None, ),  # 1
-)
-
-
-class load_result(object):
-    """
-    Attributes:
-     - success
-
-    """
-    thrift_spec = None
-
-
-    def __init__(self, success = None,):
-        self.success = success
-
-    def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
-            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
-            return
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 0:
-                if ftype == TType.STRUCT:
-                    self.success = InventoryResponse()
-                    self.success.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-
-    def write(self, oprot):
-        self.validate()
-        if oprot._fast_encode is not None and self.thrift_spec is not None:
-            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
-            return
-        oprot.writeStructBegin('load_result')
-        if self.success is not None:
-            oprot.writeFieldBegin('success', TType.STRUCT, 0)
-            self.success.write(oprot)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-all_structs.append(load_result)
-load_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [InventoryResponse, None], None, ),  # 0
-)
-
-
 class create_args(object):
     """
     Attributes:
@@ -692,7 +499,7 @@ class create_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.request = InventoryRequest()
+                    self.request = ItemRequest()
                     self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -730,7 +537,7 @@ class create_args(object):
 all_structs.append(create_args)
 create_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRUCT, 'request', [InventoryRequest, None], None, ),  # 1
+    (1, TType.STRUCT, 'request', [ItemRequest, None], None, ),  # 1
 )
 
 
@@ -757,7 +564,7 @@ class create_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = InventoryResponse()
+                    self.success = ItemResponse()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -794,7 +601,136 @@ class create_result(object):
         return not (self == other)
 all_structs.append(create_result)
 create_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [InventoryResponse, None], None, ),  # 0
+    (0, TType.STRUCT, 'success', [ItemResponse, None], None, ),  # 0
+)
+
+
+class load_args(object):
+    """
+    Attributes:
+     - request
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, request = None,):
+        self.request = request
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.request = ItemRequest()
+                    self.request.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('load_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 1)
+            self.request.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(load_args)
+load_args.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'request', [ItemRequest, None], None, ),  # 1
+)
+
+
+class load_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+    thrift_spec = None
+
+
+    def __init__(self, success = None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = ItemResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        self.validate()
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('load_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(load_result)
+load_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [ItemResponse, None], None, ),  # 0
 )
 
 
@@ -821,7 +757,7 @@ class save_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.request = InventoryRequest()
+                    self.request = ItemRequest()
                     self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -859,7 +795,7 @@ class save_args(object):
 all_structs.append(save_args)
 save_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRUCT, 'request', [InventoryRequest, None], None, ),  # 1
+    (1, TType.STRUCT, 'request', [ItemRequest, None], None, ),  # 1
 )
 
 
@@ -886,7 +822,7 @@ class save_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = InventoryResponse()
+                    self.success = ItemResponse()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -923,11 +859,11 @@ class save_result(object):
         return not (self == other)
 all_structs.append(save_result)
 save_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [InventoryResponse, None], None, ),  # 0
+    (0, TType.STRUCT, 'success', [ItemResponse, None], None, ),  # 0
 )
 
 
-class split_stack_args(object):
+class destroy_args(object):
     """
     Attributes:
      - request
@@ -950,7 +886,7 @@ class split_stack_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.request = InventoryRequest()
+                    self.request = ItemRequest()
                     self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -964,7 +900,7 @@ class split_stack_args(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('split_stack_args')
+        oprot.writeStructBegin('destroy_args')
         if self.request is not None:
             oprot.writeFieldBegin('request', TType.STRUCT, 1)
             self.request.write(oprot)
@@ -985,14 +921,14 @@ class split_stack_args(object):
 
     def __ne__(self, other):
         return not (self == other)
-all_structs.append(split_stack_args)
-split_stack_args.thrift_spec = (
+all_structs.append(destroy_args)
+destroy_args.thrift_spec = (
     None,  # 0
-    (1, TType.STRUCT, 'request', [InventoryRequest, None], None, ),  # 1
+    (1, TType.STRUCT, 'request', [ItemRequest, None], None, ),  # 1
 )
 
 
-class split_stack_result(object):
+class destroy_result(object):
     """
     Attributes:
      - success
@@ -1015,7 +951,7 @@ class split_stack_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = InventoryResponse()
+                    self.success = ItemResponse()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -1029,7 +965,7 @@ class split_stack_result(object):
         if oprot._fast_encode is not None and self.thrift_spec is not None:
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
-        oprot.writeStructBegin('split_stack_result')
+        oprot.writeStructBegin('destroy_result')
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.STRUCT, 0)
             self.success.write(oprot)
@@ -1050,138 +986,9 @@ class split_stack_result(object):
 
     def __ne__(self, other):
         return not (self == other)
-all_structs.append(split_stack_result)
-split_stack_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [InventoryResponse, None], None, ),  # 0
-)
-
-
-class transfer_item_args(object):
-    """
-    Attributes:
-     - request
-
-    """
-    thrift_spec = None
-
-
-    def __init__(self, request = None,):
-        self.request = request
-
-    def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
-            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
-            return
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 1:
-                if ftype == TType.STRUCT:
-                    self.request = InventoryRequest()
-                    self.request.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-
-    def write(self, oprot):
-        self.validate()
-        if oprot._fast_encode is not None and self.thrift_spec is not None:
-            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
-            return
-        oprot.writeStructBegin('transfer_item_args')
-        if self.request is not None:
-            oprot.writeFieldBegin('request', TType.STRUCT, 1)
-            self.request.write(oprot)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-all_structs.append(transfer_item_args)
-transfer_item_args.thrift_spec = (
-    None,  # 0
-    (1, TType.STRUCT, 'request', [InventoryRequest, None], None, ),  # 1
-)
-
-
-class transfer_item_result(object):
-    """
-    Attributes:
-     - success
-
-    """
-    thrift_spec = None
-
-
-    def __init__(self, success = None,):
-        self.success = success
-
-    def read(self, iprot):
-        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
-            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
-            return
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 0:
-                if ftype == TType.STRUCT:
-                    self.success = InventoryResponse()
-                    self.success.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-
-    def write(self, oprot):
-        self.validate()
-        if oprot._fast_encode is not None and self.thrift_spec is not None:
-            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
-            return
-        oprot.writeStructBegin('transfer_item_result')
-        if self.success is not None:
-            oprot.writeFieldBegin('success', TType.STRUCT, 0)
-            self.success.write(oprot)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-             for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-all_structs.append(transfer_item_result)
-transfer_item_result.thrift_spec = (
-    (0, TType.STRUCT, 'success', [InventoryResponse, None], None, ),  # 0
+all_structs.append(destroy_result)
+destroy_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [ItemResponse, None], None, ),  # 0
 )
 fix_spec(all_structs)
 del all_structs

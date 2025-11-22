@@ -16,7 +16,7 @@ else:
 from thrift.transport import TTransport, TSocket, TSSLSocket, THttpClient
 from thrift.protocol.TBinaryProtocol import TBinaryProtocol
 
-from game import InventoryService
+from game import ItemService
 from game.ttypes import *
 
 if len(sys.argv) <= 1 or sys.argv[1] == '--help':
@@ -25,11 +25,10 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('')
     print('Functions:')
     print('  ServiceMetadata describe()')
-    print('  InventoryResponse load(InventoryRequest request)')
-    print('  InventoryResponse create(InventoryRequest request)')
-    print('  InventoryResponse save(InventoryRequest request)')
-    print('  InventoryResponse split_stack(InventoryRequest request)')
-    print('  InventoryResponse transfer_item(InventoryRequest request)')
+    print('  ItemResponse create(ItemRequest request)')
+    print('  ItemResponse load(ItemRequest request)')
+    print('  ItemResponse save(ItemRequest request)')
+    print('  ItemResponse destroy(ItemRequest request)')
     print('')
     sys.exit(0)
 
@@ -106,7 +105,7 @@ else:
     else:
         transport = TTransport.TBufferedTransport(socket)
 protocol = TBinaryProtocol(transport)
-client = InventoryService.Client(protocol)
+client = ItemService.Client(protocol)
 transport.open()
 
 if cmd == 'describe':
@@ -115,17 +114,17 @@ if cmd == 'describe':
         sys.exit(1)
     pp.pprint(client.describe())
 
-elif cmd == 'load':
-    if len(args) != 1:
-        print('load requires 1 args')
-        sys.exit(1)
-    pp.pprint(client.load(eval(args[0]),))
-
 elif cmd == 'create':
     if len(args) != 1:
         print('create requires 1 args')
         sys.exit(1)
     pp.pprint(client.create(eval(args[0]),))
+
+elif cmd == 'load':
+    if len(args) != 1:
+        print('load requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.load(eval(args[0]),))
 
 elif cmd == 'save':
     if len(args) != 1:
@@ -133,17 +132,11 @@ elif cmd == 'save':
         sys.exit(1)
     pp.pprint(client.save(eval(args[0]),))
 
-elif cmd == 'split_stack':
+elif cmd == 'destroy':
     if len(args) != 1:
-        print('split_stack requires 1 args')
+        print('destroy requires 1 args')
         sys.exit(1)
-    pp.pprint(client.split_stack(eval(args[0]),))
-
-elif cmd == 'transfer_item':
-    if len(args) != 1:
-        print('transfer_item requires 1 args')
-        sys.exit(1)
-    pp.pprint(client.transfer_item(eval(args[0]),))
+    pp.pprint(client.destroy(eval(args[0]),))
 
 else:
     print('Unrecognized method %s' % cmd)
