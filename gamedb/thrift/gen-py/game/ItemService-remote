@@ -29,6 +29,8 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('  ItemResponse save(ItemRequest request)')
     print('  ItemResponse destroy(ItemRequest request)')
     print('  ItemResponse list_records(ItemRequest request)')
+    print('  ItemResponse autocomplete(ItemRequest request)')
+    print('  ItemResponse load_with_blueprint_tree(ItemRequest request)')
     print('  ServiceMetadata describe()')
     print('')
     sys.exit(0)
@@ -138,6 +140,18 @@ elif cmd == 'list_records':
         print('list_records requires 1 args')
         sys.exit(1)
     pp.pprint(client.list_records(eval(args[0]),))
+
+elif cmd == 'autocomplete':
+    if len(args) != 1:
+        print('autocomplete requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.autocomplete(eval(args[0]),))
+
+elif cmd == 'load_with_blueprint_tree':
+    if len(args) != 1:
+        print('load_with_blueprint_tree requires 1 args')
+        sys.exit(1)
+    pp.pprint(client.load_with_blueprint_tree(eval(args[0]),))
 
 elif cmd == 'describe':
     if len(args) != 0:

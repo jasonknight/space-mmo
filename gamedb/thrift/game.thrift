@@ -157,6 +157,18 @@ struct ItemBlueprint {
     3: i64 bake_time_ms;
 }
 
+// Recursive tree structure for displaying blueprints
+// Note: Thrift supports recursive structures without forward declarations
+struct BlueprintTreeNode {
+    1: Item item; // The item at this node
+    2: optional ItemBlueprint blueprint; // Blueprint if this item has one
+    3: list<BlueprintTreeNode> component_nodes; // Child nodes (recursive)
+    4: list<double> component_ratios; // Ratios corresponding to component_nodes
+    5: i64 total_bake_time_ms; // Sum of this blueprint's bake time + all component bake times
+    6: bool max_depth_reached = false; // True if recursion stopped due to max depth
+    7: bool cycle_detected = false; // True if a circular reference was detected
+}
+
 struct ItemDb {
     1: list<Item> items;
 }
@@ -368,6 +380,16 @@ struct ListItemRequestData {
     3: optional string search_string;
 }
 
+struct AutocompleteItemRequestData {
+    1: string search_string;
+    2: i32 max_results = 10;
+}
+
+struct LoadItemWithBlueprintTreeRequestData {
+    1: i64 item_id;
+    2: i32 max_depth = 10;
+}
+
 // Response data structures for each operation
 struct CreateItemResponseData {
     1: Item item;
@@ -390,6 +412,19 @@ struct ListItemResponseData {
     2: i64 total_count;
 }
 
+struct ItemAutocompleteResult {
+    1: i64 id;
+    2: string internal_name;
+}
+
+struct AutocompleteItemResponseData {
+    1: list<ItemAutocompleteResult> results;
+}
+
+struct LoadItemWithBlueprintTreeResponseData {
+    1: BlueprintTreeNode tree;
+}
+
 // Union of all item request data types
 union ItemRequestData {
     1: CreateItemRequestData create_item;
@@ -397,6 +432,8 @@ union ItemRequestData {
     3: SaveItemRequestData save_item;
     4: DestroyItemRequestData destroy_item;
     5: ListItemRequestData list_item;
+    6: AutocompleteItemRequestData autocomplete_item;
+    7: LoadItemWithBlueprintTreeRequestData load_with_blueprint_tree;
 }
 
 // Union of all item response data types
@@ -406,6 +443,8 @@ union ItemResponseData {
     3: SaveItemResponseData save_item;
     4: DestroyItemResponseData destroy_item;
     5: ListItemResponseData list_item;
+    6: AutocompleteItemResponseData autocomplete_item;
+    7: LoadItemWithBlueprintTreeResponseData load_with_blueprint_tree;
 }
 
 // Item Request structure (extensible for auth, tracing, etc.)
@@ -589,6 +628,12 @@ service ItemService extends BaseService {
 
     // List items with pagination and search
     ItemResponse list_records(1: ItemRequest request),
+
+    // Autocomplete search for items (returns lightweight results)
+    ItemResponse autocomplete(1: ItemRequest request),
+
+    // Load an item with its complete blueprint tree (recursive)
+    ItemResponse load_with_blueprint_tree(1: ItemRequest request),
 }
 
 // ============================================================================
