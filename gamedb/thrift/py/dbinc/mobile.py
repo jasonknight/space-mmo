@@ -1,18 +1,20 @@
 """Mobile database operations."""
+
 import sys
 from typing import Optional, Tuple
 
-sys.path.append('../../gen-py')
-
+sys.path.append("../../gen-py")
+import logging
 from game.ttypes import (
     GameResult,
     StatusType,
     GameError,
     ItemVector3,
     Attribute,
+    AttributeValue,
     Mobile,
 )
-
+logger = logging.getLogger(__name__)
 
 class MobileMixin:
     """Mixin class for Mobile database operations."""
@@ -53,7 +55,9 @@ class MobileMixin:
         statements = []
 
         if drop:
-            statements.append(f"DROP TABLE IF EXISTS {database}.{attribute_owners_table};")
+            statements.append(
+                f"DROP TABLE IF EXISTS {database}.{attribute_owners_table};"
+            )
             statements.append(f"DROP TABLE IF EXISTS {database}.{attributes_table};")
             statements.append(f"DROP TABLE IF EXISTS {database}.{mobile_table};")
 
@@ -64,6 +68,7 @@ class MobileMixin:
 
         # Insert the mobile
         from game.ttypes import MobileType as MobileTypeEnum, Owner
+
         mobile_type_name = MobileTypeEnum._VALUES_TO_NAMES[obj.mobile_type]
 
         # Extract owner information
@@ -72,20 +77,26 @@ class MobileMixin:
         owner_asset_id = "NULL"
         owner_player_id = "NULL"
 
-        if hasattr(obj, 'owner') and obj.owner is not None:
+        if hasattr(obj, "owner") and obj.owner is not None:
             if isinstance(obj.owner, Owner):
-                if hasattr(obj.owner, 'mobile_id') and obj.owner.mobile_id is not None:
+                if hasattr(obj.owner, "mobile_id") and obj.owner.mobile_id is not None:
                     owner_mobile_id = str(obj.owner.mobile_id)
-                elif hasattr(obj.owner, 'item_id') and obj.owner.item_id is not None:
+                elif hasattr(obj.owner, "item_id") and obj.owner.item_id is not None:
                     owner_item_id = str(obj.owner.item_id)
-                elif hasattr(obj.owner, 'asset_id') and obj.owner.asset_id is not None:
+                elif hasattr(obj.owner, "asset_id") and obj.owner.asset_id is not None:
                     owner_asset_id = str(obj.owner.asset_id)
-                elif hasattr(obj.owner, 'player_id') and obj.owner.player_id is not None:
+                elif (
+                    hasattr(obj.owner, "player_id") and obj.owner.player_id is not None
+                ):
                     owner_player_id = str(obj.owner.player_id)
             elif isinstance(obj.owner, int):
                 owner_mobile_id = str(obj.owner)
 
-        what_we_call_you = obj.what_we_call_you if hasattr(obj, 'what_we_call_you') and obj.what_we_call_you else ''
+        what_we_call_you = (
+            obj.what_we_call_you
+            if hasattr(obj, "what_we_call_you") and obj.what_we_call_you
+            else ""
+        )
 
         if obj.id is None:
             statements.append(
@@ -114,7 +125,9 @@ class MobileMixin:
                 if attribute.value is not None:
                     if isinstance(attribute.value, bool):
                         bool_val = str(attribute.value)
-                    elif isinstance(attribute.value, (int, float)) and not isinstance(attribute.value, bool):
+                    elif isinstance(attribute.value, (int, float)) and not isinstance(
+                        attribute.value, bool
+                    ):
                         double_val = str(attribute.value)
                     elif isinstance(attribute.value, ItemVector3):
                         vec3_x = str(attribute.value.x)
@@ -125,7 +138,10 @@ class MobileMixin:
 
                 # Insert attribute
                 from game.ttypes import AttributeType as AttrTypeEnum2
-                attr_type_name2 = AttrTypeEnum2._VALUES_TO_NAMES[attribute.attribute_type]
+
+                attr_type_name2 = AttrTypeEnum2._VALUES_TO_NAMES[
+                    attribute.attribute_type
+                ]
 
                 statements.append(
                     f"INSERT INTO {database}.{attributes_table} "
@@ -166,25 +182,29 @@ class MobileMixin:
             mobile_id_set = False
             for stmt in statements:
                 # Replace placeholder with actual last_insert_id
-                if '{last_insert_id}' in stmt:
+                if "{last_insert_id}" in stmt:
                     if last_id is None:
-                        raise Exception("Attempted to use last_insert_id but no previous insert occurred")
-                    stmt = stmt.replace('{last_insert_id}', str(last_id))
+                        raise Exception(
+                            "Attempted to use last_insert_id but no previous insert occurred"
+                        )
+                    stmt = stmt.replace("{last_insert_id}", str(last_id))
 
                 # Replace placeholder with actual mobile_id
-                if '{mobile_id}' in stmt:
+                if "{mobile_id}" in stmt:
                     current_mobile_id = obj.id if obj.id is not None else last_id
                     if current_mobile_id is None:
-                        raise Exception("Attempted to use mobile_id but no mobile insert occurred")
-                    stmt = stmt.replace('{mobile_id}', str(current_mobile_id))
+                        raise Exception(
+                            "Attempted to use mobile_id but no mobile insert occurred"
+                        )
+                    stmt = stmt.replace("{mobile_id}", str(current_mobile_id))
 
                 cursor.execute(stmt)
 
                 # Get last insert id if this was an INSERT
-                if stmt.strip().upper().startswith('INSERT'):
+                if stmt.strip().upper().startswith("INSERT"):
                     last_id = cursor.lastrowid
                     # If this was the mobile insert and obj.id was None, set it now
-                    if not mobile_id_set and obj.id is None and 'mobiles' in stmt:
+                    if not mobile_id_set and obj.id is None and "mobiles" in stmt:
                         obj.id = last_id
                         mobile_id_set = True
 
@@ -239,6 +259,7 @@ class MobileMixin:
             attribute_owners_table = "attribute_owners"
 
             from game.ttypes import MobileType as MobileTypeEnum, Owner
+
             mobile_type_name = MobileTypeEnum._VALUES_TO_NAMES[obj.mobile_type]
 
             # Extract owner information
@@ -247,21 +268,36 @@ class MobileMixin:
             owner_asset_id = "NULL"
             owner_player_id = "NULL"
 
-            if hasattr(obj, 'owner') and obj.owner is not None:
+            if hasattr(obj, "owner") and obj.owner is not None:
                 if isinstance(obj.owner, Owner):
-                    if hasattr(obj.owner, 'mobile_id') and obj.owner.mobile_id is not None:
+                    if (
+                        hasattr(obj.owner, "mobile_id")
+                        and obj.owner.mobile_id is not None
+                    ):
                         owner_mobile_id = str(obj.owner.mobile_id)
-                    elif hasattr(obj.owner, 'item_id') and obj.owner.item_id is not None:
+                    elif (
+                        hasattr(obj.owner, "item_id") and obj.owner.item_id is not None
+                    ):
                         owner_item_id = str(obj.owner.item_id)
-                    elif hasattr(obj.owner, 'asset_id') and obj.owner.asset_id is not None:
+                    elif (
+                        hasattr(obj.owner, "asset_id")
+                        and obj.owner.asset_id is not None
+                    ):
                         owner_asset_id = str(obj.owner.asset_id)
-                    elif hasattr(obj.owner, 'player_id') and obj.owner.player_id is not None:
+                    elif (
+                        hasattr(obj.owner, "player_id")
+                        and obj.owner.player_id is not None
+                    ):
                         owner_player_id = str(obj.owner.player_id)
                 elif isinstance(obj.owner, int):
                     owner_mobile_id = str(obj.owner)
 
             # Update mobile
-            what_we_call_you = obj.what_we_call_you if hasattr(obj, 'what_we_call_you') and obj.what_we_call_you else ''
+            what_we_call_you = (
+                obj.what_we_call_you
+                if hasattr(obj, "what_we_call_you") and obj.what_we_call_you
+                else ""
+            )
             cursor.execute(
                 f"UPDATE {database}.{mobile_table} SET "
                 f"mobile_type = '{mobile_type_name}', "
@@ -287,7 +323,7 @@ class MobileMixin:
 
             # Delete the attributes themselves
             if attr_ids:
-                attr_ids_str = ','.join(str(aid) for aid in attr_ids)
+                attr_ids_str = ",".join(str(aid) for aid in attr_ids)
                 cursor.execute(
                     f"DELETE FROM {database}.{attributes_table} WHERE id IN ({attr_ids_str});"
                 )
@@ -306,7 +342,9 @@ class MobileMixin:
                     if attribute.value is not None:
                         if isinstance(attribute.value, bool):
                             bool_val = str(attribute.value)
-                        elif isinstance(attribute.value, (int, float)) and not isinstance(attribute.value, bool):
+                        elif isinstance(
+                            attribute.value, (int, float)
+                        ) and not isinstance(attribute.value, bool):
                             double_val = str(attribute.value)
                         elif isinstance(attribute.value, ItemVector3):
                             vec3_x = str(attribute.value.x)
@@ -316,7 +354,10 @@ class MobileMixin:
                             asset_val = str(attribute.value)
 
                     from game.ttypes import AttributeType as AttrTypeEnum2
-                    attr_type_name2 = AttrTypeEnum2._VALUES_TO_NAMES[attribute.attribute_type]
+
+                    attr_type_name2 = AttrTypeEnum2._VALUES_TO_NAMES[
+                        attribute.attribute_type
+                    ]
 
                     cursor.execute(
                         f"INSERT INTO {database}.{attributes_table} "
@@ -399,80 +440,84 @@ class MobileMixin:
                 (mobile_id,),
             )
             attribute_rows = cursor.fetchall()
+            if not attribute_rows:
+                logger.debug("No attributes were found")
+            else:
+                logger.debug(f"loaded {len(attribute_rows)} attributes")
+
+            # Import required enums at the start
+            from game.ttypes import AttributeType, MobileType, Owner
 
             # Build attributes map
             attributes = {}
             for row in attribute_rows:
                 # Reconstruct AttributeValue union
                 value = None
-                if row['bool_value'] is not None:
-                    value = row['bool_value']
-                elif row['double_value'] is not None:
-                    value = row['double_value']
-                elif row['vector3_x'] is not None:
-                    value = ItemVector3(
-                        x=row['vector3_x'],
-                        y=row['vector3_y'],
-                        z=row['vector3_z'],
+                if row["bool_value"] is not None:
+                    value = AttributeValue(bool_value=row["bool_value"])
+                elif row["double_value"] is not None:
+                    value = AttributeValue(double_value=row["double_value"])
+                elif row["vector3_x"] is not None:
+                    value = AttributeValue(
+                        vector3=ItemVector3(
+                            x=row["vector3_x"],
+                            y=row["vector3_y"],
+                            z=row["vector3_z"],
+                        )
                     )
-                elif row['asset_id'] is not None:
-                    value = row['asset_id']
+                elif row["asset_id"] is not None:
+                    value = AttributeValue(asset_id=row["asset_id"])
 
                 # Reconstruct Owner union for this attribute
                 cursor.execute(
                     f"SELECT * FROM {database}.{attribute_owners_table} WHERE attribute_id = %s;",
-                    (row['id'],),
+                    (row["id"],),
                 )
                 owner_row = cursor.fetchone()
 
                 owner = None
                 if owner_row:
-                    if owner_row['mobile_id']:
-                        owner = owner_row['mobile_id']
-                    elif owner_row['item_id']:
-                        owner = owner_row['item_id']
-                    elif owner_row['asset_id']:
-                        owner = owner_row['asset_id']
-                    elif owner_row['player_id']:
-                        owner = owner_row['player_id']
+                    if owner_row["mobile_id"]:
+                        owner = Owner(mobile_id=owner_row["mobile_id"])
+                    elif owner_row["item_id"]:
+                        owner = Owner(item_id=owner_row["item_id"])
+                    elif owner_row["asset_id"]:
+                        owner = Owner(asset_id=owner_row["asset_id"])
+                    elif owner_row["player_id"]:
+                        owner = Owner(player_id=owner_row["player_id"])
 
-                # Import AttributeType enum
-                from game.ttypes import AttributeType
-                attr_type = AttributeType._NAMES_TO_VALUES[row['attribute_type']]
+                attr_type = AttributeType._NAMES_TO_VALUES[row["attribute_type"]]
 
                 attribute = Attribute(
-                    id=row['id'],
-                    internal_name=row['internal_name'],
-                    visible=row['visible'],
+                    id=row["id"],
+                    internal_name=row["internal_name"],
+                    visible=row["visible"],
                     value=value,
                     attribute_type=attr_type,
                     owner=owner,
                 )
                 attributes[attr_type] = attribute
-
-            # Import MobileType enum
-            from game.ttypes import MobileType, Owner
-            mobile_type = MobileType._NAMES_TO_VALUES[mobile_row['mobile_type']]
+            mobile_type = MobileType._NAMES_TO_VALUES[mobile_row["mobile_type"]]
 
             # Reconstruct owner
             owner = None
-            if mobile_row['owner_mobile_id']:
+            if mobile_row["owner_mobile_id"]:
                 owner = Owner()
-                owner.mobile_id = mobile_row['owner_mobile_id']
-            elif mobile_row['owner_item_id']:
+                owner.mobile_id = mobile_row["owner_mobile_id"]
+            elif mobile_row["owner_item_id"]:
                 owner = Owner()
-                owner.item_id = mobile_row['owner_item_id']
-            elif mobile_row['owner_asset_id']:
+                owner.item_id = mobile_row["owner_item_id"]
+            elif mobile_row["owner_asset_id"]:
                 owner = Owner()
-                owner.asset_id = mobile_row['owner_asset_id']
-            elif mobile_row['owner_player_id']:
+                owner.asset_id = mobile_row["owner_asset_id"]
+            elif mobile_row["owner_player_id"]:
                 owner = Owner()
-                owner.player_id = mobile_row['owner_player_id']
+                owner.player_id = mobile_row["owner_player_id"]
 
             # Create Mobile object
-            what_we_call_you = mobile_row.get('what_we_call_you', '')
+            what_we_call_you = mobile_row.get("what_we_call_you", "")
             mobile = Mobile(
-                id=mobile_row['id'],
+                id=mobile_row["id"],
                 mobile_type=mobile_type,
                 attributes=attributes,
                 owner=owner,
@@ -542,7 +587,7 @@ class MobileMixin:
 
             # Delete attributes
             if attr_ids:
-                attr_ids_str = ','.join(str(aid) for aid in attr_ids)
+                attr_ids_str = ",".join(str(aid) for aid in attr_ids)
                 cursor.execute(
                     f"DELETE FROM {database}.{attributes_table} WHERE id IN ({attr_ids_str});"
                 )

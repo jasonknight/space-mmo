@@ -153,6 +153,7 @@ def test_mobile(db: DB, database_name: str):
         mobile_type=MobileType.PLAYER,
         attributes=attributes,
         owner=owner,
+        what_we_call_you="TestPlayerCharacter",
     )
 
     # Save mobile
@@ -170,6 +171,9 @@ def test_mobile(db: DB, database_name: str):
     assert loaded_mobile.mobile_type == mobile.mobile_type, "mobile_type mismatch"
     assert len(loaded_mobile.attributes) == len(mobile.attributes), (
         "Attributes count mismatch"
+    )
+    assert loaded_mobile.what_we_call_you == mobile.what_we_call_you, (
+        f"what_we_call_you mismatch: expected '{mobile.what_we_call_you}', got '{loaded_mobile.what_we_call_you}'"
     )
 
     # Verify owner was saved and loaded correctly

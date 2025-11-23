@@ -128,6 +128,18 @@ def test_player(db: DB, database_name: str):
     assert loaded_player.over_13 == player.over_13, "over_13 mismatch"
     assert loaded_player.year_of_birth == player.year_of_birth, "year_of_birth mismatch"
 
+    # Verify mobile was loaded
+    assert hasattr(loaded_player, "mobile") and loaded_player.mobile is not None, (
+        "Player should have a mobile loaded"
+    )
+    assert loaded_player.mobile.what_we_call_you == player.what_we_call_you, (
+        f"Mobile what_we_call_you should match player: expected '{player.what_we_call_you}', "
+        f"got '{loaded_player.mobile.what_we_call_you}'"
+    )
+    print(
+        f"  ✓ Verified mobile loaded with what_we_call_you='{loaded_player.mobile.what_we_call_you}'"
+    )
+
     # Test update
     print("  Testing update...")
     loaded_player.full_name = "Jane Smith"
@@ -415,9 +427,12 @@ def test_player_with_character_attributes(db: DB, database_name: str):
 
     # Verify mobile name matches player name
     assert loaded_player.mobile.what_we_call_you == player.what_we_call_you, (
-        "Mobile name should match player name"
+        f"Mobile name should match player name: expected '{player.what_we_call_you}', "
+        f"got '{loaded_player.mobile.what_we_call_you}'"
     )
-    print("  ✓ Mobile name matches player name")
+    print(
+        f"  ✓ Mobile name matches player name: '{loaded_player.mobile.what_we_call_you}'"
+    )
 
     print("  ✓ All assertions passed for Player with character attributes\n")
 

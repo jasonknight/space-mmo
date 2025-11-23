@@ -2,8 +2,9 @@
 """Tests for PlayerService with cache validation."""
 
 import sys
-sys.path.append('../../gen-py')
-sys.path.append('..')
+
+sys.path.append("../../gen-py")
+sys.path.append("..")
 
 from db import DB
 from services.player_service import PlayerServiceHandler, LRUCache
@@ -74,6 +75,7 @@ def test_create_player(service: PlayerServiceHandler, db: DB, database_name: str
         security_token="hashed_password_123",
         over_13=True,
         year_of_birth=1990,
+        email="john.doe@example.com",
     )
 
     request = PlayerRequest(
@@ -87,7 +89,9 @@ def test_create_player(service: PlayerServiceHandler, db: DB, database_name: str
     response = service.create(request)
     assert is_ok(response.results), f"Create failed: {response.results[0].message}"
     assert response.response_data is not None, "Response data should not be None"
-    assert response.response_data.create_player is not None, "create_player data missing"
+    assert response.response_data.create_player is not None, (
+        "create_player data missing"
+    )
 
     created_player = response.response_data.create_player.player
     assert created_player.id is not None, "Created player should have an ID"
@@ -100,6 +104,20 @@ def test_create_player(service: PlayerServiceHandler, db: DB, database_name: str
     assert db_player.what_we_call_you == "JohnD", "what_we_call_you mismatch"
     assert db_player.year_of_birth == 1990, "year_of_birth mismatch"
     print("  ✓ Verified player in database")
+
+    # Verify mobile was loaded and has what_we_call_you
+    assert hasattr(db_player, "mobile") and db_player.mobile is not None, (
+        "Player should have a mobile loaded"
+    )
+    assert hasattr(db_player.mobile, "what_we_call_you"), (
+        "Mobile should have what_we_call_you field"
+    )
+    assert db_player.mobile.what_we_call_you == "JohnD", (
+        f"Mobile what_we_call_you should be 'JohnD', got '{db_player.mobile.what_we_call_you}'"
+    )
+    print(
+        f"  ✓ Verified mobile loaded with what_we_call_you='{db_player.mobile.what_we_call_you}'"
+    )
 
     # Verify it's in cache
     cached_player = service.cache.get(created_player.id)
@@ -120,14 +138,18 @@ def test_create_player(service: PlayerServiceHandler, db: DB, database_name: str
     mobile_type = mobile_row[1]
     owner_player_id = mobile_row[2]
     assert mobile_type == "PLAYER", f"Mobile type should be PLAYER, got {mobile_type}"
-    assert owner_player_id == created_player.id, f"Mobile owner_player_id should be {created_player.id}, got {owner_player_id}"
+    assert owner_player_id == created_player.id, (
+        f"Mobile owner_player_id should be {created_player.id}, got {owner_player_id}"
+    )
     print(f"  ✓ Verified mobile (id={mobile_id}) created for player")
 
     print("  ✓ All create tests passed\n")
     return created_player
 
 
-def test_load_player(service: PlayerServiceHandler, db: DB, database_name: str, player_id: int):
+def test_load_player(
+    service: PlayerServiceHandler, db: DB, database_name: str, player_id: int
+):
     """Test loading a player via service (cache miss and cache hit)."""
     print("Testing PlayerService.load()...")
 
@@ -153,6 +175,17 @@ def test_load_player(service: PlayerServiceHandler, db: DB, database_name: str, 
     assert loaded_player.id == player_id, "Loaded player ID mismatch"
     print(f"  ✓ Loaded player (cache miss): {response.results[0].message}")
 
+    # Verify mobile was loaded and has what_we_call_you
+    assert hasattr(loaded_player, "mobile") and loaded_player.mobile is not None, (
+        "Loaded player should have a mobile"
+    )
+    assert hasattr(loaded_player.mobile, "what_we_call_you"), (
+        "Loaded mobile should have what_we_call_you field"
+    )
+    print(
+        f"  ✓ Verified mobile loaded with what_we_call_you='{loaded_player.mobile.what_we_call_you}'"
+    )
+
     # Verify it's now in cache
     cached_player = service.cache.get(player_id)
     assert cached_player is not None, "Player should be in cache after load"
@@ -160,7 +193,9 @@ def test_load_player(service: PlayerServiceHandler, db: DB, database_name: str, 
 
     # Second load - cache hit
     response2 = service.load(request)
-    assert is_ok(response2.results), f"Second load failed: {response2.results[0].message}"
+    assert is_ok(response2.results), (
+        f"Second load failed: {response2.results[0].message}"
+    )
     assert "cache" in response2.results[0].message, "Second load should mention cache"
     print(f"  ✓ Loaded player (cache hit): {response2.results[0].message}")
 
@@ -175,13 +210,17 @@ def test_load_player(service: PlayerServiceHandler, db: DB, database_name: str, 
 
     response_bad = service.load(request_bad)
     assert not is_ok(response_bad.results), "Loading non-existent player should fail"
-    assert response_bad.response_data is None, "Response data should be None for failure"
+    assert response_bad.response_data is None, (
+        "Response data should be None for failure"
+    )
     print("  ✓ Non-existent player load properly failed")
 
     print("  ✓ All load tests passed\n")
 
 
-def test_save_player(service: PlayerServiceHandler, db: DB, database_name: str, player_id: int):
+def test_save_player(
+    service: PlayerServiceHandler, db: DB, database_name: str, player_id: int
+):
     """Test saving/updating a player via service."""
     print("Testing PlayerService.save()...")
 
@@ -209,14 +248,20 @@ def test_save_player(service: PlayerServiceHandler, db: DB, database_name: str, 
     load_result2, updated_player = db.load_player(database_name, player_id)
     assert is_true(load_result2), "Failed to load updated player from DB"
     assert updated_player.full_name == "John Doe Updated", "full_name not updated in DB"
-    assert updated_player.security_token == "new_hashed_password_456", "security_token not updated in DB"
+    assert updated_player.security_token == "new_hashed_password_456", (
+        "security_token not updated in DB"
+    )
     print("  ✓ Verified updates in database")
 
     # Verify cache was updated
     cached_player = service.cache.get(player_id)
     assert cached_player is not None, "Player should be in cache"
-    assert cached_player.full_name == "John Doe Updated", "full_name not updated in cache"
-    assert cached_player.security_token == "new_hashed_password_456", "security_token not updated in cache"
+    assert cached_player.full_name == "John Doe Updated", (
+        "full_name not updated in cache"
+    )
+    assert cached_player.security_token == "new_hashed_password_456", (
+        "security_token not updated in cache"
+    )
     print("  ✓ Verified cache was updated")
 
     print("  ✓ All save tests passed\n")
@@ -234,6 +279,7 @@ def test_delete_player(service: PlayerServiceHandler, db: DB, database_name: str
         security_token="temp_token",
         over_13=True,
         year_of_birth=1995,
+        email="jane.smith@example.com",
     )
 
     # Save to DB
@@ -269,8 +315,12 @@ def test_delete_player(service: PlayerServiceHandler, db: DB, database_name: str
     response = service.delete(request)
     assert is_ok(response.results), f"Delete failed: {response.results[0].message}"
     assert response.response_data is not None, "Response data should not be None"
-    assert response.response_data.delete_player is not None, "delete_player data missing"
-    assert response.response_data.delete_player.player_id == player.id, "Deleted player ID mismatch"
+    assert response.response_data.delete_player is not None, (
+        "delete_player data missing"
+    )
+    assert response.response_data.delete_player.player_id == player.id, (
+        "Deleted player ID mismatch"
+    )
     print(f"  ✓ Deleted player: {response.results[0].message}")
 
     # Verify it was deleted from DB
@@ -292,7 +342,9 @@ def test_delete_player(service: PlayerServiceHandler, db: DB, database_name: str
     )
     deleted_mobile_row = cursor.fetchone()
     cursor.close()
-    assert deleted_mobile_row is None, "Mobile should have been deleted when player was destroyed"
+    assert deleted_mobile_row is None, (
+        "Mobile should have been deleted when player was destroyed"
+    )
     print("  ✓ Verified mobile was deleted when player was destroyed")
 
     # Test deleting non-existent player
@@ -306,7 +358,9 @@ def test_delete_player(service: PlayerServiceHandler, db: DB, database_name: str
 
     response_bad = service.delete(request_bad)
     assert not is_ok(response_bad.results), "Deleting non-existent player should fail"
-    assert response_bad.results[0].error_code == GameError.DB_RECORD_NOT_FOUND, "Should return DB_RECORD_NOT_FOUND"
+    assert response_bad.results[0].error_code == GameError.DB_RECORD_NOT_FOUND, (
+        "Should return DB_RECORD_NOT_FOUND"
+    )
     print("  ✓ Non-existent player delete properly failed")
 
     print("  ✓ All delete tests passed\n")
@@ -329,6 +383,7 @@ def test_cache_eviction(service: PlayerServiceHandler, db: DB, database_name: st
             security_token=f"token_{i}",
             over_13=True,
             year_of_birth=2000 + i,
+            email=f"test{i}@example.com",
         )
         save_results = db.save_player(database_name, player)
         assert is_ok(save_results), f"Failed to create player {i}"
@@ -347,7 +402,9 @@ def test_cache_eviction(service: PlayerServiceHandler, db: DB, database_name: st
         response = small_cache_service.load(request)
         assert is_ok(response.results), f"Failed to load player {i}"
 
-    assert small_cache_service.cache.size() == 3, f"Cache should have 3 items, got {small_cache_service.cache.size()}"
+    assert small_cache_service.cache.size() == 3, (
+        f"Cache should have 3 items, got {small_cache_service.cache.size()}"
+    )
     print("  ✓ Loaded 3 players into cache")
 
     # Access player 0 to make it recently used
@@ -364,15 +421,25 @@ def test_cache_eviction(service: PlayerServiceHandler, db: DB, database_name: st
     response = small_cache_service.load(request)
     assert is_ok(response.results), "Failed to load player 3"
 
-    assert small_cache_service.cache.size() == 3, f"Cache should still have 3 items, got {small_cache_service.cache.size()}"
+    assert small_cache_service.cache.size() == 3, (
+        f"Cache should still have 3 items, got {small_cache_service.cache.size()}"
+    )
 
     # Verify player 1 was evicted
-    assert small_cache_service.cache.get(players[1].id) is None, "Player 1 should have been evicted"
+    assert small_cache_service.cache.get(players[1].id) is None, (
+        "Player 1 should have been evicted"
+    )
 
     # Verify others are still in cache
-    assert small_cache_service.cache.get(players[0].id) is not None, "Player 0 should still be in cache"
-    assert small_cache_service.cache.get(players[2].id) is not None, "Player 2 should still be in cache"
-    assert small_cache_service.cache.get(players[3].id) is not None, "Player 3 should be in cache"
+    assert small_cache_service.cache.get(players[0].id) is not None, (
+        "Player 0 should still be in cache"
+    )
+    assert small_cache_service.cache.get(players[2].id) is not None, (
+        "Player 2 should still be in cache"
+    )
+    assert small_cache_service.cache.get(players[3].id) is not None, (
+        "Player 3 should be in cache"
+    )
     print("  ✓ LRU eviction working correctly")
 
     print("  ✓ All cache eviction tests passed\n")
@@ -386,7 +453,9 @@ def test_invalid_requests(service: PlayerServiceHandler):
     request = PlayerRequest(data=PlayerRequestData())
     response = service.load(request)
     assert not is_ok(response.results), "Load without data should fail"
-    assert response.results[0].error_code == GameError.DB_INVALID_DATA, "Should return DB_INVALID_DATA"
+    assert response.results[0].error_code == GameError.DB_INVALID_DATA, (
+        "Should return DB_INVALID_DATA"
+    )
     print("  ✓ Load without data properly failed")
 
     # Test create without data
