@@ -14,6 +14,8 @@ struct Player {
     // Whether or not the player is over 13
     5: bool over_13;
     6: i64 year_of_birth;
+    7: string email;
+    8: optional Mobile mobile;
 }
 // The general item type is something like a parent item
 // class, it gives some broad category to the item, is it 
@@ -34,6 +36,40 @@ enum ItemType {
 enum MobileType {
     PLAYER = 1,
     NPC = 2,
+}
+
+enum BackingTable {
+    ATTRIBUTES = 1,
+    ATTRIBUTE_OWNERS = 2,
+    ITEMS = 3,
+    MOBILE_ITEMS = 4,
+    ITEM_BLUEPRINTS = 5,
+    ITEM_BLUEPRINT_COMPONENTS = 6,
+    MOBILE_ITEM_BLUEPRINTS = 7,
+    MOBILE_ITEM_BLUEPRINT_COMPONENTS = 8,
+    MOBILE_ITEM_ATTRIBUTES = 9,
+    PLAYERS = 10,
+    MOBILES = 11,
+    INVENTORIES = 12,
+    INVENTORY_ENTRIES = 13,
+    INVENTORY_OWNERS = 14,
+}
+
+const map<BackingTable, string> TABLE2STR = {
+    BackingTable.ATTRIBUTES: "attributes",
+    BackingTable.ATTRIBUTE_OWNERS: "attribute_owners",
+    BackingTable.ITEMS: "items",
+    BackingTable.MOBILE_ITEMS: "mobile_items",
+    BackingTable.ITEM_BLUEPRINTS: "item_blueprints",
+    BackingTable.ITEM_BLUEPRINT_COMPONENTS: "item_blueprint_components",
+    BackingTable.MOBILE_ITEM_BLUEPRINTS: "mobile_item_blueprints",
+    BackingTable.MOBILE_ITEM_BLUEPRINT_COMPONENTS: "mobile_item_blueprint_components",
+    BackingTable.MOBILE_ITEM_ATTRIBUTES: "mobile_item_attributes",
+    BackingTable.PLAYERS: "players",
+    BackingTable.MOBILES: "mobiles",
+    BackingTable.INVENTORIES: "inventories",
+    BackingTable.INVENTORY_ENTRIES: "inventory_entries",
+    BackingTable.INVENTORY_OWNERS: "inventory_owners",
 }
 
 union Owner {
@@ -104,6 +140,7 @@ struct Item {
     5: ItemType item_type;
     // Optional because not items can be constructed by players
     6: optional ItemBlueprint blueprint;
+    7: optional BackingTable backing_table;
 }
 
 struct ItemBlueprintComponent {
@@ -204,6 +241,7 @@ struct Mobile {
     2: MobileType mobile_type;
     3: map<AttributeType, Attribute> attributes;
     4: Owner owner;
+    5: string what_we_call_you;
 }
 
 // ============================================================================
@@ -313,6 +351,7 @@ struct CreateItemRequestData {
 
 struct LoadItemRequestData {
     1: i64 item_id;
+    2: optional BackingTable backing_table;
 }
 
 struct SaveItemRequestData {

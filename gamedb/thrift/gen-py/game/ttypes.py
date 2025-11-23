@@ -56,6 +56,57 @@ class MobileType(object):
     }
 
 
+class BackingTable(object):
+    ATTRIBUTES = 1
+    ATTRIBUTE_OWNERS = 2
+    ITEMS = 3
+    MOBILE_ITEMS = 4
+    ITEM_BLUEPRINTS = 5
+    ITEM_BLUEPRINT_COMPONENTS = 6
+    MOBILE_ITEM_BLUEPRINTS = 7
+    MOBILE_ITEM_BLUEPRINT_COMPONENTS = 8
+    MOBILE_ITEM_ATTRIBUTES = 9
+    PLAYERS = 10
+    MOBILES = 11
+    INVENTORIES = 12
+    INVENTORY_ENTRIES = 13
+    INVENTORY_OWNERS = 14
+
+    _VALUES_TO_NAMES = {
+        1: "ATTRIBUTES",
+        2: "ATTRIBUTE_OWNERS",
+        3: "ITEMS",
+        4: "MOBILE_ITEMS",
+        5: "ITEM_BLUEPRINTS",
+        6: "ITEM_BLUEPRINT_COMPONENTS",
+        7: "MOBILE_ITEM_BLUEPRINTS",
+        8: "MOBILE_ITEM_BLUEPRINT_COMPONENTS",
+        9: "MOBILE_ITEM_ATTRIBUTES",
+        10: "PLAYERS",
+        11: "MOBILES",
+        12: "INVENTORIES",
+        13: "INVENTORY_ENTRIES",
+        14: "INVENTORY_OWNERS",
+    }
+
+    _NAMES_TO_VALUES = {
+        "ATTRIBUTES": 1,
+        "ATTRIBUTE_OWNERS": 2,
+        "ITEMS": 3,
+        "MOBILE_ITEMS": 4,
+        "ITEM_BLUEPRINTS": 5,
+        "ITEM_BLUEPRINT_COMPONENTS": 6,
+        "MOBILE_ITEM_BLUEPRINTS": 7,
+        "MOBILE_ITEM_BLUEPRINT_COMPONENTS": 8,
+        "MOBILE_ITEM_ATTRIBUTES": 9,
+        "PLAYERS": 10,
+        "MOBILES": 11,
+        "INVENTORIES": 12,
+        "INVENTORY_ENTRIES": 13,
+        "INVENTORY_OWNERS": 14,
+    }
+
+
 class AttributeType(object):
     TRANSLATED_NAME = 1
     TRANSLATED_SHORT_DESCRIPTION = 2
@@ -209,18 +260,22 @@ class Player(object):
      - security_token
      - over_13
      - year_of_birth
+     - email
+     - mobile
 
     """
     thrift_spec = None
 
 
-    def __init__(self, id = None, full_name = None, what_we_call_you = None, security_token = None, over_13 = None, year_of_birth = None,):
+    def __init__(self, id = None, full_name = None, what_we_call_you = None, security_token = None, over_13 = None, year_of_birth = None, email = None, mobile = None,):
         self.id = id
         self.full_name = full_name
         self.what_we_call_you = what_we_call_you
         self.security_token = security_token
         self.over_13 = over_13
         self.year_of_birth = year_of_birth
+        self.email = email
+        self.mobile = mobile
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -261,6 +316,17 @@ class Player(object):
                     self.year_of_birth = iprot.readI64()
                 else:
                     iprot.skip(ftype)
+            elif fid == 7:
+                if ftype == TType.STRING:
+                    self.email = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 8:
+                if ftype == TType.STRUCT:
+                    self.mobile = Mobile()
+                    self.mobile.read(iprot)
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -295,6 +361,14 @@ class Player(object):
         if self.year_of_birth is not None:
             oprot.writeFieldBegin('year_of_birth', TType.I64, 6)
             oprot.writeI64(self.year_of_birth)
+            oprot.writeFieldEnd()
+        if self.email is not None:
+            oprot.writeFieldBegin('email', TType.STRING, 7)
+            oprot.writeString(self.email.encode('utf-8') if sys.version_info[0] == 2 else self.email)
+            oprot.writeFieldEnd()
+        if self.mobile is not None:
+            oprot.writeFieldBegin('mobile', TType.STRUCT, 8)
+            self.mobile.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -705,18 +779,20 @@ class Item(object):
      - max_stack_size
      - item_type
      - blueprint
+     - backing_table
 
     """
     thrift_spec = None
 
 
-    def __init__(self, id = None, internal_name = None, attributes = None, max_stack_size = None, item_type = None, blueprint = None,):
+    def __init__(self, id = None, internal_name = None, attributes = None, max_stack_size = None, item_type = None, blueprint = None, backing_table = None,):
         self.id = id
         self.internal_name = internal_name
         self.attributes = attributes
         self.max_stack_size = max_stack_size
         self.item_type = item_type
         self.blueprint = blueprint
+        self.backing_table = backing_table
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -765,6 +841,11 @@ class Item(object):
                     self.blueprint.read(iprot)
                 else:
                     iprot.skip(ftype)
+            elif fid == 7:
+                if ftype == TType.I32:
+                    self.backing_table = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -803,6 +884,10 @@ class Item(object):
         if self.blueprint is not None:
             oprot.writeFieldBegin('blueprint', TType.STRUCT, 6)
             self.blueprint.write(oprot)
+            oprot.writeFieldEnd()
+        if self.backing_table is not None:
+            oprot.writeFieldBegin('backing_table', TType.I32, 7)
+            oprot.writeI32(self.backing_table)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -1345,16 +1430,18 @@ class Mobile(object):
      - mobile_type
      - attributes
      - owner
+     - what_we_call_you
 
     """
     thrift_spec = None
 
 
-    def __init__(self, id = None, mobile_type = None, attributes = None, owner = None,):
+    def __init__(self, id = None, mobile_type = None, attributes = None, owner = None, what_we_call_you = None,):
         self.id = id
         self.mobile_type = mobile_type
         self.attributes = attributes
         self.owner = owner
+        self.what_we_call_you = what_we_call_you
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -1393,6 +1480,11 @@ class Mobile(object):
                     self.owner.read(iprot)
                 else:
                     iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.STRING:
+                    self.what_we_call_you = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -1423,6 +1515,10 @@ class Mobile(object):
         if self.owner is not None:
             oprot.writeFieldBegin('owner', TType.STRUCT, 4)
             self.owner.write(oprot)
+            oprot.writeFieldEnd()
+        if self.what_we_call_you is not None:
+            oprot.writeFieldBegin('what_we_call_you', TType.STRING, 5)
+            oprot.writeString(self.what_we_call_you.encode('utf-8') if sys.version_info[0] == 2 else self.what_we_call_you)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -2710,13 +2806,15 @@ class LoadItemRequestData(object):
     """
     Attributes:
      - item_id
+     - backing_table
 
     """
     thrift_spec = None
 
 
-    def __init__(self, item_id = None,):
+    def __init__(self, item_id = None, backing_table = None,):
         self.item_id = item_id
+        self.backing_table = backing_table
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -2730,6 +2828,11 @@ class LoadItemRequestData(object):
             if fid == 1:
                 if ftype == TType.I64:
                     self.item_id = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.I32:
+                    self.backing_table = iprot.readI32()
                 else:
                     iprot.skip(ftype)
             else:
@@ -2746,6 +2849,10 @@ class LoadItemRequestData(object):
         if self.item_id is not None:
             oprot.writeFieldBegin('item_id', TType.I64, 1)
             oprot.writeI64(self.item_id)
+            oprot.writeFieldEnd()
+        if self.backing_table is not None:
+            oprot.writeFieldBegin('backing_table', TType.I32, 2)
+            oprot.writeI32(self.backing_table)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -5053,6 +5160,8 @@ Player.thrift_spec = (
     (4, TType.STRING, 'security_token', 'UTF8', None, ),  # 4
     (5, TType.BOOL, 'over_13', None, None, ),  # 5
     (6, TType.I64, 'year_of_birth', None, None, ),  # 6
+    (7, TType.STRING, 'email', 'UTF8', None, ),  # 7
+    (8, TType.STRUCT, 'mobile', [Mobile, None], None, ),  # 8
 )
 all_structs.append(Owner)
 Owner.thrift_spec = (
@@ -5096,6 +5205,7 @@ Item.thrift_spec = (
     (4, TType.I64, 'max_stack_size', None, None, ),  # 4
     (5, TType.I32, 'item_type', None, None, ),  # 5
     (6, TType.STRUCT, 'blueprint', [ItemBlueprint, None], None, ),  # 6
+    (7, TType.I32, 'backing_table', None, None, ),  # 7
 )
 all_structs.append(ItemBlueprintComponent)
 ItemBlueprintComponent.thrift_spec = (
@@ -5146,6 +5256,7 @@ Mobile.thrift_spec = (
     (2, TType.I32, 'mobile_type', None, None, ),  # 2
     (3, TType.MAP, 'attributes', (TType.I32, None, TType.STRUCT, [Attribute, None], False), None, ),  # 3
     (4, TType.STRUCT, 'owner', [Owner, None], None, ),  # 4
+    (5, TType.STRING, 'what_we_call_you', 'UTF8', None, ),  # 5
 )
 all_structs.append(LoadInventoryRequestData)
 LoadInventoryRequestData.thrift_spec = (
@@ -5256,6 +5367,7 @@ all_structs.append(LoadItemRequestData)
 LoadItemRequestData.thrift_spec = (
     None,  # 0
     (1, TType.I64, 'item_id', None, None, ),  # 1
+    (2, TType.I32, 'backing_table', None, None, ),  # 2
 )
 all_structs.append(SaveItemRequestData)
 SaveItemRequestData.thrift_spec = (

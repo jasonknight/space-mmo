@@ -1,5 +1,6 @@
-from typing import Any
-from game.ttypes import StatusType
+from typing import Any, Dict
+from game.ttypes import StatusType, BackingTable
+from game.constants import TABLE2STR
 
 def is_true(result: Any) -> bool:
     if isinstance(result, list):
@@ -23,3 +24,10 @@ def is_ok(results: list[Any]) -> bool:
             if result.status == StatusType.FAILURE:
                 return False
     return True
+
+# Create reverse map from table name strings to BackingTable enum values
+STR2TABLE: Dict[str, BackingTable] = {
+    table_name: backing_table
+    for backing_table, table_name in TABLE2STR.items()
+}
+

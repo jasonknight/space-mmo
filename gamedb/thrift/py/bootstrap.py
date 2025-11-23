@@ -85,6 +85,26 @@ def main():
         for stmt in db.get_inventory_owners_table_sql(database_name):
             cursor.execute(stmt)
 
+        # Create mobile_items table
+        print("   - Creating mobile_items table...")
+        for stmt in db.get_mobile_items_table_sql(database_name):
+            cursor.execute(stmt)
+
+        # Create mobile_item_blueprints table
+        print("   - Creating mobile_item_blueprints table...")
+        for stmt in db.get_mobile_item_blueprints_table_sql(database_name):
+            cursor.execute(stmt)
+
+        # Create mobile_item_blueprint_components table
+        print("   - Creating mobile_item_blueprint_components table...")
+        for stmt in db.get_mobile_item_blueprint_components_table_sql(database_name):
+            cursor.execute(stmt)
+
+        # Create mobile_item_attributes table
+        print("   - Creating mobile_item_attributes table...")
+        for stmt in db.get_mobile_item_attributes_table_sql(database_name):
+            cursor.execute(stmt)
+
         db.connection.commit()
         print("\n   ✓ All tables created successfully")
 

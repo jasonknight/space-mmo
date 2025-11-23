@@ -130,9 +130,17 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             item_id = load_data.item_id
             logger.info(f"Loading item_id={item_id}")
 
+            # Determine table to use based on backing_table if provided
+            table = None
+            if hasattr(load_data, 'backing_table') and load_data.backing_table is not None:
+                from game.ttypes import TABLE2STR
+                table = TABLE2STR.get(load_data.backing_table)
+                logger.info(f"Using table={table} from backing_table={load_data.backing_table}")
+
             result, item = self.db.load_item(
                 self.database,
                 item_id,
+                table,
             )
 
             if item:

@@ -7,7 +7,8 @@
                 "what_we_call_you": "JohnD",
                 "security_token": "new_hashed_token",
                 "over_13": true,
-                "year_of_birth": 1990
+                "year_of_birth": 1990,
+                "email": "john.doe@example.com"
             }
         }
     }

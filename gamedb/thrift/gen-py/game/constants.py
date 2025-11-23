@@ -13,6 +13,22 @@ from uuid import UUID
 
 import sys
 from .ttypes import *
+TABLE2STR = {
+        1: "attributes",
+        2: "attribute_owners",
+        12: "inventories",
+        13: "inventory_entries",
+        14: "inventory_owners",
+        3: "items",
+        5: "item_blueprints",
+        6: "item_blueprint_components",
+        11: "mobiles",
+        4: "mobile_items",
+        9: "mobile_item_attributes",
+        7: "mobile_item_blueprints",
+        8: "mobile_item_blueprint_components",
+        10: "players",
+}
 INVERR2STRING = {
         12: "database connection failed",
         16: "database delete operation failed",

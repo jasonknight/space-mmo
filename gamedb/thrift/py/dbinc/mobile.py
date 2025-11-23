@@ -2,7 +2,7 @@
 import sys
 from typing import Optional, Tuple
 
-sys.path.append('../gen-py')
+sys.path.append('../../gen-py')
 
 from game.ttypes import (
     GameResult,
@@ -29,7 +29,8 @@ class MobileMixin:
                 owner_mobile_id BIGINT,
                 owner_item_id BIGINT,
                 owner_asset_id BIGINT,
-                owner_player_id BIGINT
+                owner_player_id BIGINT,
+                what_we_call_you VARCHAR(255) NOT NULL
             );""",
         ]
 
@@ -84,17 +85,19 @@ class MobileMixin:
             elif isinstance(obj.owner, int):
                 owner_mobile_id = str(obj.owner)
 
+        what_we_call_you = obj.what_we_call_you if hasattr(obj, 'what_we_call_you') and obj.what_we_call_you else ''
+
         if obj.id is None:
             statements.append(
                 f"INSERT INTO {database}.{mobile_table} "
-                f"(mobile_type, owner_mobile_id, owner_item_id, owner_asset_id, owner_player_id) "
-                f"VALUES ('{mobile_type_name}', {owner_mobile_id}, {owner_item_id}, {owner_asset_id}, {owner_player_id});"
+                f"(mobile_type, owner_mobile_id, owner_item_id, owner_asset_id, owner_player_id, what_we_call_you) "
+                f"VALUES ('{mobile_type_name}', {owner_mobile_id}, {owner_item_id}, {owner_asset_id}, {owner_player_id}, '{what_we_call_you}');"
             )
         else:
             statements.append(
                 f"INSERT INTO {database}.{mobile_table} "
-                f"(id, mobile_type, owner_mobile_id, owner_item_id, owner_asset_id, owner_player_id) "
-                f"VALUES ({obj.id}, '{mobile_type_name}', {owner_mobile_id}, {owner_item_id}, {owner_asset_id}, {owner_player_id});"
+                f"(id, mobile_type, owner_mobile_id, owner_item_id, owner_asset_id, owner_player_id, what_we_call_you) "
+                f"VALUES ({obj.id}, '{mobile_type_name}', {owner_mobile_id}, {owner_item_id}, {owner_asset_id}, {owner_player_id}, '{what_we_call_you}');"
             )
 
         # Insert attributes (one-to-many relationship via attribute_owners)
@@ -258,13 +261,15 @@ class MobileMixin:
                     owner_mobile_id = str(obj.owner)
 
             # Update mobile
+            what_we_call_you = obj.what_we_call_you if hasattr(obj, 'what_we_call_you') and obj.what_we_call_you else ''
             cursor.execute(
                 f"UPDATE {database}.{mobile_table} SET "
                 f"mobile_type = '{mobile_type_name}', "
                 f"owner_mobile_id = {owner_mobile_id}, "
                 f"owner_item_id = {owner_item_id}, "
                 f"owner_asset_id = {owner_asset_id}, "
-                f"owner_player_id = {owner_player_id} "
+                f"owner_player_id = {owner_player_id}, "
+                f"what_we_call_you = '{what_we_call_you}' "
                 f"WHERE id = {obj.id};"
             )
 
@@ -465,11 +470,13 @@ class MobileMixin:
                 owner.player_id = mobile_row['owner_player_id']
 
             # Create Mobile object
+            what_we_call_you = mobile_row.get('what_we_call_you', '')
             mobile = Mobile(
                 id=mobile_row['id'],
                 mobile_type=mobile_type,
                 attributes=attributes,
                 owner=owner,
+                what_we_call_you=what_we_call_you,
             )
 
             cursor.close()

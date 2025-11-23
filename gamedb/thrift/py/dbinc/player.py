@@ -2,7 +2,7 @@
 import sys
 from typing import Optional, Tuple
 
-sys.path.append('../gen-py')
+sys.path.append('../../gen-py')
 
 from game.ttypes import (
     GameResult,
@@ -41,7 +41,8 @@ class PlayerMixin:
                 what_we_call_you VARCHAR(255) NOT NULL,
                 security_token VARCHAR(255) NOT NULL,
                 over_13 BOOLEAN NOT NULL,
-                year_of_birth BIGINT NOT NULL
+                year_of_birth BIGINT NOT NULL,
+                email VARCHAR(255) NOT NULL
             );""",
         ]
 
@@ -58,22 +59,23 @@ class PlayerMixin:
                 if obj.id is None:
                     cursor.execute(
                         f"INSERT INTO {database}.{players_table} "
-                        f"(full_name, what_we_call_you, security_token, over_13, year_of_birth) "
-                        f"VALUES (%s, %s, %s, %s, %s)",
+                        f"(full_name, what_we_call_you, security_token, over_13, year_of_birth, email) "
+                        f"VALUES (%s, %s, %s, %s, %s, %s)",
                         (
                             obj.full_name,
                             obj.what_we_call_you,
                             obj.security_token,
                             obj.over_13,
                             obj.year_of_birth,
+                            obj.email,
                         ),
                     )
                     obj.id = cursor.lastrowid
                 else:
                     cursor.execute(
                         f"INSERT INTO {database}.{players_table} "
-                        f"(id, full_name, what_we_call_you, security_token, over_13, year_of_birth) "
-                        f"VALUES (%s, %s, %s, %s, %s, %s)",
+                        f"(id, full_name, what_we_call_you, security_token, over_13, year_of_birth, email) "
+                        f"VALUES (%s, %s, %s, %s, %s, %s, %s)",
                         (
                             obj.id,
                             obj.full_name,
@@ -81,6 +83,7 @@ class PlayerMixin:
                             obj.security_token,
                             obj.over_13,
                             obj.year_of_birth,
+                            obj.email,
                         ),
                     )
 
@@ -147,7 +150,8 @@ class PlayerMixin:
                     f"what_we_call_you = %s, "
                     f"security_token = %s, "
                     f"over_13 = %s, "
-                    f"year_of_birth = %s "
+                    f"year_of_birth = %s, "
+                    f"email = %s "
                     f"WHERE id = %s",
                     (
                         obj.full_name,
@@ -155,9 +159,17 @@ class PlayerMixin:
                         obj.security_token,
                         obj.over_13,
                         obj.year_of_birth,
+                        obj.email,
                         obj.id,
                     ),
                 )
+
+                # If mobile is present, save it
+                if hasattr(obj, 'mobile') and obj.mobile is not None:
+                    mobile_results = self.save_mobile(database, obj.mobile)
+                    from common import is_ok
+                    if not is_ok(mobile_results):
+                        return mobile_results
 
             return [
                 GameResult(
@@ -207,7 +219,22 @@ class PlayerMixin:
                     security_token=player_row['security_token'],
                     over_13=player_row['over_13'],
                     year_of_birth=player_row['year_of_birth'],
+                    email=player_row['email'],
                 )
+
+                # Load the associated mobile if it exists
+                cursor.execute(
+                    f"SELECT id FROM {database}.mobiles WHERE owner_player_id = %s;",
+                    (player_id,),
+                )
+                mobile_row = cursor.fetchone()
+
+                if mobile_row:
+                    mobile_id = mobile_row['id']
+                    mobile_result, mobile = self.load_mobile(database, mobile_id)
+                    from common import is_true
+                    if is_true(mobile_result):
+                        player.mobile = mobile
 
             return (
                 GameResult(
@@ -371,6 +398,7 @@ class PlayerMixin:
                         security_token=row['security_token'],
                         over_13=row['over_13'],
                         year_of_birth=row['year_of_birth'],
+                        email=row['email'],
                     )
                     players.append(player)
 

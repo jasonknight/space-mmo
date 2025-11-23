@@ -2,7 +2,8 @@
 import sys
 from typing import Optional, Tuple
 
-sys.path.append('../gen-py')
+sys.path.append('../../gen-py')
+sys.path.append('../')
 
 from game.ttypes import (
     GameResult,
@@ -13,6 +14,9 @@ from game.ttypes import (
     ItemBlueprint,
     ItemBlueprintComponent,
 )
+from game.constants import TABLE2STR
+
+from common import STR2TABLE
 
 # Note: is_ok and is_true are imported from common in the parent scope
 
@@ -62,6 +66,74 @@ class ItemMixin:
             );""",
         ]
 
+    def get_mobile_items_table_sql(
+        self,
+        database: str,
+    ) -> list[str]:
+        return [
+            f"CREATE DATABASE IF NOT EXISTS {database};",
+            f"""CREATE TABLE IF NOT EXISTS {database}.mobile_items (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                mobile_id BIGINT NOT NULL,
+                internal_name VARCHAR(255) NOT NULL,
+                max_stack_size BIGINT,
+                item_type VARCHAR(50) NOT NULL,
+                blueprint_id BIGINT
+            );""",
+        ]
+
+    def get_mobile_item_blueprints_table_sql(
+        self,
+        database: str,
+    ) -> list[str]:
+        return [
+            f"CREATE DATABASE IF NOT EXISTS {database};",
+            f"""CREATE TABLE IF NOT EXISTS {database}.mobile_item_blueprints (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                bake_time_ms BIGINT NOT NULL
+            );""",
+        ]
+
+    def get_mobile_item_blueprint_components_table_sql(
+        self,
+        database: str,
+    ) -> list[str]:
+        return [
+            f"CREATE DATABASE IF NOT EXISTS {database};",
+            f"""CREATE TABLE IF NOT EXISTS {database}.mobile_item_blueprint_components (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                item_blueprint_id BIGINT NOT NULL,
+                component_item_id BIGINT NOT NULL,
+                ratio DOUBLE NOT NULL,
+                FOREIGN KEY (item_blueprint_id) REFERENCES {database}.mobile_item_blueprints(id)
+            );""",
+        ]
+
+    def get_mobile_item_attributes_table_sql(
+        self,
+        database: str,
+    ) -> list[str]:
+        return [
+            f"CREATE DATABASE IF NOT EXISTS {database};",
+            f"""CREATE TABLE IF NOT EXISTS {database}.mobile_item_attributes (
+                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                mobile_item_id BIGINT NOT NULL,
+                internal_name VARCHAR(255) NOT NULL,
+                visible BOOLEAN NOT NULL,
+                attribute_type VARCHAR(50) NOT NULL,
+                bool_value BOOLEAN,
+                double_value DOUBLE,
+                vector3_x DOUBLE,
+                vector3_y DOUBLE,
+                vector3_z DOUBLE,
+                asset_id BIGINT,
+                FOREIGN KEY (mobile_item_id) REFERENCES {database}.mobile_items(id)
+            );""",
+        ]
+
+    def is_mobile_item(self, item_table: str) -> bool:
+        return STR2TABLE[item_table] == BackingTable.MOBILE_ITEMS
+
     def get_item_sql(
         self,
         database: str,
@@ -69,24 +141,33 @@ class ItemMixin:
         table: Optional[str] = None,
         drop: bool = False,
         truncate: bool = False,
+        attributes_table: Optional[str] = None,
+        attribute_owners_table: Optional[str] = None,
     ) -> list[str]:
         # If both drop and truncate are True, set truncate to False
         if drop and truncate:
             truncate = False
 
         item_table = table if table else "items"
-        attributes_table = "attributes"
-        attribute_owners_table = "attribute_owners"
+        # Determine attributes table based on item table (if not explicitly provided)
+        if attributes_table is None:
+            if STR2TABLE[item_table] == BackingTable.MOBILE_ITEMS:
+                attributes_table = TABLE2STR[BackingTable.MOBILE_ITEM_ATTRIBUTES]
+            else:
+                attributes_table = TABLE2STR[BackingTable.ATTRIBUTES]
+        attribute_owners_table = attribute_owners_table if attribute_owners_table else TABLE2STR[BackingTable.ATTRIBUTE_OWNERS]
 
         statements = []
 
         if drop:
-            statements.append(f"DROP TABLE IF EXISTS {database}.{attribute_owners_table};")
+            if STR2TABLE[item_table] != BackingTable.MOBILE_ITEMS:
+                statements.append(f"DROP TABLE IF EXISTS {database}.{attribute_owners_table};")
             statements.append(f"DROP TABLE IF EXISTS {database}.{attributes_table};")
             statements.append(f"DROP TABLE IF EXISTS {database}.{item_table};")
 
         if truncate:
-            statements.append(f"TRUNCATE TABLE {database}.{attribute_owners_table};")
+            if STR2TABLE[item_table] != BackingTable.MOBILE_ITEMS:
+                statements.append(f"TRUNCATE TABLE {database}.{attribute_owners_table};")
             statements.append(f"TRUNCATE TABLE {database}.{attributes_table};")
             statements.append(f"TRUNCATE TABLE {database}.{item_table};")
 
@@ -139,22 +220,34 @@ class ItemMixin:
                 # Insert attribute
                 from game.ttypes import AttributeType as AttrTypeEnum2
                 attr_type_name2 = AttrTypeEnum2._VALUES_TO_NAMES[attribute.attribute_type]
+                
 
-                statements.append(
-                    f"INSERT INTO {database}.{attributes_table} "
-                    f"(internal_name, visible, attribute_type, bool_value, double_value, "
-                    f"vector3_x, vector3_y, vector3_z, asset_id) "
-                    f"VALUES ('{attribute.internal_name}', {attribute.visible}, "
-                    f"'{attr_type_name2}', {bool_val}, {double_val}, "
-                    f"{vec3_x}, {vec3_y}, {vec3_z}, {asset_val});"
-                )
+                if not self.is_mobile_item(item_table):
+                    statements.append(
+                        f"INSERT INTO {database}.{attributes_table} "
+                        f"(internal_name, visible, attribute_type, bool_value, double_value, "
+                        f"vector3_x, vector3_y, vector3_z, asset_id) "
+                        f"VALUES ('{attribute.internal_name}', {attribute.visible}, "
+                        f"'{attr_type_name2}', {bool_val}, {double_val}, "
+                        f"{vec3_x}, {vec3_y}, {vec3_z}, {asset_val});"
+                    )
+                else:
+                    statements.append(
+                        f"INSERT INTO {database}.{attributes_table} "
+                        f"(mobile_item_id, internal_name, visible, attribute_type, bool_value, double_value, "
+                        f"vector3_x, vector3_y, vector3_z, asset_id) "
+                        f"VALUES ({{item_id}},'{attribute.internal_name}', {attribute.visible}, "
+                        f"'{attr_type_name2}', {bool_val}, {double_val}, "
+                        f"{vec3_x}, {vec3_y}, {vec3_z}, {asset_val});"
+                    )
 
                 # Insert attribute owner relationship (use placeholder for attribute id and item id)
-                statements.append(
-                    f"INSERT INTO {database}.{attribute_owners_table} "
-                    f"(attribute_id, item_id) "
-                    f"VALUES ({{last_insert_id}}, {{item_id}});"
-                )
+                if not self.is_mobile_item(item_table):
+                    statements.append(
+                        f"INSERT INTO {database}.{attribute_owners_table} "
+                        f"(attribute_id, item_id) "
+                        f"VALUES ({{last_insert_id}}, {{item_id}});"
+                    )
 
         return statements
 
@@ -170,7 +263,7 @@ class ItemMixin:
 
             # Start transaction
             cursor.execute("START TRANSACTION;")
-
+            
             # If blueprint exists, save it first
             if obj.blueprint:
                 blueprint_results = self.save_item_blueprint(database, obj.blueprint)
@@ -264,7 +357,11 @@ class ItemMixin:
                     return blueprint_results
 
             item_table = table if table else "items"
-            attributes_table = "attributes"
+            # Determine attributes table based on item table
+            if self.is_mobile_item(item_table):
+                attributes_table = "mobile_item_attributes"
+            else:
+                attributes_table = "attributes"
             attribute_owners_table = "attribute_owners"
 
             # Handle optional blueprint - reference by id
@@ -286,24 +383,31 @@ class ItemMixin:
                 f"WHERE id = {obj.id};"
             )
 
-            # Delete existing attributes
-            # First get the attribute IDs
-            cursor.execute(
-                f"SELECT attribute_id FROM {database}.{attribute_owners_table} WHERE item_id = {obj.id};"
-            )
-            attr_ids = [row[0] for row in cursor.fetchall()]
-
-            # Delete from attribute_owners
-            cursor.execute(
-                f"DELETE FROM {database}.{attribute_owners_table} WHERE item_id = {obj.id};"
-            )
-
-            # Delete the attributes themselves
-            if attr_ids:
-                attr_ids_str = ','.join(str(aid) for aid in attr_ids)
+            if not self.is_mobile_item(item_table):
+                # Delete existing attributes
+                # First get the attribute IDs
                 cursor.execute(
-                    f"DELETE FROM {database}.{attributes_table} WHERE id IN ({attr_ids_str});"
+                    f"SELECT attribute_id FROM {database}.{attribute_owners_table} WHERE item_id = {obj.id};"
                 )
+                attr_ids = [row[0] for row in cursor.fetchall()]
+
+                # Delete from attribute_owners
+                cursor.execute(
+                    f"DELETE FROM {database}.{attribute_owners_table} WHERE item_id = {obj.id};"
+                )
+
+                # Delete the attributes themselves
+                if attr_ids:
+                    attr_ids_str = ','.join(str(aid) for aid in attr_ids)
+                    cursor.execute(
+                        f"DELETE FROM {database}.{attributes_table} WHERE id IN ({attr_ids_str});"
+                    )
+            else:
+                # for mobile_item_attributes, we use the foreign key
+                cursor.execute(
+                    f"DELETE FROM {database}.{attributes_table} WHERE mobile_item_id = {obj.id};"
+                )
+
 
             # Insert new attributes
             if obj.attributes:
@@ -330,23 +434,33 @@ class ItemMixin:
 
                     from game.ttypes import AttributeType as AttrTypeEnum2
                     attr_type_name2 = AttrTypeEnum2._VALUES_TO_NAMES[attribute.attribute_type]
-
-                    cursor.execute(
-                        f"INSERT INTO {database}.{attributes_table} "
-                        f"(internal_name, visible, attribute_type, bool_value, double_value, "
-                        f"vector3_x, vector3_y, vector3_z, asset_id) "
-                        f"VALUES ('{attribute.internal_name}', {attribute.visible}, "
-                        f"'{attr_type_name2}', {bool_val}, {double_val}, "
-                        f"{vec3_x}, {vec3_y}, {vec3_z}, {asset_val});"
-                    )
+                    if not self.is_mobile_item(item_table):
+                        cursor.execute(
+                            f"INSERT INTO {database}.{attributes_table} "
+                            f"(internal_name, visible, attribute_type, bool_value, double_value, "
+                            f"vector3_x, vector3_y, vector3_z, asset_id) "
+                            f"VALUES ('{attribute.internal_name}', {attribute.visible}, "
+                            f"'{attr_type_name2}', {bool_val}, {double_val}, "
+                            f"{vec3_x}, {vec3_y}, {vec3_z}, {asset_val});"
+                        )
+                    else:
+                        # when dealing with mobile_item_attributes, we just use a simple foreign key on mobile_item_id
+                        cursor.execute(
+                            f"INSERT INTO {database}.{attributes_table} "
+                            f"(mobile_item_id, internal_name, visible, attribute_type, bool_value, double_value, "
+                            f"vector3_x, vector3_y, vector3_z, asset_id) "
+                            f"VALUES ({obj.id}, '{attribute.internal_name}', {attribute.visible}, "
+                            f"'{attr_type_name2}', {bool_val}, {double_val}, "
+                            f"{vec3_x}, {vec3_y}, {vec3_z}, {asset_val});"
+                        )
 
                     last_attr_id = cursor.lastrowid
-
-                    cursor.execute(
-                        f"INSERT INTO {database}.{attribute_owners_table} "
-                        f"(attribute_id, item_id) "
-                        f"VALUES ({last_attr_id}, {obj.id});"
-                    )
+                    if not self.is_mobile_item(item_table):
+                        cursor.execute(
+                            f"INSERT INTO {database}.{attribute_owners_table} "
+                            f"(attribute_id, item_id) "
+                            f"VALUES ({last_attr_id}, {obj.id});"
+                        )
 
             # Commit transaction
             self.connection.commit()
@@ -383,7 +497,11 @@ class ItemMixin:
             cursor = self.connection.cursor(dictionary=True)
 
             item_table = table if table else "items"
-            attributes_table = "attributes"
+            # Determine attributes table based on item table
+            if item_table == "mobile_items":
+                attributes_table = "mobile_item_attributes"
+            else:
+                attributes_table = "attributes"
             attribute_owners_table = "attribute_owners"
 
             # Load the item
@@ -417,12 +535,21 @@ class ItemMixin:
                     return (blueprint_result, None)
 
             # Load attributes through attribute_owners
-            cursor.execute(
-                f"SELECT a.* FROM {database}.{attributes_table} a "
-                f"INNER JOIN {database}.{attribute_owners_table} ao ON a.id = ao.attribute_id "
-                f"WHERE ao.item_id = %s;",
-                (item_id,),
-            )
+            attribute_rows = []
+            if not self.is_mobile_item(item_table):
+                cursor.execute(
+                    f"SELECT a.* FROM {database}.{attributes_table} a "
+                    f"INNER JOIN {database}.{attribute_owners_table} ao ON a.id = ao.attribute_id "
+                    f"WHERE ao.item_id = %s;",
+                    (item_id,),
+                )
+            else:
+                cursor.execute(
+                    f"SELECT a.* FROM {database}.{attributes_table} a "
+                    f"WHERE a.mobile_item_id = %s;",
+                    (item_id,),
+                )
+
             attribute_rows = cursor.fetchall()
 
             # Build attributes map
@@ -443,24 +570,30 @@ class ItemMixin:
                 elif row['asset_id'] is not None:
                     value = row['asset_id']
 
-                # Reconstruct Owner union for this attribute
-                cursor.execute(
-                    f"SELECT * FROM {database}.{attribute_owners_table} WHERE attribute_id = %s;",
-                    (row['id'],),
-                )
-                owner_row = cursor.fetchone()
-
                 owner = None
-                if owner_row:
-                    if owner_row['mobile_id']:
-                        owner = owner_row['mobile_id']
-                    elif owner_row['item_id']:
-                        owner = owner_row['item_id']
-                    elif owner_row['asset_id']:
-                        owner = owner_row['asset_id']
-                    elif owner_row['player_id']:
-                        owner = owner_row['player_id']
+                if not self.is_mobile_item():
+                    # Reconstruct Owner union for this attribute
+                    cursor.execute(
+                        f"SELECT * FROM {database}.{attribute_owners_table} WHERE attribute_id = %s;",
+                        (row['id'],),
+                    )
+                    owner_row = cursor.fetchone()
 
+                    if owner_row:
+                        if owner_row['mobile_id']:
+                            owner = Owner(mobile_id=owner_row['mobile_id'])
+                        elif owner_row['item_id']:
+                            owner = Owner(item_id=owner_row['item_id'])
+                        elif owner_row['asset_id']:
+                            owner = Owner(asset_id=owner_row['asset_id'])
+                        elif owner_row['player_id']:
+                            owner = Owner(player_id=owner_row['player_id'])
+                        # Don't handle mobile_item_id here when it's been added,
+                        # we should never store a mobile_item_attribute like the others
+                else:
+                    # TODO: add a mobile_item_id to Owner, so that we can detect where this
+                    # really belongs, then update this code to use mobile_item_id instead of item_id
+                    owner = Owner(item_id=item_id)
                 # Import AttributeType enum
                 from game.ttypes import AttributeType, Attribute
                 attr_type = AttributeType._NAMES_TO_VALUES[row['attribute_type']]
@@ -477,7 +610,11 @@ class ItemMixin:
 
             # Import ItemType enum
             from game.ttypes import ItemType
+            from common import STR2TABLE
             item_type = ItemType._NAMES_TO_VALUES[item_row['item_type']]
+
+            # Determine backing_table based on the table used
+            backing_table_value = STR2TABLE.get(item_table) if item_table in STR2TABLE else None
 
             # Create Item object
             item = Item(
@@ -487,6 +624,7 @@ class ItemMixin:
                 max_stack_size=item_row['max_stack_size'],
                 item_type=item_type,
                 blueprint=blueprint,
+                backing_table=backing_table_value,
             )
 
             cursor.close()
@@ -518,13 +656,14 @@ class ItemMixin:
         table: Optional[str] = None,
         drop: bool = False,
         truncate: bool = False,
+        components_table: Optional[str] = None,
     ) -> list[str]:
         # If both drop and truncate are True, set truncate to False
         if drop and truncate:
             truncate = False
 
         blueprint_table = table if table else "item_blueprints"
-        components_table = "item_blueprint_components"
+        components_table = components_table if components_table else "item_blueprint_components"
 
         statements = []
 
@@ -786,6 +925,10 @@ class ItemMixin:
         obj: Item,
         table: Optional[str] = None,
     ) -> list[GameResult]:
+        if table is None:
+            if obj.backing_table is not None:
+                table = TABLE2STR[obj.backing_table]
+
         if obj.id is None:
             return self.create_item(database, obj, table)
         else:
@@ -866,7 +1009,11 @@ class ItemMixin:
             cursor.execute("START TRANSACTION;")
 
             item_table = table if table else "items"
-            attributes_table = "attributes"
+            # Determine attributes table based on item table
+            if item_table == "mobile_items":
+                attributes_table = "mobile_item_attributes"
+            else:
+                attributes_table = "attributes"
             attribute_owners_table = "attribute_owners"
 
             # Get attribute IDs first
@@ -989,7 +1136,11 @@ class ItemMixin:
                     )
 
                 # Load attributes through attribute_owners
-                attributes_table = "attributes"
+                # Determine attributes table based on item table
+                if item_table == "mobile_items":
+                    attributes_table = "mobile_item_attributes"
+                else:
+                    attributes_table = "attributes"
                 attribute_owners_table = "attribute_owners"
                 cursor.execute(
                     f"SELECT a.* FROM {database}.{attributes_table} a "
@@ -1051,7 +1202,11 @@ class ItemMixin:
 
                 # Import ItemType enum
                 from game.ttypes import ItemType
+                from common import STR2TABLE
                 item_type = ItemType._NAMES_TO_VALUES[row['item_type']]
+
+                # Determine backing_table based on the table used
+                backing_table_value = STR2TABLE.get(item_table) if item_table in STR2TABLE else None
 
                 # Create Item object
                 item = Item(
@@ -1061,6 +1216,7 @@ class ItemMixin:
                     max_stack_size=row['max_stack_size'],
                     item_type=item_type,
                     blueprint=blueprint,
+                    backing_table=backing_table_value,
                 )
                 items.append(item)
 
