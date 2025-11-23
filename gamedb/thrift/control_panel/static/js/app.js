@@ -110,8 +110,11 @@ var App = (function() {
                 }
                 break;
             case 'inventories':
-                // TODO: Load inventories view
-                $('#content').html('<div class="alert alert-info">Inventory management coming soon...</div>');
+                if (typeof InventoryModule !== 'undefined') {
+                    InventoryModule.init();
+                } else {
+                    $('#content').html('<div class="alert alert-danger">Inventory module not loaded</div>');
+                }
                 break;
             case 'players':
                 // TODO: Load players view

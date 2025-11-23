@@ -30,7 +30,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link disabled" href="#" data-view="inventories">
+                        <a class="nav-link" href="#" data-view="inventories">
                             <i class="bi bi-backpack"></i> Inventories
                         </a>
                     </li>
@@ -122,6 +122,48 @@
         </div>
     </div>
 
+    <!-- Owner Search Modal -->
+    <div class="modal fade" id="ownerSearchModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Select Owner</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="owner-search-container">
+                        <!-- Search interface will be dynamically populated based on owner type -->
+                        <div class="mb-3">
+                            <label for="owner-search-input" class="form-label">Search</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="owner-search-input"
+                                placeholder="Type to search..."
+                                autocomplete="off"
+                            >
+                        </div>
+                        <div id="owner-search-results" class="list-group" style="max-height: 400px; overflow-y: auto;">
+                            <!-- Search results will appear here -->
+                        </div>
+                        <div id="owner-manual-entry-notice" class="alert alert-warning mt-3" style="display: none;">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Note:</strong> <span id="owner-manual-entry-text"></span>
+                        </div>
+                    </div>
+                    <div id="selected-owner-info" class="alert alert-success mt-3" style="display: none;">
+                        <strong>Selected:</strong> <span id="selected-owner-name"></span>
+                        <input type="hidden" id="selected-owner-id">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="select-owner-btn" disabled>Select Owner</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <!-- Bootstrap 5 JS Bundle -->
@@ -129,8 +171,8 @@
     <!-- App Scripts -->
     <script src="/static/js/app.js"></script>
     <script src="/static/js/item.js"></script>
+    <script src="/static/js/inventory.js"></script>
     <!-- Uncomment when ready -->
-    <!-- <script src="/static/js/inventory.js"></script> -->
     <!-- <script src="/static/js/player.js"></script> -->
 
     <script>

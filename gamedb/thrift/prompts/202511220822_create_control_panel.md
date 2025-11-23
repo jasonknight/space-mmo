@@ -79,7 +79,7 @@ Because this webapp will need to be worked on and iterated on, we must choose a 
 
 Because this webapp will not be public facing, it does not require any security features, and it can use something simple, like Bottle as the application framework. 
 
-The main "models" of this webapp will be the Player, the Inventory, and the Item. We will need to create CRUD actions for each of these models. The backing will not be MySQL directly, but we will interface with the PlayerService, InventoryService, and the ItemService as defined in `py/services/*`, as well as defined in game.thrift. For some features, we might have to add functions to these services, for instance for auto-complete if things like list_records is not enough, or we might have to make minor modifications to existing methods. 
+The main "models" of this webapp will be the Player, the Inventory. We have already created the Item CRUD operations. We will need to create CRUD actions for each of these models. The backing will not be MySQL directly, but we will interface with the PlayerService, InventoryService as defined in `py/services/*`, as well as defined in game.thrift. For some features, we might have to add functions to these services, for instance for auto-complete if things like list_records is not enough, or we might have to make minor modifications to existing methods. 
 
 Each model needs an index page that will list paginated results of the existing items fetched from the various services. There will need to be a create form for each. Each of the structs is complex, that is there are substructs, and therefore subrecords that must be created. The Create and Edit forms must allow the user to add and remove these records.
 
@@ -88,3 +88,20 @@ In some cases the fields of a member will be an Enum. If that is the case, those
 When editing items that are a foreign key into another table, these must be a hidden input, and instead we need an auto complete input that allows the user to search for an existing record, or choose to create an entirely new record, in which case we should display a subform to collect the inputs. 
 
 Before starting, ask clarifying questions, and present options for design and layout. If you encounter situations or aspects of the task that require more thinking, think hard about the best solution considering the current goals and intent.
+
+# First Review
+
+On the create inventory page of control panel, you have the ability to choose the owner, this is two fields, and owner type, and then the owner id. But this owner id should be set from a flow where we take the owner type that was just set, and then search for that kind of owner. If it's owned by an item, we should search for an Item, if it is owned by a mobile we should search the mobiles table (via the what_we_call_you), if it's a player we should retrive the player via a flow as well. Starting the flow should be triggered on change of the Owner Type field, and the flow should have a cancel button as well.
+
+## Answers
+
+1. Create a new db instance. The user=admin, and the password=minda, yes add them as cli arguments with those values as default. 2. Mobile search should be Partial Matches with '%search%'. 3. Show it immediately, even if they select the same type again. They may want to change the id even though the type isn't changing. With asset_id just show an input prompt or modal that allows them to enter an asset_id manually. 5. When displaying the owner, either the existing one, or the new one being set (so similar rules for the Edit action), show the 'what_we_call_you' field with a label of 'Name'. The same for players, items, etc. Also show the ID, so something like: [ID][123][Name][bob], but choose the right display structure, like a table, or a field set with readonly fields, or divs, however it seems best and most consistent.
+
+# Second Review
+
+1. On the create inventory form for control panel, the search for Mobile, or Player doesn't work. There is a mobile with a name of 'emma', and a player of the name "Emma" but searching those values for Owner Type of Mobile, or Player don't return results. Can you debug this and see what is wrong? 
+2. When you choose Mobile as the Owner Type, or Player as the Owner type, and cancel or close the modal, re-selecting the Owner Type doesn't trigger the Modal. What we need to do is add a button next to the select for Owner Type, probably with some sort of small icon to indicate search, and make it so that can also trigger the Modal. Instead of fighting with the onChange event. We should leave the current behavior for Owner Type as that works the first time, but we need to add the button in case the user cancels, or doesn't find the right record, and needs to open the modal again.
+
+# Third Review
+
+The Owner Type search is actually still wrong. Player with ID=1 is named 'Emma', but her Mobile with ID=1 is named 'douche'.  Player with ID=2 is named 'Ollie', but his Mobile ID=2 is named 'emma'. When creating an inventory, if I select Mobile as the Owner type, and search for 'emma', I expect it to choose mobile with id=2, but the current search results show Id=1 of Type Player. So the results are not even the right type. In this example we want Mobile, not Player results.

@@ -42,8 +42,25 @@ from game.ttypes import (
     BackingTable,
     AttributeType,
     StatusType,
+    InventoryRequest,
+    InventoryRequestData,
+    CreateInventoryRequestData,
+    LoadInventoryRequestData,
+    SaveInventoryRequestData,
+    ListInventoryRequestData,
+    Inventory,
+    InventoryEntry,
+    PlayerRequest,
+    PlayerRequestData,
+    ListPlayerRequestData,
 )
+from game.constants import TABLE2STR
 from game.ItemService import Client as ItemServiceClient
+from game.InventoryService import Client as InventoryServiceClient
+from game.PlayerService import Client as PlayerServiceClient
+
+# Import DB adapter
+from db import DB
 
 # Configure logging
 logging.basicConfig(
@@ -57,7 +74,20 @@ app = Bottle()
 
 # Configuration
 ITEM_SERVICE_HOST = 'localhost'
-ITEM_SERVICE_PORT = 9090
+ITEM_SERVICE_PORT = 9091
+INVENTORY_SERVICE_HOST = 'localhost'
+INVENTORY_SERVICE_PORT = 9090
+PLAYER_SERVICE_HOST = 'localhost'
+PLAYER_SERVICE_PORT = 9092
+
+# Database configuration
+DB_HOST = 'localhost'
+DB_USER = 'admin'
+DB_PASSWORD = 'minda'
+DB_NAME = 'gamedb'
+
+# Database instance (will be initialized after arg parsing)
+db_instance = None
 
 
 # ============================================================================
@@ -70,6 +100,26 @@ def get_item_service_client():
     transport = TTransport.TBufferedTransport(transport)
     protocol = TBinaryProtocol.TBinaryProtocol(transport)
     client = ItemServiceClient(protocol)
+    transport.open()
+    return client, transport
+
+
+def get_inventory_service_client():
+    """Create and return an InventoryService client."""
+    transport = TSocket.TSocket(INVENTORY_SERVICE_HOST, INVENTORY_SERVICE_PORT)
+    transport = TTransport.TBufferedTransport(transport)
+    protocol = TBinaryProtocol.TBinaryProtocol(transport)
+    client = InventoryServiceClient(protocol)
+    transport.open()
+    return client, transport
+
+
+def get_player_service_client():
+    """Create and return a PlayerService client."""
+    transport = TSocket.TSocket(PLAYER_SERVICE_HOST, PLAYER_SERVICE_PORT)
+    transport = TTransport.TBufferedTransport(transport)
+    protocol = TBinaryProtocol.TBinaryProtocol(transport)
+    client = PlayerServiceClient(protocol)
     transport.open()
     return client, transport
 
@@ -216,6 +266,53 @@ def dict_to_item(data):
         item.blueprint = blueprint
 
     return item
+
+
+def dict_to_inventory(data):
+    """Convert a dictionary to an Inventory thrift object."""
+    inventory = Inventory()
+
+    if 'id' in data and data['id']:
+        inventory.id = int(data['id'])
+
+    inventory.max_entries = int(data.get('max_entries', 0))
+    inventory.max_volume = float(data.get('max_volume', 0.0))
+
+    if 'last_calculated_volume' in data:
+        inventory.last_calculated_volume = float(data['last_calculated_volume'])
+    else:
+        inventory.last_calculated_volume = 0.0
+
+    # Entries list
+    if 'entries' in data and data['entries']:
+        inventory.entries = []
+        for entry_data in data['entries']:
+            entry = InventoryEntry(
+                item_id=int(entry_data.get('item_id', 0)),
+                quantity=float(entry_data.get('quantity', 0.0)),
+                is_max_stacked=entry_data.get('is_max_stacked', False),
+            )
+            inventory.entries.append(entry)
+    else:
+        inventory.entries = []
+
+    # Owner union
+    if 'owner' in data and data['owner']:
+        owner_data = data['owner']
+        owner = Owner()
+
+        if 'mobile_id' in owner_data and owner_data['mobile_id']:
+            owner.mobile_id = int(owner_data['mobile_id'])
+        elif 'item_id' in owner_data and owner_data['item_id']:
+            owner.item_id = int(owner_data['item_id'])
+        elif 'asset_id' in owner_data and owner_data['asset_id']:
+            owner.asset_id = int(owner_data['asset_id'])
+        elif 'player_id' in owner_data and owner_data['player_id']:
+            owner.player_id = int(owner_data['player_id'])
+
+        inventory.owner = owner
+
+    return inventory
 
 
 # ============================================================================
@@ -584,6 +681,499 @@ def get_item_blueprint_tree(item_id):
 
 
 # ============================================================================
+# API Routes - Inventories
+# ============================================================================
+
+@app.route('/api/inventories', method='GET')
+def list_inventories():
+    """List inventories with pagination and search."""
+    try:
+        page = int(request.params.get('page', 1))
+        per_page = int(request.params.get('per_page', 20))
+        search = request.params.get('search', '')
+
+        client, transport = get_inventory_service_client()
+
+        try:
+            req = InventoryRequest(
+                data=InventoryRequestData(
+                    list_inventory=ListInventoryRequestData(
+                        page=page,
+                        results_per_page=per_page,
+                        search_string=search if search else None,
+                    ),
+                ),
+            )
+
+            resp = client.list_records(req)
+
+            if resp.results and resp.results[0].status == StatusType.SUCCESS:
+                inventories = []
+                if resp.response_data and resp.response_data.list_inventory:
+                    inventories = [thrift_to_dict(inv) for inv in resp.response_data.list_inventory.inventories]
+                    total_count = resp.response_data.list_inventory.total_count
+                else:
+                    total_count = 0
+
+                response.content_type = 'application/json'
+                return json.dumps({
+                    'success': True,
+                    'inventories': inventories,
+                    'total_count': total_count,
+                    'page': page,
+                    'per_page': per_page,
+                })
+            else:
+                error_msg = resp.results[0].message if resp.results else 'Unknown error'
+                response.status = 500
+                return json.dumps({
+                    'success': False,
+                    'error': error_msg,
+                })
+        finally:
+            transport.close()
+
+    except Exception as e:
+        logger.error(f"Error listing inventories: {e}", exc_info=True)
+        response.status = 500
+        return json.dumps({
+            'success': False,
+            'error': str(e),
+        })
+
+
+@app.route('/api/inventories/<inventory_id:int>', method='GET')
+def get_inventory(inventory_id):
+    """Get a single inventory by ID."""
+    try:
+        client, transport = get_inventory_service_client()
+
+        try:
+            req = InventoryRequest(
+                data=InventoryRequestData(
+                    load_inventory=LoadInventoryRequestData(
+                        inventory_id=inventory_id,
+                    ),
+                ),
+            )
+
+            resp = client.load(req)
+
+            if resp.results and resp.results[0].status == StatusType.SUCCESS:
+                inventory = None
+                if resp.response_data and resp.response_data.load_inventory:
+                    inventory = thrift_to_dict(resp.response_data.load_inventory.inventory)
+
+                response.content_type = 'application/json'
+                return json.dumps({
+                    'success': True,
+                    'inventory': inventory,
+                })
+            else:
+                error_msg = resp.results[0].message if resp.results else 'Unknown error'
+                response.status = 404
+                return json.dumps({
+                    'success': False,
+                    'error': error_msg,
+                })
+        finally:
+            transport.close()
+
+    except Exception as e:
+        logger.error(f"Error getting inventory {inventory_id}: {e}", exc_info=True)
+        response.status = 500
+        return json.dumps({
+            'success': False,
+            'error': str(e),
+        })
+
+
+@app.route('/api/inventories', method='POST')
+def create_inventory():
+    """Create a new inventory."""
+    try:
+        data = request.json
+
+        if not data:
+            response.status = 400
+            return json.dumps({
+                'success': False,
+                'error': 'No data provided',
+            })
+
+        inventory = dict_to_inventory(data)
+
+        client, transport = get_inventory_service_client()
+
+        try:
+            req = InventoryRequest(
+                data=InventoryRequestData(
+                    create_inventory=CreateInventoryRequestData(
+                        inventory=inventory,
+                    ),
+                ),
+            )
+
+            resp = client.create(req)
+
+            if resp.results and resp.results[0].status == StatusType.SUCCESS:
+                created_inventory = None
+                if resp.response_data and resp.response_data.create_inventory:
+                    created_inventory = thrift_to_dict(resp.response_data.create_inventory.inventory)
+
+                response.content_type = 'application/json'
+                return json.dumps({
+                    'success': True,
+                    'inventory': created_inventory,
+                })
+            else:
+                error_msg = resp.results[0].message if resp.results else 'Unknown error'
+                response.status = 500
+                return json.dumps({
+                    'success': False,
+                    'error': error_msg,
+                })
+        finally:
+            transport.close()
+
+    except Exception as e:
+        logger.error(f"Error creating inventory: {e}", exc_info=True)
+        response.status = 500
+        return json.dumps({
+            'success': False,
+            'error': str(e),
+        })
+
+
+@app.route('/api/inventories/<inventory_id:int>', method='PUT')
+def update_inventory(inventory_id):
+    """Update an existing inventory."""
+    try:
+        data = request.json
+
+        if not data:
+            response.status = 400
+            return json.dumps({
+                'success': False,
+                'error': 'No data provided',
+            })
+
+        # Ensure the ID is set
+        data['id'] = inventory_id
+        inventory = dict_to_inventory(data)
+
+        client, transport = get_inventory_service_client()
+
+        try:
+            req = InventoryRequest(
+                data=InventoryRequestData(
+                    save_inventory=SaveInventoryRequestData(
+                        inventory=inventory,
+                    ),
+                ),
+            )
+
+            resp = client.save(req)
+
+            if resp.results and resp.results[0].status == StatusType.SUCCESS:
+                updated_inventory = None
+                if resp.response_data and resp.response_data.save_inventory:
+                    updated_inventory = thrift_to_dict(resp.response_data.save_inventory.inventory)
+
+                response.content_type = 'application/json'
+                return json.dumps({
+                    'success': True,
+                    'inventory': updated_inventory,
+                })
+            else:
+                error_msg = resp.results[0].message if resp.results else 'Unknown error'
+                response.status = 500
+                return json.dumps({
+                    'success': False,
+                    'error': error_msg,
+                })
+        finally:
+            transport.close()
+
+    except Exception as e:
+        logger.error(f"Error updating inventory {inventory_id}: {e}", exc_info=True)
+        response.status = 500
+        return json.dumps({
+            'success': False,
+            'error': str(e),
+        })
+
+
+# ============================================================================
+# API Routes - Players (for owner search)
+# ============================================================================
+
+@app.route('/api/players/search', method='GET')
+def search_players():
+    """Search players by name."""
+    response.content_type = 'application/json'
+
+    try:
+        # Get query parameters
+        search_query = request.query.get('search', '')
+        max_results = int(request.query.get('max_results', 10))
+
+        if not search_query or len(search_query) < 2:
+            return json.dumps({
+                'success': True,
+                'results': [],
+            })
+
+        # Create request
+        list_data = ListPlayerRequestData(
+            page=1,
+            results_per_page=max_results,
+            search_string=search_query,
+        )
+        req = PlayerRequest(
+            data=PlayerRequestData(
+                list_player=list_data,
+            ),
+        )
+
+        # Call service
+        client, transport = get_player_service_client()
+        try:
+            resp = client.list_records(req)
+
+            if resp.results[0].status == StatusType.SUCCESS and resp.response_data:
+                players = resp.response_data.list_player.players
+                result_list = [
+                    {
+                        'id': player.id,
+                        'what_we_call_you': player.what_we_call_you,
+                        'full_name': player.full_name,
+                        'email': player.email,
+                    }
+                    for player in players
+                ]
+                return json.dumps({
+                    'success': True,
+                    'results': result_list,
+                })
+            else:
+                error_msg = resp.results[0].message if resp.results else 'Unknown error'
+                return json.dumps({
+                    'success': False,
+                    'error': error_msg,
+                })
+        finally:
+            transport.close()
+
+    except Exception as e:
+        logger.error(f"Error searching players: {e}", exc_info=True)
+        response.status = 500
+        return json.dumps({
+            'success': False,
+            'error': str(e),
+        })
+
+
+# ============================================================================
+# API Routes - Mobiles (for owner search)
+# ============================================================================
+
+@app.route('/api/mobiles/search', method='GET')
+def search_mobiles():
+    """Search mobiles by what_we_call_you field."""
+    response.content_type = 'application/json'
+
+    try:
+        # Get query parameters
+        search_query = request.query.get('search', '')
+        max_results = int(request.query.get('max_results', 10))
+
+        if not search_query or len(search_query) < 2:
+            return json.dumps({
+                'success': True,
+                'results': [],
+            })
+
+        # Get mobiles table name from TABLE2STR
+        mobiles_table = TABLE2STR[BackingTable.MOBILES]
+
+        # Query database directly
+        db_instance.connect()
+        cursor = db_instance.connection.cursor(dictionary=True)
+
+        try:
+            query = f"""
+                SELECT id, what_we_call_you, mobile_type
+                FROM {DB_NAME}.{mobiles_table}
+                WHERE what_we_call_you LIKE %s
+                ORDER BY what_we_call_you
+                LIMIT %s
+            """
+            cursor.execute(query, (f'%{search_query}%', max_results))
+            rows = cursor.fetchall()
+
+            result_list = [
+                {
+                    'id': row['id'],
+                    'what_we_call_you': row['what_we_call_you'],
+                    'mobile_type': row['mobile_type'],
+                }
+                for row in rows
+            ]
+
+            return json.dumps({
+                'success': True,
+                'results': result_list,
+            })
+        finally:
+            cursor.close()
+
+    except Exception as e:
+        logger.error(f"Error searching mobiles: {e}", exc_info=True)
+        response.status = 500
+        return json.dumps({
+            'success': False,
+            'error': str(e),
+        })
+
+
+# ============================================================================
+# API Routes - Owner Info (for display)
+# ============================================================================
+
+@app.route('/api/owners/<owner_type>/<owner_id:int>', method='GET')
+def get_owner_info(owner_type, owner_id):
+    """Get owner display information by type and ID."""
+    response.content_type = 'application/json'
+
+    try:
+        if owner_type == 'item_id':
+            # Get item info
+            client, transport = get_item_service_client()
+            try:
+                req = ItemRequest(
+                    data=ItemRequestData(
+                        load_item=LoadItemRequestData(
+                            item_id=owner_id,
+                        ),
+                    ),
+                )
+                resp = client.load(req)
+
+                if resp.results and resp.results[0].status == StatusType.SUCCESS:
+                    item = resp.response_data.load_item.item
+                    return json.dumps({
+                        'success': True,
+                        'owner': {
+                            'id': item.id,
+                            'name': item.internal_name,
+                            'type': 'Item',
+                        },
+                    })
+                else:
+                    return json.dumps({
+                        'success': False,
+                        'error': 'Item not found',
+                    })
+            finally:
+                transport.close()
+
+        elif owner_type == 'player_id':
+            # Get player info
+            client, transport = get_player_service_client()
+            try:
+                req = PlayerRequest(
+                    data=PlayerRequestData(
+                        list_player=ListPlayerRequestData(
+                            page=1,
+                            results_per_page=1,
+                            search_string=str(owner_id),
+                        ),
+                    ),
+                )
+                resp = client.list_records(req)
+
+                if resp.results[0].status == StatusType.SUCCESS and resp.response_data:
+                    players = resp.response_data.list_player.players
+                    if players:
+                        player = players[0]
+                        return json.dumps({
+                            'success': True,
+                            'owner': {
+                                'id': player.id,
+                                'name': player.what_we_call_you,
+                                'type': 'Player',
+                            },
+                        })
+
+                return json.dumps({
+                    'success': False,
+                    'error': 'Player not found',
+                })
+            finally:
+                transport.close()
+
+        elif owner_type == 'mobile_id':
+            # Get mobile info from database
+            mobiles_table = TABLE2STR[BackingTable.MOBILES]
+
+            db_instance.connect()
+            cursor = db_instance.connection.cursor(dictionary=True)
+
+            try:
+                query = f"""
+                    SELECT id, what_we_call_you, mobile_type
+                    FROM {DB_NAME}.{mobiles_table}
+                    WHERE id = %s
+                """
+                cursor.execute(query, (owner_id,))
+                row = cursor.fetchone()
+
+                if row:
+                    return json.dumps({
+                        'success': True,
+                        'owner': {
+                            'id': row['id'],
+                            'name': row['what_we_call_you'],
+                            'type': 'Mobile',
+                        },
+                    })
+                else:
+                    return json.dumps({
+                        'success': False,
+                        'error': 'Mobile not found',
+                    })
+            finally:
+                cursor.close()
+
+        elif owner_type == 'asset_id':
+            # Assets don't have a service, so just return the ID
+            return json.dumps({
+                'success': True,
+                'owner': {
+                    'id': owner_id,
+                    'name': f'Asset #{owner_id}',
+                    'type': 'Asset',
+                },
+            })
+
+        else:
+            response.status = 400
+            return json.dumps({
+                'success': False,
+                'error': f'Unknown owner type: {owner_type}',
+            })
+
+    except Exception as e:
+        logger.error(f"Error getting owner info: {e}", exc_info=True)
+        response.status = 500
+        return json.dumps({
+            'success': False,
+            'error': str(e),
+        })
+
+
+# ============================================================================
 # API Routes - Enums (for dropdowns)
 # ============================================================================
 
@@ -644,17 +1234,77 @@ if __name__ == '__main__':
     parser.add_argument(
         '--item-service-port',
         type=int,
+        default=9091,
+        help='ItemService port (default: 9091)',
+    )
+    parser.add_argument(
+        '--inventory-service-host',
+        default='localhost',
+        help='InventoryService host (default: localhost)',
+    )
+    parser.add_argument(
+        '--inventory-service-port',
+        type=int,
         default=9090,
-        help='ItemService port (default: 9090)',
+        help='InventoryService port (default: 9090)',
+    )
+    parser.add_argument(
+        '--player-service-host',
+        default='localhost',
+        help='PlayerService host (default: localhost)',
+    )
+    parser.add_argument(
+        '--player-service-port',
+        type=int,
+        default=9092,
+        help='PlayerService port (default: 9092)',
+    )
+    parser.add_argument(
+        '--db-host',
+        default='localhost',
+        help='Database host (default: localhost)',
+    )
+    parser.add_argument(
+        '--db-user',
+        default='admin',
+        help='Database user (default: admin)',
+    )
+    parser.add_argument(
+        '--db-password',
+        default='minda',
+        help='Database password (default: minda)',
+    )
+    parser.add_argument(
+        '--db-name',
+        default='gamedb',
+        help='Database name (default: gamedb)',
     )
 
     args = parser.parse_args()
 
     ITEM_SERVICE_HOST = args.item_service_host
     ITEM_SERVICE_PORT = args.item_service_port
+    INVENTORY_SERVICE_HOST = args.inventory_service_host
+    INVENTORY_SERVICE_PORT = args.inventory_service_port
+    PLAYER_SERVICE_HOST = args.player_service_host
+    PLAYER_SERVICE_PORT = args.player_service_port
+    DB_HOST = args.db_host
+    DB_USER = args.db_user
+    DB_PASSWORD = args.db_password
+    DB_NAME = args.db_name
+
+    # Initialize database instance
+    db_instance = DB(
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASSWORD,
+    )
 
     logger.info(f"Starting Control Panel on {args.host}:{args.port}")
     logger.info(f"Connecting to ItemService at {ITEM_SERVICE_HOST}:{ITEM_SERVICE_PORT}")
+    logger.info(f"Connecting to InventoryService at {INVENTORY_SERVICE_HOST}:{INVENTORY_SERVICE_PORT}")
+    logger.info(f"Connecting to PlayerService at {PLAYER_SERVICE_HOST}:{PLAYER_SERVICE_PORT}")
+    logger.info(f"Connecting to Database at {DB_HOST} (database: {DB_NAME})")
 
     app.run(
         host=args.host,
