@@ -481,14 +481,17 @@ class InventoryMixin:
 
             owner = None
             if owner_row:
+                from game.ttypes import Owner
+
+                owner = Owner()
                 if owner_row["mobile_id"]:
-                    owner = owner_row["mobile_id"]
+                    owner.mobile_id = owner_row["mobile_id"]
                 elif owner_row["item_id"]:
-                    owner = owner_row["item_id"]
+                    owner.item_id = owner_row["item_id"]
                 elif owner_row["asset_id"]:
-                    owner = owner_row["asset_id"]
+                    owner.asset_id = owner_row["asset_id"]
                 elif owner_row["player_id"]:
-                    owner = owner_row["player_id"]
+                    owner.player_id = owner_row["player_id"]
 
             # Create Inventory object
             inventory = Inventory(

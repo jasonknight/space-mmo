@@ -3,6 +3,7 @@
 import sys
 from typing import Optional, Tuple
 from datetime import datetime
+import logging
 
 sys.path.append("../../gen-py")
 
@@ -11,8 +12,11 @@ from game.ttypes import (
     StatusType,
     GameError,
     Player,
+    Mobile,
+    MobileType,
+    Owner,
 )
-
+logger = logging.getLogger(__name__)
 # Table names
 TABLE_PLAYERS = "players"
 
@@ -403,17 +407,30 @@ class PlayerMixin:
 
                 # Get total count
                 count_query = f"SELECT COUNT(*) as total FROM {database}.{players_table} {where_clause};"
+                logger.debug(count_query)
                 cursor.execute(count_query, tuple(params))
                 count_row = cursor.fetchone()
                 total_count = count_row["total"] if count_row else 0
 
                 # Get paginated results
-                query = f"SELECT * FROM {database}.{players_table} {where_clause} ORDER BY id LIMIT %s OFFSET %s;"
-                cursor.execute(query, tuple(params + [results_per_page, offset]))
+                if not search_string:
+                    query = f"SELECT * FROM {database}.{players_table} {where_clause} ORDER BY id LIMIT %s OFFSET %s;"
+                    logger.debug(query)
+                    args_to_query = tuple(params + [results_per_page, offset])
+                    logger.debug(args_to_query)
+                    cursor.execute(query, args_to_query)
+                else:
+                    query = f"SELECT * FROM {database}.{players_table} {where_clause} ORDER BY id LIMIT 100;"
+                    logger.debug(query)
+                    args_to_query = tuple(params)
+                    logger.debug(args_to_query)
+                    cursor.execute(query, args_to_query)
+                
                 player_rows = cursor.fetchall()
 
                 # Convert rows to Player objects
                 players = []
+                player_ids = []
                 for row in player_rows:
                     player = Player(
                         id=row["id"],
@@ -425,6 +442,39 @@ class PlayerMixin:
                         email=row["email"],
                     )
                     players.append(player)
+                    player_ids.append(row["id"])
+
+                # Load mobiles for all players in one query
+                if player_ids:
+                    placeholders = ",".join(["%s"] * len(player_ids))
+                    mobile_query = f"""
+                        SELECT id, what_we_call_you, owner_player_id 
+                        FROM {database}.mobiles 
+                        WHERE owner_player_id IN ({placeholders});
+                    """
+                    cursor.execute(mobile_query, tuple(player_ids))
+                    mobile_rows = cursor.fetchall()
+
+                    # Create a map of player_id -> mobile data
+                    mobile_map = {}
+                    for mobile_row in mobile_rows:
+                        mobile = Mobile(
+                            id=mobile_row["id"],
+                            what_we_call_you=mobile_row["what_we_call_you"],
+                            mobile_type=MobileType.PLAYER,
+                            attributes={},
+                        )
+
+                        mobile_owner = Owner()
+                        mobile_owner.player_id = mobile_row["owner_player_id"]
+                        mobile.owner = mobile_owner
+
+                        mobile_map[mobile_row["owner_player_id"]] = mobile
+
+                    # Attach mobiles to players
+                    for player in players:
+                        if player.id in mobile_map:
+                            player.mobile = mobile_map[player.id]
 
             return (
                 GameResult(

@@ -1,0 +1,167 @@
+[InventoryService] 2025-11-23 17:36:32,703 - services.inventory_service - INFO - SUCCESS: Listed 7 inventories (total: 7)
+[InventoryService] 2025-11-23 17:36:43,488 - services.inventory_service - INFO - === LOAD inventory request ===
+[InventoryService] 2025-11-23 17:36:43,489 - services.inventory_service - INFO - Loading inventory_id=1
+[InventoryService] 2025-11-23 17:36:43,489 - services.inventory_service - DEBUG - Checking cache...
+[InventoryService] 2025-11-23 17:36:43,489 - services.lru_cache - DEBUG - Cache MISS for key=1
+[InventoryService] 2025-11-23 17:36:43,489 - services.inventory_service - DEBUG - Cache miss, loading from DATABASE for inventory_id=1
+[InventoryService] 2025-11-23 17:36:43,489 - dbinc.inventory - INFO - === LOAD_INVENTORY: database=gamedb, inventory_id=1
+[InventoryService] 2025-11-23 17:36:43,489 - dbinc.inventory - DEBUG - Querying inventory table for id=1
+[InventoryService] 2025-11-23 17:36:43,489 - dbinc.inventory - DEBUG - Loading entries for inventory_id=1
+[InventoryService] 2025-11-23 17:36:43,489 - dbinc.inventory - DEBUG - Found 0 entries
+[InventoryService] 2025-11-23 17:36:43,489 - dbinc.inventory - INFO - SUCCESS: Loaded inventory id=1 with 0 entries
+[InventoryService] 2025-11-23 17:36:43,489 - services.inventory_service - INFO - SUCCESS: Loaded inventory_id=1 from DATABASE
+[InventoryService] 2025-11-23 17:36:43,489 - services.lru_cache - DEBUG - Cache PUT key=1 (cache size now 1)
+[InventoryService] 2025-11-23 17:36:43,489 - thrift.server.TServer - ERROR - 'int' object has no attribute 'write'
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/server/TServer.py", line 102, in serve
+    self.processor.process(iprot, oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/InventoryService.py", line 298, in process
+    self._processMap[name](self, seqid, iprot, oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/InventoryService.py", line 320, in process_load
+    result.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/InventoryService.py", line 547, in write
+    self.success.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 2869, in write
+    self.response_data.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 2709, in write
+    self.load_inventory.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 2158, in write
+    self.inventory.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 1469, in write
+    self.owner.write(oprot)
+    ^^^^^^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'write'
+[InventoryService] 2025-11-23 17:36:45,283 - services.inventory_service - INFO - === LOAD inventory request ===
+[InventoryService] 2025-11-23 17:36:45,283 - services.inventory_service - INFO - Loading inventory_id=1
+[InventoryService] 2025-11-23 17:36:45,283 - services.inventory_service - DEBUG - Checking cache...
+[InventoryService] 2025-11-23 17:36:45,283 - services.lru_cache - DEBUG - Cache HIT for key=1
+[InventoryService] 2025-11-23 17:36:45,283 - services.inventory_service - INFO - SUCCESS: Loaded inventory_id=1 from CACHE
+[InventoryService] 2025-11-23 17:36:45,283 - thrift.server.TServer - ERROR - 'int' object has no attribute 'write'
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/server/TServer.py", line 102, in serve
+    self.processor.process(iprot, oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/InventoryService.py", line 298, in process
+    self._processMap[name](self, seqid, iprot, oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/InventoryService.py", line 320, in process_load
+    result.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/InventoryService.py", line 547, in write
+    self.success.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 2869, in write
+    self.response_data.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 2709, in write
+    self.load_inventory.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 2158, in write
+    self.inventory.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 1469, in write
+    self.owner.write(oprot)
+    ^^^^^^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'write'
+[InventoryService] 2025-11-23 17:37:58,440 - services.inventory_service - INFO - === LOAD inventory request ===
+[InventoryService] 2025-11-23 17:37:58,440 - services.inventory_service - INFO - Loading inventory_id=1
+[InventoryService] 2025-11-23 17:37:58,440 - services.inventory_service - DEBUG - Checking cache...
+[InventoryService] 2025-11-23 17:37:58,440 - services.lru_cache - DEBUG - Cache HIT for key=1
+[InventoryService] 2025-11-23 17:37:58,442 - services.inventory_service - INFO - SUCCESS: Loaded inventory_id=1 from CACHE
+[InventoryService] 2025-11-23 17:37:58,442 - thrift.server.TServer - ERROR - 'int' object has no attribute 'write'
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/server/TServer.py", line 102, in serve
+    self.processor.process(iprot, oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/InventoryService.py", line 298, in process
+    self._processMap[name](self, seqid, iprot, oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/InventoryService.py", line 320, in process_load
+    result.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/InventoryService.py", line 547, in write
+    self.success.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 2869, in write
+    self.response_data.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 2709, in write
+    self.load_inventory.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 2158, in write
+    self.inventory.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 1469, in write
+    self.owner.write(oprot)
+    ^^^^^^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'write'
+[InventoryService] 2025-11-23 17:38:00,742 - services.inventory_service - INFO - === LOAD inventory request ===
+[InventoryService] 2025-11-23 17:38:00,742 - services.inventory_service - INFO - Loading inventory_id=1
+[InventoryService] 2025-11-23 17:38:00,742 - services.inventory_service - DEBUG - Checking cache...
+[InventoryService] 2025-11-23 17:38:00,742 - services.lru_cache - DEBUG - Cache HIT for key=1
+[InventoryService] 2025-11-23 17:38:00,921 - services.inventory_service - INFO - SUCCESS: Loaded inventory_id=1 from CACHE
+[InventoryService] 2025-11-23 17:38:00,921 - thrift.server.TServer - ERROR - 'int' object has no attribute 'write'
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/server/TServer.py", line 102, in serve
+    self.processor.process(iprot, oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/InventoryService.py", line 298, in process
+    self._processMap[name](self, seqid, iprot, oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/InventoryService.py", line 320, in process_load
+    result.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/InventoryService.py", line 547, in write
+    self.success.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 2869, in write
+    self.response_data.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 2709, in write
+    self.load_inventory.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 2158, in write
+    self.inventory.write(oprot)
+  File "/vagrant/gamedb/thrift/py/../gen-py/game/ttypes.py", line 1469, in write
+    self.owner.write(oprot)
+    ^^^^^^^^^^^^^^^^
+AttributeError: 'int' object has no attribute 'write'
+
+
+
+And the control_panel web app error logs:
+
+2025-11-23 17:37:58,446 - __main__ - ERROR - Error getting inventory 1: TSocket read 0 bytes
+Traceback (most recent call last):
+  File "/vagrant/gamedb/thrift/control_panel/app.py", line 951, in get_inventory
+    resp = client.load(req)
+           ^^^^^^^^^^^^^^^^
+  File "/vagrant/gamedb/thrift/control_panel/../gen-py/game/InventoryService.py", line 84, in load
+    return self.recv_load()
+           ^^^^^^^^^^^^^^^^
+  File "/vagrant/gamedb/thrift/control_panel/../gen-py/game/InventoryService.py", line 96, in recv_load
+    (fname, mtype, rseqid) = iprot.readMessageBegin()
+                             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/protocol/TBinaryProtocol.py", line 135, in readMessageBegin
+    sz = self.readI32()
+         ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/protocol/TBinaryProtocol.py", line 218, in readI32
+    buff = self.trans.readAll(4)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/transport/TTransport.py", line 63, in readAll
+    chunk = self.read(sz - have)
+            ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/transport/TTransport.py", line 165, in read
+    self.__rbuf = BytesIO(self.__trans.read(max(sz, self.__rbuf_size)))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/transport/TSocket.py", line 174, in read
+    raise TTransportException(type=TTransportException.END_OF_FILE,
+thrift.transport.TTransport.TTransportException: TSocket read 0 bytes
+10.0.0.1 - - [23/Nov/2025 17:37:58] "GET /api/inventories/1 HTTP/1.1" 500 51
+2025-11-23 17:38:00,926 - __main__ - ERROR - Error getting inventory 1: TSocket read 0 bytes
+Traceback (most recent call last):
+  File "/vagrant/gamedb/thrift/control_panel/app.py", line 951, in get_inventory
+    resp = client.load(req)
+           ^^^^^^^^^^^^^^^^
+  File "/vagrant/gamedb/thrift/control_panel/../gen-py/game/InventoryService.py", line 84, in load
+    return self.recv_load()
+           ^^^^^^^^^^^^^^^^
+  File "/vagrant/gamedb/thrift/control_panel/../gen-py/game/InventoryService.py", line 96, in recv_load
+    (fname, mtype, rseqid) = iprot.readMessageBegin()
+                             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/protocol/TBinaryProtocol.py", line 135, in readMessageBegin
+    sz = self.readI32()
+         ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/protocol/TBinaryProtocol.py", line 218, in readI32
+    buff = self.trans.readAll(4)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/transport/TTransport.py", line 63, in readAll
+    chunk = self.read(sz - have)
+            ^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/transport/TTransport.py", line 165, in read
+    self.__rbuf = BytesIO(self.__trans.read(max(sz, self.__rbuf_size)))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/thrift-0.23.0-py3.12-linux-x86_64.egg/thrift/transport/TSocket.py", line 174, in read
+    raise TTransportException(type=TTransportException.END_OF_FILE,
+thrift.transport.TTransport.TTransportException: TSocket read 0 bytes
+10.0.0.1 - - [23/Nov/2025 17:38:00] "GET /api/inventories/1 HTTP/1.1" 500 51
