@@ -14,7 +14,9 @@ from game.ttypes import (
     AttributeValue,
     Mobile,
 )
+
 logger = logging.getLogger(__name__)
+
 
 class MobileMixin:
     """Mixin class for Mobile database operations."""
@@ -123,18 +125,29 @@ class MobileMixin:
                 asset_val = "NULL"
 
                 if attribute.value is not None:
-                    if isinstance(attribute.value, bool):
-                        bool_val = str(attribute.value)
-                    elif isinstance(attribute.value, (int, float)) and not isinstance(
-                        attribute.value, bool
+                    # AttributeValue is a Thrift union - check its fields
+                    if (
+                        hasattr(attribute.value, "bool_value")
+                        and attribute.value.bool_value is not None
                     ):
-                        double_val = str(attribute.value)
-                    elif isinstance(attribute.value, ItemVector3):
-                        vec3_x = str(attribute.value.x)
-                        vec3_y = str(attribute.value.y)
-                        vec3_z = str(attribute.value.z)
-                    elif isinstance(attribute.value, int):
-                        asset_val = str(attribute.value)
+                        bool_val = str(attribute.value.bool_value)
+                    elif (
+                        hasattr(attribute.value, "double_value")
+                        and attribute.value.double_value is not None
+                    ):
+                        double_val = str(attribute.value.double_value)
+                    elif (
+                        hasattr(attribute.value, "vector3")
+                        and attribute.value.vector3 is not None
+                    ):
+                        vec3_x = str(attribute.value.vector3.x)
+                        vec3_y = str(attribute.value.vector3.y)
+                        vec3_z = str(attribute.value.vector3.z)
+                    elif (
+                        hasattr(attribute.value, "asset_id")
+                        and attribute.value.asset_id is not None
+                    ):
+                        asset_val = str(attribute.value.asset_id)
 
                 # Insert attribute
                 from game.ttypes import AttributeType as AttrTypeEnum2
@@ -340,18 +353,29 @@ class MobileMixin:
                     asset_val = "NULL"
 
                     if attribute.value is not None:
-                        if isinstance(attribute.value, bool):
-                            bool_val = str(attribute.value)
-                        elif isinstance(
-                            attribute.value, (int, float)
-                        ) and not isinstance(attribute.value, bool):
-                            double_val = str(attribute.value)
-                        elif isinstance(attribute.value, ItemVector3):
-                            vec3_x = str(attribute.value.x)
-                            vec3_y = str(attribute.value.y)
-                            vec3_z = str(attribute.value.z)
-                        elif isinstance(attribute.value, int):
-                            asset_val = str(attribute.value)
+                        # AttributeValue is a Thrift union - check its fields
+                        if (
+                            hasattr(attribute.value, "bool_value")
+                            and attribute.value.bool_value is not None
+                        ):
+                            bool_val = str(attribute.value.bool_value)
+                        elif (
+                            hasattr(attribute.value, "double_value")
+                            and attribute.value.double_value is not None
+                        ):
+                            double_val = str(attribute.value.double_value)
+                        elif (
+                            hasattr(attribute.value, "vector3")
+                            and attribute.value.vector3 is not None
+                        ):
+                            vec3_x = str(attribute.value.vector3.x)
+                            vec3_y = str(attribute.value.vector3.y)
+                            vec3_z = str(attribute.value.vector3.z)
+                        elif (
+                            hasattr(attribute.value, "asset_id")
+                            and attribute.value.asset_id is not None
+                        ):
+                            asset_val = str(attribute.value.asset_id)
 
                     from game.ttypes import AttributeType as AttrTypeEnum2
 

@@ -439,6 +439,115 @@ def dict_to_player(data):
     return player
 
 
+def dict_to_mobile(data):
+    """Convert a dictionary to a Mobile thrift object."""
+    mobile = Mobile()
+
+    if "id" in data and data["id"]:
+        mobile.id = int(data["id"])
+
+    mobile.what_we_call_you = data.get("what_we_call_you", "")
+
+    # MobileType enum - hardcode to NPC
+    mobile.mobile_type = MobileType.NPC
+
+    # Owner union (optional for NPC mobiles)
+    if "owner" in data and data["owner"]:
+        owner_data = data["owner"]
+        owner = Owner()
+
+        if "mobile_id" in owner_data and owner_data["mobile_id"]:
+            owner.mobile_id = int(owner_data["mobile_id"])
+        elif "item_id" in owner_data and owner_data["item_id"]:
+            owner.item_id = int(owner_data["item_id"])
+        elif "asset_id" in owner_data and owner_data["asset_id"]:
+            owner.asset_id = int(owner_data["asset_id"])
+        elif "player_id" in owner_data and owner_data["player_id"]:
+            owner.player_id = int(owner_data["player_id"])
+
+        mobile.owner = owner
+    else:
+        mobile.owner = None
+
+    # Attributes map (similar to Item/Player attributes)
+    if "attributes" in data and data["attributes"]:
+        mobile.attributes = {}
+        for attr_type_key, attr_data in data["attributes"].items():
+            # Convert attribute type
+            if isinstance(attr_type_key, str):
+                attr_type = AttributeType._NAMES_TO_VALUES.get(
+                    attr_type_key,
+                    int(attr_type_key),
+                )
+            else:
+                attr_type = int(attr_type_key)
+
+            # Build Attribute object
+            attr = Attribute()
+            if "id" in attr_data and attr_data["id"]:
+                attr.id = int(attr_data["id"])
+            attr.internal_name = attr_data.get("internal_name", "")
+            attr.visible = attr_data.get("visible", True)
+
+            # AttributeType enum
+            if "attribute_type" in attr_data:
+                attr.attribute_type = AttributeType._NAMES_TO_VALUES.get(
+                    attr_data["attribute_type"],
+                    attr_data["attribute_type"]
+                    if isinstance(attr_data["attribute_type"], int)
+                    else AttributeType.TRANSLATED_NAME,
+                )
+
+            # AttributeValue union
+            if "value" in attr_data:
+                value_data = attr_data["value"]
+                attr_value = AttributeValue()
+
+                if "bool_value" in value_data:
+                    attr_value.bool_value = value_data["bool_value"]
+                elif "double_value" in value_data:
+                    attr_value.double_value = float(value_data["double_value"])
+                elif "vector3" in value_data:
+                    v = value_data["vector3"]
+                    attr_value.vector3 = ItemVector3(
+                        x=float(v.get("x", 0)),
+                        y=float(v.get("y", 0)),
+                        z=float(v.get("z", 0)),
+                    )
+                elif "asset_id" in value_data:
+                    attr_value.asset_id = int(value_data["asset_id"])
+
+                attr.value = attr_value
+
+            # Owner for attribute (points to mobile)
+            if "owner" in attr_data and attr_data["owner"]:
+                attr_owner_data = attr_data["owner"]
+                attr_owner = Owner()
+
+                if "mobile_id" in attr_owner_data and attr_owner_data["mobile_id"]:
+                    attr_owner.mobile_id = int(attr_owner_data["mobile_id"])
+                elif "item_id" in attr_owner_data and attr_owner_data["item_id"]:
+                    attr_owner.item_id = int(attr_owner_data["item_id"])
+                elif "asset_id" in attr_owner_data and attr_owner_data["asset_id"]:
+                    attr_owner.asset_id = int(attr_owner_data["asset_id"])
+                elif "player_id" in attr_owner_data and attr_owner_data["player_id"]:
+                    attr_owner.player_id = int(attr_owner_data["player_id"])
+
+                attr.owner = attr_owner
+            else:
+                # Default owner to this mobile if not specified
+                if mobile.id:
+                    attr_owner = Owner()
+                    attr_owner.mobile_id = mobile.id
+                    attr.owner = attr_owner
+
+            mobile.attributes[attr_type] = attr
+    else:
+        mobile.attributes = {}
+
+    return mobile
+
+
 # ============================================================================
 # API Routes - Items
 # ============================================================================
@@ -1506,8 +1615,277 @@ def delete_player(player_id):
 
 
 # ============================================================================
-# API Routes - Mobiles (for owner search)
+# API Routes - Mobiles
 # ============================================================================
+
+
+@app.route("/api/mobiles", method="GET")
+def list_mobiles():
+    """List NPC mobiles with pagination and search."""
+    try:
+        page = int(request.params.get("page", 0))
+        per_page = int(request.params.get("per_page", 10))
+        search = request.params.get("search", "")
+
+        # Query database directly
+        db_instance.connect()
+        cursor = db_instance.connection.cursor(dictionary=True)
+
+        try:
+            mobiles_table = TABLE2STR[BackingTable.MOBILES]
+
+            # Build query
+            if search:
+                query = f"""
+                    SELECT id, what_we_call_you, mobile_type
+                    FROM {DB_NAME}.{mobiles_table}
+                    WHERE mobile_type = 'NPC'
+                    AND what_we_call_you LIKE %s
+                    ORDER BY id DESC
+                    LIMIT %s OFFSET %s
+                """
+                cursor.execute(query, (f"%{search}%", per_page, page * per_page))
+            else:
+                query = f"""
+                    SELECT id, what_we_call_you, mobile_type
+                    FROM {DB_NAME}.{mobiles_table}
+                    WHERE mobile_type = 'NPC'
+                    ORDER BY id DESC
+                    LIMIT %s OFFSET %s
+                """
+                cursor.execute(query, (per_page, page * per_page))
+
+            rows = cursor.fetchall()
+
+            # Get total count
+            if search:
+                count_query = f"""
+                    SELECT COUNT(*) as count
+                    FROM {DB_NAME}.{mobiles_table}
+                    WHERE mobile_type = 'NPC'
+                    AND what_we_call_you LIKE %s
+                """
+                cursor.execute(count_query, (f"%{search}%",))
+            else:
+                count_query = f"""
+                    SELECT COUNT(*) as count
+                    FROM {DB_NAME}.{mobiles_table}
+                    WHERE mobile_type = 'NPC'
+                """
+                cursor.execute(count_query)
+
+            total_count = cursor.fetchone()["count"]
+
+            # Convert to list of dicts
+            mobiles = [
+                {
+                    "id": row["id"],
+                    "what_we_call_you": row["what_we_call_you"],
+                    "mobile_type": row["mobile_type"],
+                }
+                for row in rows
+            ]
+
+            response.content_type = "application/json"
+            return json.dumps(
+                {
+                    "success": True,
+                    "mobiles": mobiles,
+                    "total_count": total_count,
+                    "page": page,
+                    "per_page": per_page,
+                }
+            )
+        finally:
+            cursor.close()
+
+    except Exception as e:
+        logger.error(f"Error listing mobiles: {e}", exc_info=True)
+        response.status = 500
+        return json.dumps(
+            {
+                "success": False,
+                "error": str(e),
+            }
+        )
+
+
+@app.route("/api/mobiles/<mobile_id:int>", method="GET")
+def get_mobile(mobile_id):
+    """Get a single mobile by ID."""
+    try:
+        # Load mobile using db layer
+        result, mobile = db_instance.load_mobile(DB_NAME, mobile_id)
+
+        if result.status == StatusType.SUCCESS:
+            mobile_dict = thrift_to_dict(mobile)
+
+            response.content_type = "application/json"
+            return json.dumps(
+                {
+                    "success": True,
+                    "mobile": mobile_dict,
+                }
+            )
+        else:
+            error_msg = result.message if result else "Unknown error"
+            response.status = 404
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": error_msg,
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error getting mobile {mobile_id}: {e}", exc_info=True)
+        response.status = 500
+        return json.dumps(
+            {
+                "success": False,
+                "error": str(e),
+            }
+        )
+
+
+@app.route("/api/mobiles", method="POST")
+def create_mobile():
+    """Create a new NPC mobile."""
+    try:
+        data = request.json
+
+        if not data:
+            response.status = 400
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": "No data provided",
+                }
+            )
+
+        mobile = dict_to_mobile(data)
+
+        # Create the mobile using db layer
+        results = db_instance.create_mobile(DB_NAME, mobile)
+
+        if results and results[0].status == StatusType.SUCCESS:
+            created_mobile = thrift_to_dict(mobile)
+
+            response.content_type = "application/json"
+            return json.dumps(
+                {
+                    "success": True,
+                    "mobile": created_mobile,
+                }
+            )
+        else:
+            error_msg = results[0].message if results else "Unknown error"
+            response.status = 500
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": error_msg,
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error creating mobile: {e}", exc_info=True)
+        response.status = 500
+        return json.dumps(
+            {
+                "success": False,
+                "error": str(e),
+            }
+        )
+
+
+@app.route("/api/mobiles/<mobile_id:int>", method="PUT")
+def update_mobile(mobile_id):
+    """Update an existing NPC mobile."""
+    try:
+        data = request.json
+
+        if not data:
+            response.status = 400
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": "No data provided",
+                }
+            )
+
+        # Ensure the ID is set
+        data["id"] = mobile_id
+        mobile = dict_to_mobile(data)
+
+        # Update the mobile using db layer
+        results = db_instance.update_mobile(DB_NAME, mobile)
+
+        if results and results[0].status == StatusType.SUCCESS:
+            updated_mobile = thrift_to_dict(mobile)
+
+            response.content_type = "application/json"
+            return json.dumps(
+                {
+                    "success": True,
+                    "mobile": updated_mobile,
+                }
+            )
+        else:
+            error_msg = results[0].message if results else "Unknown error"
+            response.status = 500
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": error_msg,
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error updating mobile {mobile_id}: {e}", exc_info=True)
+        response.status = 500
+        return json.dumps(
+            {
+                "success": False,
+                "error": str(e),
+            }
+        )
+
+
+@app.route("/api/mobiles/<mobile_id:int>", method="DELETE")
+def delete_mobile(mobile_id):
+    """Delete an NPC mobile."""
+    try:
+        # Delete the mobile using db layer
+        results = db_instance.destroy_mobile(DB_NAME, mobile_id)
+
+        if results and results[0].status == StatusType.SUCCESS:
+            response.content_type = "application/json"
+            return json.dumps(
+                {
+                    "success": True,
+                    "message": f"Mobile {mobile_id} deleted successfully",
+                }
+            )
+        else:
+            error_msg = results[0].message if results else "Unknown error"
+            response.status = 500
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": error_msg,
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error deleting mobile {mobile_id}: {e}", exc_info=True)
+        response.status = 500
+        return json.dumps(
+            {
+                "success": False,
+                "error": str(e),
+            }
+        )
 
 
 @app.route("/api/mobiles/search", method="GET")

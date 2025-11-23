@@ -123,6 +123,13 @@ var App = (function() {
                     $('#content').html('<div class="alert alert-danger">Player module not loaded</div>');
                 }
                 break;
+            case 'mobiles':
+                if (typeof MobileModule !== 'undefined') {
+                    MobileModule.init();
+                } else {
+                    $('#content').html('<div class="alert alert-danger">Mobile module not loaded</div>');
+                }
+                break;
             default:
                 $('#content').html('<div class="alert alert-warning">Unknown view</div>');
         }
