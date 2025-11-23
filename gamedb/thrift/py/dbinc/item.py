@@ -1132,7 +1132,8 @@ class ItemMixin:
             item_table = table if table else "items"
 
             # Calculate offset (page is 1-indexed from API)
-            offset = (page - 1) * results_per_page
+            page = max(0, page)
+            offset = page * results_per_page
 
             # Build WHERE clause for search
             where_clause = ""
