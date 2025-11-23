@@ -1,11 +1,17 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../gen-py'))
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../gen-py"))
 
 from db import DB
 from game.ttypes import (
     Player,
+    Mobile,
+    MobileType,
+    Owner,
+    Attribute,
+    AttributeType,
     GameError,
 )
 from common import is_ok, is_true
@@ -77,6 +83,7 @@ def test_player(db: DB, database_name: str):
         security_token="abc123def456",
         over_13=True,
         year_of_birth=1990,
+        email="john.doe@example.com",
     )
 
     # Save player
@@ -97,8 +104,12 @@ def test_player(db: DB, database_name: str):
     mobile_type = mobile_row[1]
     owner_player_id = mobile_row[2]
     assert mobile_type == "PLAYER", f"Mobile type should be PLAYER, got {mobile_type}"
-    assert owner_player_id == player.id, f"Mobile owner_player_id should be {player.id}, got {owner_player_id}"
-    print(f"  ✓ Verified mobile (id={mobile_id}) created for player with correct type and owner")
+    assert owner_player_id == player.id, (
+        f"Mobile owner_player_id should be {player.id}, got {owner_player_id}"
+    )
+    print(
+        f"  ✓ Verified mobile (id={mobile_id}) created for player with correct type and owner"
+    )
 
     # Load player
     load_result, loaded_player = db.load_player(database_name, player.id)
@@ -108,8 +119,12 @@ def test_player(db: DB, database_name: str):
     # Compare
     assert loaded_player.id == player.id, "ID mismatch"
     assert loaded_player.full_name == player.full_name, "full_name mismatch"
-    assert loaded_player.what_we_call_you == player.what_we_call_you, "what_we_call_you mismatch"
-    assert loaded_player.security_token == player.security_token, "security_token mismatch"
+    assert loaded_player.what_we_call_you == player.what_we_call_you, (
+        "what_we_call_you mismatch"
+    )
+    assert loaded_player.security_token == player.security_token, (
+        "security_token mismatch"
+    )
     assert loaded_player.over_13 == player.over_13, "over_13 mismatch"
     assert loaded_player.year_of_birth == player.year_of_birth, "year_of_birth mismatch"
 
@@ -120,14 +135,20 @@ def test_player(db: DB, database_name: str):
     loaded_player.year_of_birth = 1995
 
     update_results = db.save_player(database_name, loaded_player)
-    assert is_ok(update_results), f"Failed to update Player: {update_results[0].message}"
+    assert is_ok(update_results), (
+        f"Failed to update Player: {update_results[0].message}"
+    )
     print(f"  ✓ Updated: {update_results[0].message}")
 
     # Load again and verify updates
     load_result2, updated_player = db.load_player(database_name, loaded_player.id)
-    assert is_true(load_result2), f"Failed to load updated Player: {load_result2.message}"
+    assert is_true(load_result2), (
+        f"Failed to load updated Player: {load_result2.message}"
+    )
     assert updated_player.full_name == "Jane Smith", "Updated full_name mismatch"
-    assert updated_player.what_we_call_you == "Janie", "Updated what_we_call_you mismatch"
+    assert updated_player.what_we_call_you == "Janie", (
+        "Updated what_we_call_you mismatch"
+    )
     assert updated_player.year_of_birth == 1995, "Updated year_of_birth mismatch"
     print("  ✓ Update verified")
 
@@ -139,20 +160,26 @@ def test_player(db: DB, database_name: str):
     )
     mobile_row_after_update = cursor.fetchone()
     cursor.close()
-    assert mobile_row_after_update is not None, "Mobile should still exist after player update"
+    assert mobile_row_after_update is not None, (
+        "Mobile should still exist after player update"
+    )
     print("  ✓ Verified mobile still exists after player update")
 
     # Test destroy
     print("  Testing destroy...")
     destroy_results = db.destroy_player(database_name, loaded_player.id)
-    assert is_ok(destroy_results), f"Failed to destroy Player: {destroy_results[0].message}"
+    assert is_ok(destroy_results), (
+        f"Failed to destroy Player: {destroy_results[0].message}"
+    )
     print(f"  ✓ Destroyed: {destroy_results[0].message}")
 
     # Verify load fails after destroy
     load_result3, destroyed_player = db.load_player(database_name, loaded_player.id)
     assert not is_true(load_result3), "Load should fail after destroy"
     assert destroyed_player is None, "Destroyed player should be None"
-    assert load_result3.error_code == GameError.DB_RECORD_NOT_FOUND, f"Expected DB_RECORD_NOT_FOUND, got {load_result3.error_code}"
+    assert load_result3.error_code == GameError.DB_RECORD_NOT_FOUND, (
+        f"Expected DB_RECORD_NOT_FOUND, got {load_result3.error_code}"
+    )
     print("  ✓ Destroy verified: load failed with DB_RECORD_NOT_FOUND")
 
     # Verify mobile was also deleted
@@ -163,7 +190,9 @@ def test_player(db: DB, database_name: str):
     )
     deleted_mobile_row = cursor.fetchone()
     cursor.close()
-    assert deleted_mobile_row is None, "Mobile should have been deleted when player was destroyed"
+    assert deleted_mobile_row is None, (
+        "Mobile should have been deleted when player was destroyed"
+    )
     print("  ✓ Verified mobile was deleted when player was destroyed")
 
     print("  ✓ All assertions passed for Player\n")
@@ -178,7 +207,7 @@ def test_list_player(db: DB, database_name: str):
 
     # Generate random string helper
     def random_string(length=10):
-        return ''.join(random.choices(string.ascii_letters, k=length))
+        return "".join(random.choices(string.ascii_letters, k=length))
 
     # Create 100 players with random data
     print("  Creating 100 players...")
@@ -200,10 +229,13 @@ def test_list_player(db: DB, database_name: str):
             security_token=random_string(20),
             over_13=random.choice([True, False]),
             year_of_birth=random.randint(1950, 2010),
+            email=f"{nickname.lower()}@test.com",
         )
 
         save_results = db.save_player(database_name, player)
-        assert is_ok(save_results), f"Failed to save player {i}: {save_results[0].message}"
+        assert is_ok(save_results), (
+            f"Failed to save player {i}: {save_results[0].message}"
+        )
         created_players.append(player)
 
     print(f"  ✓ Created {len(created_players)} players")
@@ -226,7 +258,9 @@ def test_list_player(db: DB, database_name: str):
             break
 
         all_paginated_players.extend(players)
-        print(f"    Page {page}: retrieved {len(players)} players (total: {total_count})")
+        print(
+            f"    Page {page}: retrieved {len(players)} players (total: {total_count})"
+        )
 
         # Check if this is the last page
         if len(all_paginated_players) >= total_count:
@@ -234,8 +268,12 @@ def test_list_player(db: DB, database_name: str):
 
         page += 1
 
-    assert len(all_paginated_players) == 100, f"Expected 100 players, got {len(all_paginated_players)}"
-    print(f"  ✓ Pagination test passed: retrieved all {len(all_paginated_players)} players across {page + 1} pages")
+    assert len(all_paginated_players) == 100, (
+        f"Expected 100 players, got {len(all_paginated_players)}"
+    )
+    print(
+        f"  ✓ Pagination test passed: retrieved all {len(all_paginated_players)} players across {page + 1} pages"
+    )
 
     # Test search on full_name
     print("  Testing search on full_name...")
@@ -247,9 +285,15 @@ def test_list_player(db: DB, database_name: str):
         search_string=search_full_name,
     )
     assert is_true(result), f"Failed to search players: {result.message}"
-    assert len(players) >= 1, f"Expected at least 1 player matching '{search_full_name}', got {len(players)}"
-    assert any(p.full_name == search_full_name for p in players), f"Expected to find player with full_name '{search_full_name}'"
-    print(f"  ✓ Search on full_name '{search_full_name}' found {len(players)} player(s)")
+    assert len(players) >= 1, (
+        f"Expected at least 1 player matching '{search_full_name}', got {len(players)}"
+    )
+    assert any(p.full_name == search_full_name for p in players), (
+        f"Expected to find player with full_name '{search_full_name}'"
+    )
+    print(
+        f"  ✓ Search on full_name '{search_full_name}' found {len(players)} player(s)"
+    )
 
     # Test search on what_we_call_you
     print("  Testing search on what_we_call_you...")
@@ -261,9 +305,15 @@ def test_list_player(db: DB, database_name: str):
         search_string=search_nickname,
     )
     assert is_true(result), f"Failed to search players: {result.message}"
-    assert len(players) >= 1, f"Expected at least 1 player matching '{search_nickname}', got {len(players)}"
-    assert any(p.what_we_call_you == search_nickname for p in players), f"Expected to find player with what_we_call_you '{search_nickname}'"
-    print(f"  ✓ Search on what_we_call_you '{search_nickname}' found {len(players)} player(s)")
+    assert len(players) >= 1, (
+        f"Expected at least 1 player matching '{search_nickname}', got {len(players)}"
+    )
+    assert any(p.what_we_call_you == search_nickname for p in players), (
+        f"Expected to find player with what_we_call_you '{search_nickname}'"
+    )
+    print(
+        f"  ✓ Search on what_we_call_you '{search_nickname}' found {len(players)} player(s)"
+    )
 
     # Test partial search
     print("  Testing partial search...")
@@ -275,10 +325,101 @@ def test_list_player(db: DB, database_name: str):
         search_string=partial_search,
     )
     assert is_true(result), f"Failed to search players: {result.message}"
-    assert len(players) == 100, f"Expected 100 players matching '{partial_search}', got {len(players)}"
+    assert len(players) == 100, (
+        f"Expected 100 players matching '{partial_search}', got {len(players)}"
+    )
     print(f"  ✓ Partial search '{partial_search}' found {len(players)} player(s)")
 
     print("  ✓ All list tests passed for Player\n")
+
+
+def test_player_with_character_attributes(db: DB, database_name: str):
+    """Test Player with mobile character attributes."""
+    print("Testing Player with character attributes...")
+
+    import random
+
+    # Create mobile with character attributes
+    mobile_owner = Owner()
+    mobile_owner.player_id = None  # Will be set after player creation
+
+    # Generate character attributes with random values in range 0.001 to 0.05
+    mobile_attributes = {}
+    char_attrs = [
+        (AttributeType.STRENGTH, "strength"),
+        (AttributeType.LUCK, "luck"),
+        (AttributeType.CONSTITUTION, "constitution"),
+        (AttributeType.DEXTERITY, "dexterity"),
+        (AttributeType.ARCANA, "arcana"),
+        (AttributeType.OPERATIONS, "operations"),
+    ]
+
+    for attr_type, internal_name in char_attrs:
+        value = random.uniform(0.001, 0.05)
+        mobile_attributes[attr_type] = Attribute(
+            id=None,
+            internal_name=internal_name,
+            visible=True,
+            value=value,
+            attribute_type=attr_type,
+            owner=0,
+        )
+
+    mobile = Mobile(
+        id=None,
+        mobile_type=MobileType.PLAYER,
+        attributes=mobile_attributes,
+        owner=mobile_owner,
+        what_we_call_you="TestChar",
+    )
+
+    # Create player
+    player = Player(
+        id=None,
+        full_name="Test Character",
+        what_we_call_you="TestChar",
+        security_token="test_token_123",
+        over_13=True,
+        year_of_birth=1995,
+        email="test@example.com",
+        mobile=mobile,
+    )
+
+    # Save player
+    save_results = db.save_player(database_name, player)
+    assert is_ok(save_results), f"Failed to save Player: {save_results[0].message}"
+    print(f"  ✓ Saved: {save_results[0].message}")
+
+    # Load player
+    load_result, loaded_player = db.load_player(database_name, player.id)
+    assert is_true(load_result), f"Failed to load Player: {load_result.message}"
+    print(f"  ✓ Loaded: {load_result.message}")
+
+    # Verify mobile exists and has character attributes
+    assert hasattr(loaded_player, "mobile") and loaded_player.mobile is not None, (
+        "Mobile should exist"
+    )
+
+    # Verify all character attributes exist and have correct values
+    for attr_type, internal_name in char_attrs:
+        assert attr_type in loaded_player.mobile.attributes, (
+            f"Missing character attribute: {internal_name}"
+        )
+        original_value = mobile_attributes[attr_type].value
+        loaded_value = loaded_player.mobile.attributes[attr_type].value
+        assert abs(loaded_value - original_value) < 0.00001, (
+            f"Attribute {internal_name} value mismatch: expected {original_value}, got {loaded_value}"
+        )
+
+    print(f"  ✓ Verified {len(char_attrs)} character attributes")
+
+    # Verify mobile name matches player name
+    assert loaded_player.mobile.what_we_call_you == player.what_we_call_you, (
+        "Mobile name should match player name"
+    )
+    print("  ✓ Mobile name matches player name")
+
+    print("  ✓ All assertions passed for Player with character attributes\n")
 
 
 def main():
@@ -306,6 +447,7 @@ def main():
         # Run tests
         test_player(db, database_name)
         test_list_player(db, database_name)
+        test_player_with_character_attributes(db, database_name)
 
         print("=" * 60)
         print("All tests passed successfully!")

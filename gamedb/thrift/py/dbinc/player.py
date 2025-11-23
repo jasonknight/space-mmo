@@ -16,6 +16,7 @@ from game.ttypes import (
     MobileType,
     Owner,
 )
+
 logger = logging.getLogger(__name__)
 # Table names
 TABLE_PLAYERS = "players"
@@ -103,22 +104,33 @@ class PlayerMixin:
                 mobile_owner = Owner()
                 mobile_owner.player_id = obj.id
 
-                mobile = Mobile(
-                    id=None,
-                    mobile_type=MobileType.PLAYER,
-                    attributes={},
-                    owner=mobile_owner,
-                )
+                # If the player already has a mobile defined, use it
+                # Otherwise create a new empty one
+                if hasattr(obj, "mobile") and obj.mobile is not None:
+                    mobile = obj.mobile
+                    mobile.owner = mobile_owner
+                    if mobile.id is None:
+                        mobile.id = None  # Ensure it gets a new ID
+                else:
+                    mobile = Mobile(
+                        id=None,
+                        mobile_type=MobileType.PLAYER,
+                        attributes={},
+                        owner=mobile_owner,
+                        what_we_call_you=obj.what_we_call_you,
+                    )
 
-                # Get SQL for mobile creation
-                mobile_statements = self.get_mobile_sql(
-                    database,
-                    mobile,
-                )
+                # Commit the player transaction first so the mobile can reference the player
+                self.connection.commit()
 
-                # Execute mobile creation statements
-                for stmt in mobile_statements:
-                    cursor.execute(stmt)
+                # Create the mobile using save_mobile (which manages its own transaction)
+                mobile_results = self.save_mobile(database, mobile)
+                from common import is_ok
+
+                if not is_ok(mobile_results):
+                    raise Exception(
+                        f"Failed to create mobile: {mobile_results[0].message}"
+                    )
 
             return [
                 GameResult(
@@ -425,7 +437,7 @@ class PlayerMixin:
                     args_to_query = tuple(params)
                     logger.debug(args_to_query)
                     cursor.execute(query, args_to_query)
-                
+
                 player_rows = cursor.fetchall()
 
                 # Convert rows to Player objects

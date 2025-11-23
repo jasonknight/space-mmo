@@ -122,6 +122,12 @@ class AttributeType(object):
     ITEM = 12
     PURITY = 13
     VOLUME = 14
+    STRENGTH = 15
+    LUCK = 16
+    CONSTITUTION = 17
+    DEXTERITY = 18
+    ARCANA = 19
+    OPERATIONS = 20
 
     _VALUES_TO_NAMES = {
         1: "TRANSLATED_NAME",
@@ -138,6 +144,12 @@ class AttributeType(object):
         12: "ITEM",
         13: "PURITY",
         14: "VOLUME",
+        15: "STRENGTH",
+        16: "LUCK",
+        17: "CONSTITUTION",
+        18: "DEXTERITY",
+        19: "ARCANA",
+        20: "OPERATIONS",
     }
 
     _NAMES_TO_VALUES = {
@@ -155,6 +167,12 @@ class AttributeType(object):
         "ITEM": 12,
         "PURITY": 13,
         "VOLUME": 14,
+        "STRENGTH": 15,
+        "LUCK": 16,
+        "CONSTITUTION": 17,
+        "DEXTERITY": 18,
+        "ARCANA": 19,
+        "OPERATIONS": 20,
     }
 
 

@@ -105,6 +105,13 @@ enum AttributeType {
     ITEM=12, // for those items that are composed of other items
     PURITY=13,
     VOLUME=14, // how many mm3 is 1 unit
+    // Character attributes for mobiles (and items that affect them)
+    STRENGTH = 15, // How much a character can carry, physical power
+    LUCK = 16, // Used for random chances like drop rates
+    CONSTITUTION = 17, // Stamina for sprinting, carrying, physical endurance
+    DEXTERITY = 18, // Weapon handling, engineering with fine equipment
+    ARCANA = 19, // Discovery, item info, revealing secrets, blueprint study
+    OPERATIONS = 20, // Repair, scanning, equipment use, ship weapons, mining
 }
 
 struct ItemVector3 {

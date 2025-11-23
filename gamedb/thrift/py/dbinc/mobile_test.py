@@ -1,7 +1,8 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../gen-py'))
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../gen-py"))
 
 from db import DB
 from game.ttypes import (
@@ -92,6 +93,55 @@ def test_mobile(db: DB, database_name: str):
             attribute_type=AttributeType.LOCAL_POSITION,
             owner=7000,
         ),
+        # Add character attributes
+        AttributeType.STRENGTH: Attribute(
+            id=None,
+            internal_name="strength",
+            visible=True,
+            value=0.025,
+            attribute_type=AttributeType.STRENGTH,
+            owner=7000,
+        ),
+        AttributeType.LUCK: Attribute(
+            id=None,
+            internal_name="luck",
+            visible=True,
+            value=0.018,
+            attribute_type=AttributeType.LUCK,
+            owner=7000,
+        ),
+        AttributeType.CONSTITUTION: Attribute(
+            id=None,
+            internal_name="constitution",
+            visible=True,
+            value=0.032,
+            attribute_type=AttributeType.CONSTITUTION,
+            owner=7000,
+        ),
+        AttributeType.DEXTERITY: Attribute(
+            id=None,
+            internal_name="dexterity",
+            visible=True,
+            value=0.041,
+            attribute_type=AttributeType.DEXTERITY,
+            owner=7000,
+        ),
+        AttributeType.ARCANA: Attribute(
+            id=None,
+            internal_name="arcana",
+            visible=True,
+            value=0.015,
+            attribute_type=AttributeType.ARCANA,
+            owner=7000,
+        ),
+        AttributeType.OPERATIONS: Attribute(
+            id=None,
+            internal_name="operations",
+            visible=True,
+            value=0.037,
+            attribute_type=AttributeType.OPERATIONS,
+            owner=7000,
+        ),
     }
 
     # Create owner for mobile
@@ -118,39 +168,72 @@ def test_mobile(db: DB, database_name: str):
     # Compare
     assert loaded_mobile.id == mobile.id, "ID mismatch"
     assert loaded_mobile.mobile_type == mobile.mobile_type, "mobile_type mismatch"
-    assert len(loaded_mobile.attributes) == len(mobile.attributes), "Attributes count mismatch"
+    assert len(loaded_mobile.attributes) == len(mobile.attributes), (
+        "Attributes count mismatch"
+    )
 
     # Verify owner was saved and loaded correctly
     assert loaded_mobile.owner is not None, "Owner is None"
-    assert hasattr(loaded_mobile.owner, 'mobile_id'), "Owner should have mobile_id"
-    assert loaded_mobile.owner.mobile_id == 999, f"Owner mobile_id mismatch: {loaded_mobile.owner.mobile_id}"
+    assert hasattr(loaded_mobile.owner, "mobile_id"), "Owner should have mobile_id"
+    assert loaded_mobile.owner.mobile_id == 999, (
+        f"Owner mobile_id mismatch: {loaded_mobile.owner.mobile_id}"
+    )
+
+    # Verify character attributes were saved and loaded correctly
+    char_attrs = [
+        AttributeType.STRENGTH,
+        AttributeType.LUCK,
+        AttributeType.CONSTITUTION,
+        AttributeType.DEXTERITY,
+        AttributeType.ARCANA,
+        AttributeType.OPERATIONS,
+    ]
+    for attr_type in char_attrs:
+        assert attr_type in loaded_mobile.attributes, (
+            f"Missing character attribute: {attr_type}"
+        )
+        assert (
+            loaded_mobile.attributes[attr_type].value
+            == mobile.attributes[attr_type].value
+        ), f"Character attribute value mismatch for {attr_type}"
+    print("  ✓ All character attributes verified")
 
     # Test update
     print("  Testing update...")
     loaded_mobile.mobile_type = MobileType.NPC
-    loaded_mobile.attributes[AttributeType.LOCAL_POSITION].value = ItemVector3(x=500.0, y=600.0, z=700.0)
+    loaded_mobile.attributes[AttributeType.LOCAL_POSITION].value = ItemVector3(
+        x=500.0, y=600.0, z=700.0
+    )
 
     update_results = db.save_mobile(database_name, loaded_mobile)
-    assert is_ok(update_results), f"Failed to update Mobile: {update_results[0].message}"
+    assert is_ok(update_results), (
+        f"Failed to update Mobile: {update_results[0].message}"
+    )
     print(f"  ✓ Updated: {update_results[0].message}")
 
     # Load again and verify updates
     load_result2, updated_mobile = db.load_mobile(database_name, loaded_mobile.id)
-    assert is_true(load_result2), f"Failed to load updated Mobile: {load_result2.message}"
+    assert is_true(load_result2), (
+        f"Failed to load updated Mobile: {load_result2.message}"
+    )
     assert updated_mobile.mobile_type == MobileType.NPC, "Updated mobile_type mismatch"
     print("  ✓ Update verified")
 
     # Test destroy
     print("  Testing destroy...")
     destroy_results = db.destroy_mobile(database_name, loaded_mobile.id)
-    assert is_ok(destroy_results), f"Failed to destroy Mobile: {destroy_results[0].message}"
+    assert is_ok(destroy_results), (
+        f"Failed to destroy Mobile: {destroy_results[0].message}"
+    )
     print(f"  ✓ Destroyed: {destroy_results[0].message}")
 
     # Verify load fails after destroy
     load_result3, destroyed_mobile = db.load_mobile(database_name, loaded_mobile.id)
     assert not is_true(load_result3), "Load should fail after destroy"
     assert destroyed_mobile is None, "Destroyed mobile should be None"
-    assert load_result3.error_code == GameError.DB_RECORD_NOT_FOUND, f"Expected DB_RECORD_NOT_FOUND, got {load_result3.error_code}"
+    assert load_result3.error_code == GameError.DB_RECORD_NOT_FOUND, (
+        f"Expected DB_RECORD_NOT_FOUND, got {load_result3.error_code}"
+    )
     print("  ✓ Destroy verified: load failed with DB_RECORD_NOT_FOUND")
 
     print("  ✓ All assertions passed for Mobile\n")

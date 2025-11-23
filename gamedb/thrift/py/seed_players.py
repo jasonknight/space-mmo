@@ -6,18 +6,66 @@ Creates 5 test players: under 13, under 18, under 30, under 75, and adult.
 
 import sys
 import hashlib
+import random
 from datetime import datetime
 
-sys.path.append('../gen-py')
+sys.path.append("../gen-py")
 
 from db import DB
 from common import is_ok, is_true
-from game.ttypes import Player
+from game.ttypes import (
+    Player,
+    Mobile,
+    MobileType,
+    Owner,
+    Attribute,
+    AttributeType,
+    AttributeValue,
+)
 
 
 def generate_security_token(password: str) -> str:
     """Generate a security token hash from a password."""
     return hashlib.sha256(password.encode()).hexdigest()
+
+
+def generate_character_attributes(owner_id: int) -> dict:
+    """
+    Generate random character attributes for a mobile.
+    Values are in range 0.001 to 0.05 for starting characters.
+
+    Args:
+        owner_id: The owner ID for the attributes
+
+    Returns:
+        Dictionary mapping AttributeType to Attribute
+    """
+    attributes = {}
+
+    # Define the character attribute types
+    character_attr_types = [
+        (AttributeType.STRENGTH, "strength"),
+        (AttributeType.LUCK, "luck"),
+        (AttributeType.CONSTITUTION, "constitution"),
+        (AttributeType.DEXTERITY, "dexterity"),
+        (AttributeType.ARCANA, "arcana"),
+        (AttributeType.OPERATIONS, "operations"),
+    ]
+
+    for attr_type, internal_name in character_attr_types:
+        # Generate random value between 0.001 and 0.05
+        value = random.uniform(0.001, 0.05)
+
+        attributes[attr_type] = Attribute(
+            id=None,
+            internal_name=internal_name,
+            visible=True,
+            value=value,
+            attribute_type=attr_type,
+            owner=owner_id,
+        )
+
+    return attributes
 
 
 def drop_and_recreate_player_tables(db: DB, database_name: str):
@@ -73,39 +121,39 @@ def create_test_players(db: DB, database_name: str) -> list[Player]:
     # Define test players with different age ranges
     test_players_data = [
         {
-            'full_name': 'Emma Young',
-            'what_we_call_you': 'Emma',
-            'email': 'emma.young@test.com',
-            'year_of_birth': current_year - 10,  # Under 13 (10 years old)
-            'password': 'password123',
+            "full_name": "Emma Young",
+            "what_we_call_you": "Emma",
+            "email": "emma.young@test.com",
+            "year_of_birth": current_year - 10,  # Under 13 (10 years old)
+            "password": "password123",
         },
         {
-            'full_name': 'Oliver Teen',
-            'what_we_call_you': 'Ollie',
-            'email': 'oliver.teen@test.com',
-            'year_of_birth': current_year - 15,  # Under 18 (15 years old)
-            'password': 'password123',
+            "full_name": "Oliver Teen",
+            "what_we_call_you": "Ollie",
+            "email": "oliver.teen@test.com",
+            "year_of_birth": current_year - 15,  # Under 18 (15 years old)
+            "password": "password123",
         },
         {
-            'full_name': 'Sophia Miller',
-            'what_we_call_you': 'Sophie',
-            'email': 'sophia.miller@test.com',
-            'year_of_birth': current_year - 25,  # Under 30 (25 years old)
-            'password': 'password123',
+            "full_name": "Sophia Miller",
+            "what_we_call_you": "Sophie",
+            "email": "sophia.miller@test.com",
+            "year_of_birth": current_year - 25,  # Under 30 (25 years old)
+            "password": "password123",
         },
         {
-            'full_name': 'James Anderson',
-            'what_we_call_you': 'Jim',
-            'email': 'james.anderson@test.com',
-            'year_of_birth': current_year - 45,  # Under 75 (45 years old)
-            'password': 'password123',
+            "full_name": "James Anderson",
+            "what_we_call_you": "Jim",
+            "email": "james.anderson@test.com",
+            "year_of_birth": current_year - 45,  # Under 75 (45 years old)
+            "password": "password123",
         },
         {
-            'full_name': 'Margaret Wilson',
-            'what_we_call_you': 'Maggie',
-            'email': 'margaret.wilson@test.com',
-            'year_of_birth': current_year - 68,  # Under 75 (68 years old)
-            'password': 'password123',
+            "full_name": "Margaret Wilson",
+            "what_we_call_you": "Maggie",
+            "email": "margaret.wilson@test.com",
+            "year_of_birth": current_year - 68,  # Under 75 (68 years old)
+            "password": "password123",
         },
     ]
 
@@ -113,27 +161,47 @@ def create_test_players(db: DB, database_name: str) -> list[Player]:
     created_players = []
 
     for i, player_data in enumerate(test_players_data, 1):
+        # Create mobile with character attributes
+        mobile_owner = Owner()
+        mobile_owner.player_id = None  # Will be set after player creation
+
+        # Generate random character attributes (will use player_id once created)
+        mobile_attributes = generate_character_attributes(0)  # Temporary owner
+
+        mobile = Mobile(
+            id=None,
+            mobile_type=MobileType.PLAYER,
+            attributes=mobile_attributes,
+            owner=mobile_owner,
+            what_we_call_you=player_data["what_we_call_you"],
+        )
+
         # Create Player object (over_13 will be set automatically in create_player)
         player = Player(
             id=None,
-            full_name=player_data['full_name'],
-            what_we_call_you=player_data['what_we_call_you'],
-            security_token=generate_security_token(player_data['password']),
+            full_name=player_data["full_name"],
+            what_we_call_you=player_data["what_we_call_you"],
+            security_token=generate_security_token(player_data["password"]),
             over_13=False,  # Will be automatically set based on year_of_birth
-            year_of_birth=player_data['year_of_birth'],
-            email=player_data['email'],
+            year_of_birth=player_data["year_of_birth"],
+            email=player_data["email"],
+            mobile=mobile,
         )
 
-        # Create the player
+        # Create the player (this will also create the mobile with attributes)
         results = db.create_player(database_name, player)
 
         if not is_ok(results):
             error_msg = results[0].message
             print(f"\n✗ Failed to create player '{player.full_name}'")
             print(f"  Error: {error_msg}")
-            raise Exception(f"Failed to create player '{player.full_name}': {error_msg}")
+            raise Exception(
+                f"Failed to create player '{player.full_name}': {error_msg}"
+            )
 
-        print(f"  [{i}/{len(test_players_data)}] ✓ Created: {player.full_name} (age={current_year - player.year_of_birth}, id={player.id})")
+        print(
+            f"  [{i}/{len(test_players_data)}] ✓ Created: {player.full_name} (age={current_year - player.year_of_birth}, id={player.id})"
+        )
         created_players.append(player)
 
     print(f"\n  ✓ Successfully created {len(created_players)} players")
@@ -153,7 +221,9 @@ def validate_players(db: DB, database_name: str, players: list[Player]):
 
         if not is_true(load_result):
             error_msg = load_result.message
-            print(f"\n✗ Failed to load player '{original_player.full_name}' (id={original_player.id})")
+            print(
+                f"\n✗ Failed to load player '{original_player.full_name}' (id={original_player.id})"
+            )
             print(f"  Error: {error_msg}")
             raise Exception(f"Failed to load player for validation: {error_msg}")
 
@@ -173,26 +243,63 @@ def validate_players(db: DB, database_name: str, players: list[Player]):
             )
 
         # Validate mobile was created
-        if not hasattr(loaded_player, 'mobile') or loaded_player.mobile is None:
+        if not hasattr(loaded_player, "mobile") or loaded_player.mobile is None:
             raise Exception(
                 f"Player validation failed: mobile not created for {loaded_player.full_name} (id={loaded_player.id})"
             )
 
         # Validate mobile has correct owner
-        if not hasattr(loaded_player.mobile, 'owner') or loaded_player.mobile.owner is None:
+        if (
+            not hasattr(loaded_player.mobile, "owner")
+            or loaded_player.mobile.owner is None
+        ):
             raise Exception(
                 f"Player validation failed: mobile owner not set for {loaded_player.full_name}"
             )
 
-        if not hasattr(loaded_player.mobile.owner, 'player_id') or loaded_player.mobile.owner.player_id != loaded_player.id:
+        if (
+            not hasattr(loaded_player.mobile.owner, "player_id")
+            or loaded_player.mobile.owner.player_id != loaded_player.id
+        ):
             raise Exception(
                 f"Player validation failed: mobile owner player_id mismatch for {loaded_player.full_name}"
+            )
+
+        # Validate mobile has character attributes
+        required_attrs = [
+            AttributeType.STRENGTH,
+            AttributeType.LUCK,
+            AttributeType.CONSTITUTION,
+            AttributeType.DEXTERITY,
+            AttributeType.ARCANA,
+            AttributeType.OPERATIONS,
+        ]
+
+        for attr_type in required_attrs:
+            if attr_type not in loaded_player.mobile.attributes:
+                raise Exception(
+                    f"Player validation failed: missing {attr_type} attribute for {loaded_player.full_name}"
+                )
+
+            # Verify attribute value is in expected range (0.001 to 0.05)
+            attr_value = loaded_player.mobile.attributes[attr_type].value
+            if attr_value < 0.001 or attr_value > 0.05:
+                raise Exception(
+                    f"Player validation failed: {attr_type} value {attr_value} out of range for {loaded_player.full_name}"
+                )
+
+        # Validate mobile name matches player name
+        if loaded_player.mobile.what_we_call_you != loaded_player.what_we_call_you:
+            raise Exception(
+                f"Player validation failed: mobile name mismatch for {loaded_player.full_name}. "
+                f"Expected '{loaded_player.what_we_call_you}', got '{loaded_player.mobile.what_we_call_you}'"
             )
 
         age = current_year - loaded_player.year_of_birth
         print(
             f"  [{i}/{len(players)}] ✓ Validated: {loaded_player.full_name} "
-            f"(age={age}, over_13={loaded_player.over_13}, mobile_id={loaded_player.mobile.id})"
+            f"(age={age}, over_13={loaded_player.over_13}, mobile_id={loaded_player.mobile.id}, "
+            f"attrs={len(loaded_player.mobile.attributes)})"
         )
 
     print(f"\n  ✓ All {len(players)} players validated successfully")
@@ -241,5 +348,5 @@ def main():
         db.disconnect()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
