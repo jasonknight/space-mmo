@@ -1,0 +1,1423 @@
+{
+    "items": [
+        {
+            "id": 1001,
+            "internal_name": "gold",
+            "attributes": {
+                "6": {
+                    "id": 1001,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1002,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1003,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 1.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 5,
+            "blueprint": {
+                "components": {
+                    "1002": {
+                        "ratio": 1.0,
+                        "item_id": 1002
+                    }
+                },
+                "bake_time_ms": 3000
+            }
+        },
+        {
+            "id": 1002,
+            "internal_name": "calaverite",
+            "attributes": {
+                "6": {
+                    "id": 1004,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1005,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1006,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1003,
+            "internal_name": "silver",
+            "attributes": {
+                "6": {
+                    "id": 1007,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1008,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1009,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 1.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 5,
+            "blueprint": {
+                "components": {
+                    "1004": {
+                        "ratio": 1.0,
+                        "item_id": 1004
+                    },
+                    "1005": {
+                        "ratio": 1.0,
+                        "item_id": 1005
+                    }
+                },
+                "bake_time_ms": 3000
+            }
+        },
+        {
+            "id": 1004,
+            "internal_name": "argentite",
+            "attributes": {
+                "6": {
+                    "id": 1010,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1011,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1012,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1005,
+            "internal_name": "proustite",
+            "attributes": {
+                "6": {
+                    "id": 1013,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1014,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1015,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1006,
+            "internal_name": "copper",
+            "attributes": {
+                "6": {
+                    "id": 1016,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1017,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1018,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 1.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 5,
+            "blueprint": {
+                "components": {
+                    "1007": {
+                        "ratio": 1.0,
+                        "item_id": 1007
+                    },
+                    "1008": {
+                        "ratio": 1.0,
+                        "item_id": 1008
+                    },
+                    "1009": {
+                        "ratio": 1.0,
+                        "item_id": 1009
+                    },
+                    "1010": {
+                        "ratio": 1.0,
+                        "item_id": 1010
+                    }
+                },
+                "bake_time_ms": 3000
+            }
+        },
+        {
+            "id": 1007,
+            "internal_name": "chacopyrite",
+            "attributes": {
+                "6": {
+                    "id": 1019,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1020,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1021,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1008,
+            "internal_name": "chalcocite",
+            "attributes": {
+                "6": {
+                    "id": 1022,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1023,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1024,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1009,
+            "internal_name": "bornite",
+            "attributes": {
+                "6": {
+                    "id": 1025,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1026,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1027,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1010,
+            "internal_name": "pyrite",
+            "attributes": {
+                "6": {
+                    "id": 1028,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1029,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1030,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1011,
+            "internal_name": "iron",
+            "attributes": {
+                "6": {
+                    "id": 1031,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1032,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1033,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 1.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 5,
+            "blueprint": {
+                "components": {
+                    "1012": {
+                        "ratio": 1.0,
+                        "item_id": 1012
+                    },
+                    "1013": {
+                        "ratio": 1.0,
+                        "item_id": 1013
+                    },
+                    "1014": {
+                        "ratio": 1.0,
+                        "item_id": 1014
+                    },
+                    "1015": {
+                        "ratio": 1.0,
+                        "item_id": 1015
+                    }
+                },
+                "bake_time_ms": 3000
+            }
+        },
+        {
+            "id": 1012,
+            "internal_name": "hematite",
+            "attributes": {
+                "6": {
+                    "id": 1034,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1035,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1036,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1013,
+            "internal_name": "magnetite",
+            "attributes": {
+                "6": {
+                    "id": 1037,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1038,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1039,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1014,
+            "internal_name": "goethite",
+            "attributes": {
+                "6": {
+                    "id": 1040,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1041,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1042,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1015,
+            "internal_name": "siderite",
+            "attributes": {
+                "6": {
+                    "id": 1043,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1044,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1045,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1016,
+            "internal_name": "manganese",
+            "attributes": {
+                "6": {
+                    "id": 1046,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1047,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1048,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 1.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 5,
+            "blueprint": {
+                "components": {
+                    "1017": {
+                        "ratio": 1.0,
+                        "item_id": 1017
+                    },
+                    "1018": {
+                        "ratio": 1.0,
+                        "item_id": 1018
+                    }
+                },
+                "bake_time_ms": 3000
+            }
+        },
+        {
+            "id": 1017,
+            "internal_name": "pyrolusite",
+            "attributes": {
+                "6": {
+                    "id": 1049,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1050,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1051,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1018,
+            "internal_name": "psilomelane",
+            "attributes": {
+                "6": {
+                    "id": 1052,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1053,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1054,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1019,
+            "internal_name": "aluminium",
+            "attributes": {
+                "6": {
+                    "id": 1055,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1056,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1057,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 1.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 5,
+            "blueprint": {
+                "components": {
+                    "1020": {
+                        "ratio": 1.0,
+                        "item_id": 1020
+                    },
+                    "1021": {
+                        "ratio": 1.0,
+                        "item_id": 1021
+                    },
+                    "1022": {
+                        "ratio": 1.0,
+                        "item_id": 1022
+                    },
+                    "1023": {
+                        "ratio": 1.0,
+                        "item_id": 1023
+                    }
+                },
+                "bake_time_ms": 3000
+            }
+        },
+        {
+            "id": 1020,
+            "internal_name": "bauxite",
+            "attributes": {
+                "6": {
+                    "id": 1058,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1059,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1060,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1021,
+            "internal_name": "gibbsite",
+            "attributes": {
+                "6": {
+                    "id": 1061,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1062,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1063,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1022,
+            "internal_name": "boehmite",
+            "attributes": {
+                "6": {
+                    "id": 1064,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1065,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1066,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1023,
+            "internal_name": "diaspore",
+            "attributes": {
+                "6": {
+                    "id": 1067,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1068,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1069,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1024,
+            "internal_name": "zinc",
+            "attributes": {
+                "6": {
+                    "id": 1070,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1071,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1072,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 1.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 5,
+            "blueprint": {
+                "components": {
+                    "1025": {
+                        "ratio": 1.0,
+                        "item_id": 1025
+                    },
+                    "1026": {
+                        "ratio": 1.0,
+                        "item_id": 1026
+                    }
+                },
+                "bake_time_ms": 3000
+            }
+        },
+        {
+            "id": 1025,
+            "internal_name": "sphalerite",
+            "attributes": {
+                "6": {
+                    "id": 1073,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1074,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1075,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1026,
+            "internal_name": "zincite",
+            "attributes": {
+                "6": {
+                    "id": 1076,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1077,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1078,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1027,
+            "internal_name": "lead",
+            "attributes": {
+                "6": {
+                    "id": 1079,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1080,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1081,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 1.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 5,
+            "blueprint": {
+                "components": {
+                    "1028": {
+                        "ratio": 1.0,
+                        "item_id": 1028
+                    },
+                    "1029": {
+                        "ratio": 1.0,
+                        "item_id": 1029
+                    }
+                },
+                "bake_time_ms": 3000
+            }
+        },
+        {
+            "id": 1028,
+            "internal_name": "galena",
+            "attributes": {
+                "6": {
+                    "id": 1082,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1083,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1084,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1029,
+            "internal_name": "cerussite",
+            "attributes": {
+                "6": {
+                    "id": 1085,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1086,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1087,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1030,
+            "internal_name": "nickel",
+            "attributes": {
+                "6": {
+                    "id": 1088,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1089,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1090,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 1.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 5,
+            "blueprint": {
+                "components": {
+                    "1031": {
+                        "ratio": 1.0,
+                        "item_id": 1031
+                    },
+                    "1032": {
+                        "ratio": 1.0,
+                        "item_id": 1032
+                    }
+                },
+                "bake_time_ms": 3000
+            }
+        },
+        {
+            "id": 1031,
+            "internal_name": "pentlandite",
+            "attributes": {
+                "6": {
+                    "id": 1091,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1092,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1093,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1032,
+            "internal_name": "garnierite",
+            "attributes": {
+                "6": {
+                    "id": 1094,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1095,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1096,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1033,
+            "internal_name": "chromium",
+            "attributes": {
+                "6": {
+                    "id": 1097,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1098,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1099,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 1.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 5,
+            "blueprint": {
+                "components": {
+                    "1034": {
+                        "ratio": 1.0,
+                        "item_id": 1034
+                    }
+                },
+                "bake_time_ms": 3000
+            }
+        },
+        {
+            "id": 1034,
+            "internal_name": "chromite",
+            "attributes": {
+                "6": {
+                    "id": 1100,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1101,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1102,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 2.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1035,
+            "internal_name": "carbon",
+            "attributes": {
+                "6": {
+                    "id": 1103,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1104,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1105,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 1.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 10000,
+            "item_type": 4
+        },
+        {
+            "id": 1036,
+            "internal_name": "steel",
+            "attributes": {
+                "6": {
+                    "id": 1106,
+                    "internal_name": "quantity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 6
+                },
+                "13": {
+                    "id": 1107,
+                    "internal_name": "purity",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 0.0
+                    },
+                    "attribute_type": 13
+                },
+                "14": {
+                    "id": 1108,
+                    "internal_name": "volume",
+                    "visible": 1,
+                    "value": {
+                        "double_value": 3.0
+                    },
+                    "attribute_type": 14
+                }
+            },
+            "max_stack_size": 100,
+            "item_type": 5,
+            "blueprint": {
+                "components": {
+                    "1011": {
+                        "ratio": 0.9,
+                        "item_id": 1011
+                    },
+                    "1035": {
+                        "ratio": 0.1,
+                        "item_id": 1035
+                    }
+                },
+                "bake_time_ms": 3000
+            }
+        }
+    ]
+}

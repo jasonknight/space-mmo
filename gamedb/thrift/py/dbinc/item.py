@@ -13,6 +13,8 @@ from game.ttypes import (
     Item,
     ItemBlueprint,
     ItemBlueprintComponent,
+    BackingTable,
+    Owner,
 )
 from game.constants import TABLE2STR
 
@@ -206,7 +208,21 @@ class ItemMixin:
                 asset_val = "NULL"
 
                 if attribute.value is not None:
-                    if isinstance(attribute.value, bool):
+                    # Handle AttributeValue union
+                    from game.ttypes import AttributeValue
+                    if isinstance(attribute.value, AttributeValue):
+                        if attribute.value.bool_value is not None:
+                            bool_val = str(attribute.value.bool_value)
+                        elif attribute.value.double_value is not None:
+                            double_val = str(attribute.value.double_value)
+                        elif attribute.value.vector3 is not None:
+                            vec3_x = str(attribute.value.vector3.x)
+                            vec3_y = str(attribute.value.vector3.y)
+                            vec3_z = str(attribute.value.vector3.z)
+                        elif attribute.value.asset_id is not None:
+                            asset_val = str(attribute.value.asset_id)
+                    # Handle primitive values for backwards compatibility
+                    elif isinstance(attribute.value, bool):
                         bool_val = str(attribute.value)
                     elif isinstance(attribute.value, (int, float)) and not isinstance(attribute.value, bool):
                         double_val = str(attribute.value)
@@ -421,7 +437,21 @@ class ItemMixin:
                     asset_val = "NULL"
 
                     if attribute.value is not None:
-                        if isinstance(attribute.value, bool):
+                        # Handle AttributeValue union
+                        from game.ttypes import AttributeValue
+                        if isinstance(attribute.value, AttributeValue):
+                            if attribute.value.bool_value is not None:
+                                bool_val = str(attribute.value.bool_value)
+                            elif attribute.value.double_value is not None:
+                                double_val = str(attribute.value.double_value)
+                            elif attribute.value.vector3 is not None:
+                                vec3_x = str(attribute.value.vector3.x)
+                                vec3_y = str(attribute.value.vector3.y)
+                                vec3_z = str(attribute.value.vector3.z)
+                            elif attribute.value.asset_id is not None:
+                                asset_val = str(attribute.value.asset_id)
+                        # Handle primitive values for backwards compatibility
+                        elif isinstance(attribute.value, bool):
                             bool_val = str(attribute.value)
                         elif isinstance(attribute.value, (int, float)) and not isinstance(attribute.value, bool):
                             double_val = str(attribute.value)
@@ -571,7 +601,7 @@ class ItemMixin:
                     value = row['asset_id']
 
                 owner = None
-                if not self.is_mobile_item():
+                if not self.is_mobile_item(item_table):
                     # Reconstruct Owner union for this attribute
                     cursor.execute(
                         f"SELECT * FROM {database}.{attribute_owners_table} WHERE attribute_id = %s;",
