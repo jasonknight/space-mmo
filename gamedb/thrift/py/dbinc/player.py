@@ -1,6 +1,7 @@
 """Player database operations."""
 import sys
 from typing import Optional, Tuple
+from datetime import datetime
 
 sys.path.append('../../gen-py')
 
@@ -53,6 +54,10 @@ class PlayerMixin:
         table: Optional[str] = None,
     ) -> list[GameResult]:
         try:
+            # Automatically set over_13 based on birth year
+            current_year = datetime.now().year
+            obj.over_13 = (current_year - obj.year_of_birth) >= 13
+
             with self.transaction() as cursor:
                 players_table = table if table else TABLE_PLAYERS
 
@@ -140,6 +145,10 @@ class PlayerMixin:
                         error_code=GameError.DB_INVALID_DATA,
                     ),
                 ]
+
+            # Automatically set over_13 based on birth year
+            current_year = datetime.now().year
+            obj.over_13 = (current_year - obj.year_of_birth) >= 13
 
             with self.transaction() as cursor:
                 players_table = table if table else TABLE_PLAYERS
