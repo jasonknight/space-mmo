@@ -132,7 +132,7 @@ var InventoryModule = (function() {
             url: '/api/inventories',
             method: 'GET',
             data: {
-                page: currentPage,
+                page: currentPage - 1,
                 per_page: inventoriesPerPage,
                 search: searchQuery,
             },

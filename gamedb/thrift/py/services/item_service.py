@@ -1,6 +1,7 @@
 import sys
-sys.path.append('../../gen-py')
-sys.path.append('..')
+
+sys.path.append("../../gen-py")
+sys.path.append("..")
 
 from typing import Optional
 import logging
@@ -8,7 +9,7 @@ import logging
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,9 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                 )
 
             create_data = request.data.create_item
-            logger.info(f"Creating item with internal_name={create_data.item.internal_name}")
+            logger.info(
+                f"Creating item with internal_name={create_data.item.internal_name}"
+            )
 
             results = self.db.create_item(
                 self.database,
@@ -96,7 +99,9 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                     response_data=response_data,
                 )
             else:
-                logger.warning(f"FAILURE: Could not create item - {results[0].message if results else 'unknown error'}")
+                logger.warning(
+                    f"FAILURE: Could not create item - {results[0].message if results else 'unknown error'}"
+                )
                 return ItemResponse(
                     results=results,
                     response_data=None,
@@ -138,10 +143,16 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
 
             # Determine table to use based on backing_table if provided
             table = None
-            if hasattr(load_data, 'backing_table') and load_data.backing_table is not None:
+            if (
+                hasattr(load_data, "backing_table")
+                and load_data.backing_table is not None
+            ):
                 from game.ttypes import TABLE2STR
+
                 table = TABLE2STR.get(load_data.backing_table)
-                logger.info(f"Using table={table} from backing_table={load_data.backing_table}")
+                logger.info(
+                    f"Using table={table} from backing_table={load_data.backing_table}"
+                )
 
             result, item = self.db.load_item(
                 self.database,
@@ -218,7 +229,9 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                     response_data=response_data,
                 )
             else:
-                logger.warning(f"FAILURE: Could not save item - {results[0].message if results else 'unknown error'}")
+                logger.warning(
+                    f"FAILURE: Could not save item - {results[0].message if results else 'unknown error'}"
+                )
                 return ItemResponse(
                     results=results,
                     response_data=None,
@@ -275,7 +288,9 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                     response_data=response_data,
                 )
             else:
-                logger.warning(f"FAILURE: Could not destroy item - {results[0].message if results else 'unknown error'}")
+                logger.warning(
+                    f"FAILURE: Could not destroy item - {results[0].message if results else 'unknown error'}"
+                )
                 return ItemResponse(
                     results=results,
                     response_data=None,
@@ -312,11 +327,15 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                 )
 
             list_data = request.data.list_item
-            page = list_data.page
+            page = max(0, list_data.page)
             results_per_page = list_data.results_per_page
-            search_string = list_data.search_string if hasattr(list_data, 'search_string') else None
+            search_string = (
+                list_data.search_string if hasattr(list_data, "search_string") else None
+            )
 
-            logger.info(f"Listing items: page={page}, results_per_page={results_per_page}, search_string={search_string}")
+            logger.info(
+                f"Listing items: page={page}, results_per_page={results_per_page}, search_string={search_string}"
+            )
 
             result, items, total_count = self.db.list_item(
                 self.database,
@@ -326,7 +345,9 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             )
 
             if items is not None:
-                logger.info(f"SUCCESS: Listed {len(items)} items (total: {total_count})")
+                logger.info(
+                    f"SUCCESS: Listed {len(items)} items (total: {total_count})"
+                )
                 response_data = ItemResponseData(
                     list_item=ListItemResponseData(
                         items=items,
@@ -376,9 +397,15 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
 
             autocomplete_data = request.data.autocomplete_item
             search_string = autocomplete_data.search_string
-            max_results = autocomplete_data.max_results if hasattr(autocomplete_data, 'max_results') else 10
+            max_results = (
+                autocomplete_data.max_results
+                if hasattr(autocomplete_data, "max_results")
+                else 10
+            )
 
-            logger.info(f"Autocomplete search: search_string={search_string}, max_results={max_results}")
+            logger.info(
+                f"Autocomplete search: search_string={search_string}, max_results={max_results}"
+            )
 
             # Use custom SQL query for lightweight autocomplete
             cursor = self.db.connection.cursor(dictionary=True)
@@ -393,14 +420,20 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             """
 
             search_pattern = f"%{search_string}%"
-            cursor.execute(query, (search_pattern, max_results,))
+            cursor.execute(
+                query,
+                (
+                    search_pattern,
+                    max_results,
+                ),
+            )
             rows = cursor.fetchall()
             cursor.close()
 
             results = [
                 ItemAutocompleteResult(
-                    id=row['id'],
-                    internal_name=row['internal_name'],
+                    id=row["id"],
+                    internal_name=row["internal_name"],
                 )
                 for row in rows
             ]
@@ -455,9 +488,11 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
 
             tree_data = request.data.load_with_blueprint_tree
             item_id = tree_data.item_id
-            max_depth = tree_data.max_depth if hasattr(tree_data, 'max_depth') else 10
+            max_depth = tree_data.max_depth if hasattr(tree_data, "max_depth") else 10
 
-            logger.info(f"Loading blueprint tree for item_id={item_id}, max_depth={max_depth}")
+            logger.info(
+                f"Loading blueprint tree for item_id={item_id}, max_depth={max_depth}"
+            )
 
             # Load the root item
             result, item = self.db.load_item(
@@ -482,7 +517,9 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                 max_depth=max_depth,
             )
 
-            logger.info(f"SUCCESS: Built blueprint tree for item_id={item_id}, total_bake_time={tree.total_bake_time_ms}ms")
+            logger.info(
+                f"SUCCESS: Built blueprint tree for item_id={item_id}, total_bake_time={tree.total_bake_time_ms}ms"
+            )
 
             response_data = ItemResponseData(
                 load_with_blueprint_tree=LoadItemWithBlueprintTreeResponseData(
@@ -501,8 +538,11 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             )
 
         except Exception as e:
-            logger.error(f"EXCEPTION in load_with_blueprint_tree: {type(e).__name__}: {str(e)}")
+            logger.error(
+                f"EXCEPTION in load_with_blueprint_tree: {type(e).__name__}: {str(e)}"
+            )
             import traceback
+
             traceback.print_exc()
             return ItemResponse(
                 results=[
@@ -534,7 +574,9 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
         Returns:
             BlueprintTreeNode with the item, blueprint, and recursive components
         """
-        logger.debug(f"Building tree node for item_id={item.id}, internal_name={item.internal_name}, depth={current_depth}")
+        logger.debug(
+            f"Building tree node for item_id={item.id}, internal_name={item.internal_name}, depth={current_depth}"
+        )
 
         # Initialize the tree node
         component_nodes = []
@@ -546,7 +588,9 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
         # Add this item's bake time if it has a blueprint
         if item.blueprint:
             total_bake_time = item.blueprint.bake_time_ms
-            logger.debug(f"Item has blueprint with bake_time={item.blueprint.bake_time_ms}ms")
+            logger.debug(
+                f"Item has blueprint with bake_time={item.blueprint.bake_time_ms}ms"
+            )
 
             # Check if we can recurse deeper
             if current_depth >= max_depth:
@@ -555,11 +599,15 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             elif item.blueprint.components:
                 # Process each component
                 for component_item_id, component in item.blueprint.components.items():
-                    logger.debug(f"Processing component: item_id={component_item_id}, ratio={component.ratio}")
+                    logger.debug(
+                        f"Processing component: item_id={component_item_id}, ratio={component.ratio}"
+                    )
 
                     # Check for cycles
                     if component_item_id in visited_items:
-                        logger.debug(f"Cycle detected: item_id={component_item_id} already visited")
+                        logger.debug(
+                            f"Cycle detected: item_id={component_item_id} already visited"
+                        )
                         cycle_detected = True
                         continue
 
@@ -590,9 +638,13 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                         # Add component's total bake time to our total
                         total_bake_time += component_node.total_bake_time_ms
                     else:
-                        logger.warning(f"Could not load component item_id={component_item_id}")
+                        logger.warning(
+                            f"Could not load component item_id={component_item_id}"
+                        )
 
-        logger.debug(f"Node for item_id={item.id}: total_bake_time={total_bake_time}ms, {len(component_nodes)} components")
+        logger.debug(
+            f"Node for item_id={item.id}: total_bake_time={total_bake_time}ms, {len(component_nodes)} components"
+        )
 
         return BlueprintTreeNode(
             item=item,

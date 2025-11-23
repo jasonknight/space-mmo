@@ -1,9 +1,10 @@
 """Player database operations."""
+
 import sys
 from typing import Optional, Tuple
 from datetime import datetime
 
-sys.path.append('../../gen-py')
+sys.path.append("../../gen-py")
 
 from game.ttypes import (
     GameResult,
@@ -125,7 +126,9 @@ class PlayerMixin:
             return [
                 GameResult(
                     status=StatusType.FAILURE,
-                    message=MSG_CREATE_FAILED.format(type="Player", database=database, error=str(e)),
+                    message=MSG_CREATE_FAILED.format(
+                        type="Player", database=database, error=str(e)
+                    ),
                     error_code=GameError.DB_INSERT_FAILED,
                 ),
             ]
@@ -174,9 +177,10 @@ class PlayerMixin:
                 )
 
                 # If mobile is present, save it
-                if hasattr(obj, 'mobile') and obj.mobile is not None:
+                if hasattr(obj, "mobile") and obj.mobile is not None:
                     mobile_results = self.save_mobile(database, obj.mobile)
                     from common import is_ok
+
                     if not is_ok(mobile_results):
                         return mobile_results
 
@@ -190,7 +194,9 @@ class PlayerMixin:
             return [
                 GameResult(
                     status=StatusType.FAILURE,
-                    message=MSG_UPDATE_FAILED.format(type="Player", id=obj.id, database=database, error=str(e)),
+                    message=MSG_UPDATE_FAILED.format(
+                        type="Player", id=obj.id, database=database, error=str(e)
+                    ),
                     error_code=GameError.DB_UPDATE_FAILED,
                 ),
             ]
@@ -215,20 +221,22 @@ class PlayerMixin:
                     return (
                         GameResult(
                             status=StatusType.FAILURE,
-                            message=MSG_NOT_FOUND.format(type="Player", id=player_id, database=database),
+                            message=MSG_NOT_FOUND.format(
+                                type="Player", id=player_id, database=database
+                            ),
                             error_code=GameError.DB_RECORD_NOT_FOUND,
                         ),
                         None,
                     )
 
                 player = Player(
-                    id=player_row['id'],
-                    full_name=player_row['full_name'],
-                    what_we_call_you=player_row['what_we_call_you'],
-                    security_token=player_row['security_token'],
-                    over_13=player_row['over_13'],
-                    year_of_birth=player_row['year_of_birth'],
-                    email=player_row['email'],
+                    id=player_row["id"],
+                    full_name=player_row["full_name"],
+                    what_we_call_you=player_row["what_we_call_you"],
+                    security_token=player_row["security_token"],
+                    over_13=player_row["over_13"],
+                    year_of_birth=player_row["year_of_birth"],
+                    email=player_row["email"],
                 )
 
                 # Load the associated mobile if it exists
@@ -239,9 +247,10 @@ class PlayerMixin:
                 mobile_row = cursor.fetchone()
 
                 if mobile_row:
-                    mobile_id = mobile_row['id']
+                    mobile_id = mobile_row["id"]
                     mobile_result, mobile = self.load_mobile(database, mobile_id)
                     from common import is_true
+
                     if is_true(mobile_result):
                         player.mobile = mobile
 
@@ -256,7 +265,9 @@ class PlayerMixin:
             return (
                 GameResult(
                     status=StatusType.FAILURE,
-                    message=MSG_LOAD_FAILED.format(type="Player", id=player_id, database=database, error=str(e)),
+                    message=MSG_LOAD_FAILED.format(
+                        type="Player", id=player_id, database=database, error=str(e)
+                    ),
                     error_code=GameError.DB_QUERY_FAILED,
                 ),
                 None,
@@ -308,7 +319,7 @@ class PlayerMixin:
 
                     # Delete attributes
                     if attr_ids:
-                        placeholders = ','.join(['%s'] * len(attr_ids))
+                        placeholders = ",".join(["%s"] * len(attr_ids))
                         cursor.execute(
                             f"DELETE FROM {database}.attributes WHERE id IN ({placeholders});",
                             tuple(attr_ids),
@@ -330,7 +341,9 @@ class PlayerMixin:
                     return [
                         GameResult(
                             status=StatusType.FAILURE,
-                            message=MSG_NOT_FOUND.format(type="Player", id=player_id, database=database),
+                            message=MSG_NOT_FOUND.format(
+                                type="Player", id=player_id, database=database
+                            ),
                             error_code=GameError.DB_RECORD_NOT_FOUND,
                         ),
                     ]
@@ -345,7 +358,9 @@ class PlayerMixin:
             return [
                 GameResult(
                     status=StatusType.FAILURE,
-                    message=MSG_DESTROY_FAILED.format(type="Player", id=player_id, database=database, error=str(e)),
+                    message=MSG_DESTROY_FAILED.format(
+                        type="Player", id=player_id, database=database, error=str(e)
+                    ),
                     error_code=GameError.DB_DELETE_FAILED,
                 ),
             ]
@@ -365,7 +380,7 @@ class PlayerMixin:
             database: Database name
             page: Page number (0-indexed)
             results_per_page: Number of results per page
-            search_string: Optional search string (searches full_name and what_we_call_you)
+            search_string: Optional search string (searches full_name, what_we_call_you, and email)
             table: Optional table name override
 
         Returns:
@@ -382,15 +397,15 @@ class PlayerMixin:
                 where_clause = ""
                 params = []
                 if search_string:
-                    where_clause = "WHERE (full_name LIKE %s OR what_we_call_you LIKE %s)"
+                    where_clause = "WHERE (full_name LIKE %s OR what_we_call_you LIKE %s OR email LIKE %s)"
                     search_pattern = f"%{search_string}%"
-                    params = [search_pattern, search_pattern]
+                    params = [search_pattern, search_pattern, search_pattern]
 
                 # Get total count
                 count_query = f"SELECT COUNT(*) as total FROM {database}.{players_table} {where_clause};"
                 cursor.execute(count_query, tuple(params))
                 count_row = cursor.fetchone()
-                total_count = count_row['total'] if count_row else 0
+                total_count = count_row["total"] if count_row else 0
 
                 # Get paginated results
                 query = f"SELECT * FROM {database}.{players_table} {where_clause} ORDER BY id LIMIT %s OFFSET %s;"
@@ -401,13 +416,13 @@ class PlayerMixin:
                 players = []
                 for row in player_rows:
                     player = Player(
-                        id=row['id'],
-                        full_name=row['full_name'],
-                        what_we_call_you=row['what_we_call_you'],
-                        security_token=row['security_token'],
-                        over_13=row['over_13'],
-                        year_of_birth=row['year_of_birth'],
-                        email=row['email'],
+                        id=row["id"],
+                        full_name=row["full_name"],
+                        what_we_call_you=row["what_we_call_you"],
+                        security_token=row["security_token"],
+                        over_13=row["over_13"],
+                        year_of_birth=row["year_of_birth"],
+                        email=row["email"],
                     )
                     players.append(player)
 

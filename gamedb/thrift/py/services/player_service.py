@@ -1,13 +1,14 @@
 import sys
-sys.path.append('../../gen-py')
-sys.path.append('..')
+
+sys.path.append("../../gen-py")
+sys.path.append("..")
 
 import logging
 
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -178,7 +179,9 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
                     response_data=response_data,
                 )
             else:
-                logger.warning(f"FAILURE: Could not create player - {results[0].message if results else 'unknown error'}")
+                logger.warning(
+                    f"FAILURE: Could not create player - {results[0].message if results else 'unknown error'}"
+                )
                 return PlayerResponse(
                     results=results,
                     response_data=None,
@@ -240,7 +243,9 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
                     response_data=response_data,
                 )
             else:
-                logger.warning(f"FAILURE: Could not save player - {results[0].message if results else 'unknown error'}")
+                logger.warning(
+                    f"FAILURE: Could not save player - {results[0].message if results else 'unknown error'}"
+                )
                 return PlayerResponse(
                     results=results,
                     response_data=None,
@@ -300,7 +305,9 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
                     response_data=response_data,
                 )
             else:
-                logger.warning(f"FAILURE: Could not delete player - {results[0].message if results else 'unknown error'}")
+                logger.warning(
+                    f"FAILURE: Could not delete player - {results[0].message if results else 'unknown error'}"
+                )
                 return PlayerResponse(
                     results=results,
                     response_data=None,
@@ -337,11 +344,15 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
                 )
 
             list_data = request.data.list_player
-            page = list_data.page
+            page = max(0, list_data.page)
             results_per_page = list_data.results_per_page
-            search_string = list_data.search_string if hasattr(list_data, 'search_string') else None
+            search_string = (
+                list_data.search_string if hasattr(list_data, "search_string") else None
+            )
 
-            logger.info(f"Listing players: page={page}, results_per_page={results_per_page}, search_string={search_string}")
+            logger.info(
+                f"Listing players: page={page}, results_per_page={results_per_page}, search_string={search_string}"
+            )
 
             result, players, total_count = self.db.list_player(
                 self.database,
@@ -351,7 +362,9 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
             )
 
             if players is not None:
-                logger.info(f"SUCCESS: Listed {len(players)} players (total: {total_count})")
+                logger.info(
+                    f"SUCCESS: Listed {len(players)} players (total: {total_count})"
+                )
                 response_data = PlayerResponseData(
                     list_player=ListPlayerResponseData(
                         players=players,

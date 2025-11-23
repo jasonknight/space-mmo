@@ -117,8 +117,11 @@ var App = (function() {
                 }
                 break;
             case 'players':
-                // TODO: Load players view
-                $('#content').html('<div class="alert alert-info">Player management coming soon...</div>');
+                if (typeof PlayerModule !== 'undefined') {
+                    PlayerModule.init();
+                } else {
+                    $('#content').html('<div class="alert alert-danger">Player module not loaded</div>');
+                }
                 break;
             default:
                 $('#content').html('<div class="alert alert-warning">Unknown view</div>');

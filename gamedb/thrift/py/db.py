@@ -1,8 +1,13 @@
 import mysql.connector
 from typing import Optional, Tuple
 from contextlib import contextmanager
+import logging
 import sys
-sys.path.append('../gen-py')
+
+sys.path.append("../gen-py")
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 from game.ttypes import (
     GameResult,
@@ -55,12 +60,13 @@ MSG_NOT_FOUND = "{type} id={id} not found in database={database}"
 # Utility Functions for Thrift Struct Introspection and SQL Generation
 # ============================================================================
 
+
 def get_struct_fields(obj) -> dict:
     """
     Get all field names and values from a thrift struct.
     Returns a dict of {field_name: value}.
     """
-    if not hasattr(obj, 'thrift_spec') or obj.thrift_spec is None:
+    if not hasattr(obj, "thrift_spec") or obj.thrift_spec is None:
         return {}
 
     fields = {}
@@ -85,37 +91,39 @@ def attribute_value_to_sql_fields(attribute: Attribute) -> dict:
     Returns a dict with keys: bool_value, double_value, vector3_x, vector3_y, vector3_z, asset_id
     """
     fields = {
-        'bool_value': None,
-        'double_value': None,
-        'vector3_x': None,
-        'vector3_y': None,
-        'vector3_z': None,
-        'asset_id': None,
+        "bool_value": None,
+        "double_value": None,
+        "vector3_x": None,
+        "vector3_y": None,
+        "vector3_z": None,
+        "asset_id": None,
     }
 
     if attribute.value is not None:
         if isinstance(attribute.value, bool):
-            fields['bool_value'] = attribute.value
-        elif isinstance(attribute.value, (int, float)) and not isinstance(attribute.value, bool):
-            fields['double_value'] = attribute.value
+            fields["bool_value"] = attribute.value
+        elif isinstance(attribute.value, (int, float)) and not isinstance(
+            attribute.value, bool
+        ):
+            fields["double_value"] = attribute.value
         elif isinstance(attribute.value, ItemVector3):
-            fields['vector3_x'] = attribute.value.x
-            fields['vector3_y'] = attribute.value.y
-            fields['vector3_z'] = attribute.value.z
+            fields["vector3_x"] = attribute.value.x
+            fields["vector3_y"] = attribute.value.y
+            fields["vector3_z"] = attribute.value.z
         elif isinstance(attribute.value, int):
-            fields['asset_id'] = attribute.value
+            fields["asset_id"] = attribute.value
 
     return fields
 
 
 # Type registry for dispatcher functions
 TYPE_REGISTRY = {
-    'Attribute': Attribute,
-    'Item': Item,
-    'ItemBlueprint': ItemBlueprint,
-    'Inventory': Inventory,
-    'Mobile': Mobile,
-    'Player': Player,
+    "Attribute": Attribute,
+    "Item": Item,
+    "ItemBlueprint": ItemBlueprint,
+    "Inventory": Inventory,
+    "Mobile": Mobile,
+    "Player": Player,
 }
 
 
@@ -124,24 +132,26 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         self.host = host
         self.user = user
         self.password = password
-        self.connection: Optional[
-            mysql.connector.connection.MySQLConnection
-        ] = None
+        self.connection: Optional[mysql.connector.connection.MySQLConnection] = None
 
     def connect(self):
         if not self.connection or not self.connection.is_connected():
+            logger.debug(f"Connecting to database: host={self.host}, user={self.user}")
             self.connection = mysql.connector.connect(
                 host=self.host,
                 user=self.user,
                 password=self.password,
-                auth_plugin='mysql_native_password',
+                auth_plugin="mysql_native_password",
                 ssl_disabled=True,
                 use_pure=True,
             )
+            logger.debug("Database connection established")
 
     def disconnect(self):
         if self.connection and self.connection.is_connected():
+            logger.debug("Disconnecting from database")
             self.connection.close()
+            logger.debug("Database connection closed")
 
     @contextmanager
     def transaction(self):
@@ -153,14 +163,20 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
             with self.transaction() as cursor:
                 cursor.execute(...)
         """
+        logger.debug("Starting transaction context")
         self.connect()
         cursor = self.connection.cursor()
         try:
             cursor.execute("START TRANSACTION;")
+            logger.debug("Transaction started")
             yield cursor
+            logger.debug("Committing transaction")
             self.connection.commit()
-        except Exception:
+            logger.debug("Transaction committed")
+        except Exception as e:
+            logger.error(f"Transaction failed: {type(e).__name__}: {str(e)}")
             if self.connection:
+                logger.debug("Rolling back transaction")
                 self.connection.rollback()
             raise
         finally:
@@ -173,14 +189,22 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         Context manager for database transactions with dictionary cursor.
         Automatically commits on success, rolls back on exception.
         """
+        logger.debug("Starting transaction_dict context")
         self.connect()
         cursor = self.connection.cursor(dictionary=True)
         try:
             cursor.execute("START TRANSACTION;")
+            logger.debug("Transaction started (dict cursor)")
             yield cursor
+            logger.debug("Committing transaction (dict cursor)")
             self.connection.commit()
-        except Exception:
+            logger.debug("Transaction committed (dict cursor)")
+        except Exception as e:
+            logger.error(
+                f"Transaction failed (dict cursor): {type(e).__name__}: {str(e)}"
+            )
             if self.connection:
+                logger.debug("Rolling back transaction (dict cursor)")
                 self.connection.rollback()
             raise
         finally:
@@ -242,7 +266,9 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         statements = []
 
         if drop:
-            statements.append(f"DROP TABLE IF EXISTS {database}.{attribute_owners_table};")
+            statements.append(
+                f"DROP TABLE IF EXISTS {database}.{attribute_owners_table};"
+            )
             statements.append(f"DROP TABLE IF EXISTS {database}.{attributes_table};")
 
         if truncate:
@@ -260,7 +286,9 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         if obj.value is not None:
             if isinstance(obj.value, bool):
                 bool_val = str(obj.value)
-            elif isinstance(obj.value, (int, float)) and not isinstance(obj.value, bool):
+            elif isinstance(obj.value, (int, float)) and not isinstance(
+                obj.value, bool
+            ):
                 double_val = str(obj.value)
             elif isinstance(obj.value, ItemVector3):
                 vec3_x = str(obj.value.x)
@@ -271,6 +299,7 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
 
         # Insert attribute
         from game.ttypes import AttributeType as AttrTypeEnum
+
         attr_type_name = AttrTypeEnum._VALUES_TO_NAMES[obj.attribute_type]
 
         statements.append(
@@ -289,13 +318,13 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         player_id = "NULL"
 
         if obj.owner:
-            if hasattr(obj.owner, 'mobile_id') and obj.owner.mobile_id is not None:
+            if hasattr(obj.owner, "mobile_id") and obj.owner.mobile_id is not None:
                 mobile_id = str(obj.owner.mobile_id)
-            elif hasattr(obj.owner, 'item_id') and obj.owner.item_id is not None:
+            elif hasattr(obj.owner, "item_id") and obj.owner.item_id is not None:
                 item_id = str(obj.owner.item_id)
-            elif hasattr(obj.owner, 'asset_id') and obj.owner.asset_id is not None:
+            elif hasattr(obj.owner, "asset_id") and obj.owner.asset_id is not None:
                 asset_id = str(obj.owner.asset_id)
-            elif hasattr(obj.owner, 'player_id') and obj.owner.player_id is not None:
+            elif hasattr(obj.owner, "player_id") and obj.owner.player_id is not None:
                 player_id = str(obj.owner.player_id)
 
         statements.append(
@@ -321,6 +350,7 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
 
                 # Get attribute type name
                 from game.ttypes import AttributeType as AttrTypeEnum
+
                 attr_type_name = AttrTypeEnum._VALUES_TO_NAMES[obj.attribute_type]
 
                 # Insert attribute with parameterized query
@@ -334,12 +364,12 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
                             obj.internal_name,
                             obj.visible,
                             attr_type_name,
-                            value_fields['bool_value'],
-                            value_fields['double_value'],
-                            value_fields['vector3_x'],
-                            value_fields['vector3_y'],
-                            value_fields['vector3_z'],
-                            value_fields['asset_id'],
+                            value_fields["bool_value"],
+                            value_fields["double_value"],
+                            value_fields["vector3_x"],
+                            value_fields["vector3_y"],
+                            value_fields["vector3_z"],
+                            value_fields["asset_id"],
                         ),
                     )
                     obj.id = cursor.lastrowid
@@ -354,12 +384,12 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
                             obj.internal_name,
                             obj.visible,
                             attr_type_name,
-                            value_fields['bool_value'],
-                            value_fields['double_value'],
-                            value_fields['vector3_x'],
-                            value_fields['vector3_y'],
-                            value_fields['vector3_z'],
-                            value_fields['asset_id'],
+                            value_fields["bool_value"],
+                            value_fields["double_value"],
+                            value_fields["vector3_x"],
+                            value_fields["vector3_y"],
+                            value_fields["vector3_z"],
+                            value_fields["asset_id"],
                         ),
                     )
 
@@ -370,13 +400,24 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
                     asset_id = None
                     player_id = None
 
-                    if hasattr(obj.owner, 'mobile_id') and obj.owner.mobile_id is not None:
+                    if (
+                        hasattr(obj.owner, "mobile_id")
+                        and obj.owner.mobile_id is not None
+                    ):
                         mobile_id = obj.owner.mobile_id
-                    elif hasattr(obj.owner, 'item_id') and obj.owner.item_id is not None:
+                    elif (
+                        hasattr(obj.owner, "item_id") and obj.owner.item_id is not None
+                    ):
                         item_id = obj.owner.item_id
-                    elif hasattr(obj.owner, 'asset_id') and obj.owner.asset_id is not None:
+                    elif (
+                        hasattr(obj.owner, "asset_id")
+                        and obj.owner.asset_id is not None
+                    ):
                         asset_id = obj.owner.asset_id
-                    elif hasattr(obj.owner, 'player_id') and obj.owner.player_id is not None:
+                    elif (
+                        hasattr(obj.owner, "player_id")
+                        and obj.owner.player_id is not None
+                    ):
                         player_id = obj.owner.player_id
 
                     cursor.execute(
@@ -396,7 +437,9 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
             return [
                 GameResult(
                     status=StatusType.FAILURE,
-                    message=MSG_CREATE_FAILED.format(type="Attribute", database=database, error=str(e)),
+                    message=MSG_CREATE_FAILED.format(
+                        type="Attribute", database=database, error=str(e)
+                    ),
                     error_code=GameError.DB_INSERT_FAILED,
                 ),
             ]
@@ -437,7 +480,9 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
             if obj.value is not None:
                 if isinstance(obj.value, bool):
                     bool_val = str(obj.value)
-                elif isinstance(obj.value, (int, float)) and not isinstance(obj.value, bool):
+                elif isinstance(obj.value, (int, float)) and not isinstance(
+                    obj.value, bool
+                ):
                     double_val = str(obj.value)
                 elif isinstance(obj.value, ItemVector3):
                     vec3_x = str(obj.value.x)
@@ -447,6 +492,7 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
                     asset_val = str(obj.value)
 
             from game.ttypes import AttributeType as AttrTypeEnum
+
             attr_type_name = AttrTypeEnum._VALUES_TO_NAMES[obj.attribute_type]
 
             # Update attribute
@@ -475,13 +521,15 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
             player_id = "NULL"
 
             if obj.owner:
-                if hasattr(obj.owner, 'mobile_id') and obj.owner.mobile_id is not None:
+                if hasattr(obj.owner, "mobile_id") and obj.owner.mobile_id is not None:
                     mobile_id = str(obj.owner.mobile_id)
-                elif hasattr(obj.owner, 'item_id') and obj.owner.item_id is not None:
+                elif hasattr(obj.owner, "item_id") and obj.owner.item_id is not None:
                     item_id = str(obj.owner.item_id)
-                elif hasattr(obj.owner, 'asset_id') and obj.owner.asset_id is not None:
+                elif hasattr(obj.owner, "asset_id") and obj.owner.asset_id is not None:
                     asset_id = str(obj.owner.asset_id)
-                elif hasattr(obj.owner, 'player_id') and obj.owner.player_id is not None:
+                elif (
+                    hasattr(obj.owner, "player_id") and obj.owner.player_id is not None
+                ):
                     player_id = str(obj.owner.player_id)
 
             cursor.execute(
@@ -547,18 +595,18 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
 
             # Reconstruct AttributeValue union
             value = None
-            if attr_row['bool_value'] is not None:
-                value = attr_row['bool_value']
-            elif attr_row['double_value'] is not None:
-                value = attr_row['double_value']
-            elif attr_row['vector3_x'] is not None:
+            if attr_row["bool_value"] is not None:
+                value = attr_row["bool_value"]
+            elif attr_row["double_value"] is not None:
+                value = attr_row["double_value"]
+            elif attr_row["vector3_x"] is not None:
                 value = ItemVector3(
-                    x=attr_row['vector3_x'],
-                    y=attr_row['vector3_y'],
-                    z=attr_row['vector3_z'],
+                    x=attr_row["vector3_x"],
+                    y=attr_row["vector3_y"],
+                    z=attr_row["vector3_z"],
                 )
-            elif attr_row['asset_id'] is not None:
-                value = attr_row['asset_id']
+            elif attr_row["asset_id"] is not None:
+                value = attr_row["asset_id"]
 
             # Load owner
             cursor.execute(
@@ -569,24 +617,25 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
 
             owner = None
             if owner_row:
-                if owner_row['mobile_id']:
-                    owner = owner_row['mobile_id']
-                elif owner_row['item_id']:
-                    owner = owner_row['item_id']
-                elif owner_row['asset_id']:
-                    owner = owner_row['asset_id']
-                elif owner_row['player_id']:
-                    owner = owner_row['player_id']
+                if owner_row["mobile_id"]:
+                    owner = owner_row["mobile_id"]
+                elif owner_row["item_id"]:
+                    owner = owner_row["item_id"]
+                elif owner_row["asset_id"]:
+                    owner = owner_row["asset_id"]
+                elif owner_row["player_id"]:
+                    owner = owner_row["player_id"]
 
             # Import AttributeType enum
             from game.ttypes import AttributeType
-            attr_type = AttributeType._NAMES_TO_VALUES[attr_row['attribute_type']]
+
+            attr_type = AttributeType._NAMES_TO_VALUES[attr_row["attribute_type"]]
 
             # Create Attribute object
             attribute = Attribute(
-                id=attr_row['id'],
-                internal_name=attr_row['internal_name'],
-                visible=attr_row['visible'],
+                id=attr_row["id"],
+                internal_name=attr_row["internal_name"],
+                visible=attr_row["visible"],
                 value=value,
                 attribute_type=attr_type,
                 owner=owner,
@@ -697,17 +746,22 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         based on object type.
         """
         type_name = get_struct_type_name(obj)
+        obj_id = getattr(obj, "id", None) if hasattr(obj, "id") else None
+        logger.info(
+            f"=== SAVE (dispatch): type={type_name}, id={obj_id}, database={database}"
+        )
 
         dispatch_map = {
-            'Attribute': self.save_attribute,
-            'Item': self.save_item,
-            'ItemBlueprint': self.save_item_blueprint,
-            'Inventory': self.save_inventory,
-            'Mobile': self.save_mobile,
-            'Player': self.save_player,
+            "Attribute": self.save_attribute,
+            "Item": self.save_item,
+            "ItemBlueprint": self.save_item_blueprint,
+            "Inventory": self.save_inventory,
+            "Mobile": self.save_mobile,
+            "Player": self.save_player,
         }
 
         if type_name not in dispatch_map:
+            logger.warning(f"Unknown type for save: {type_name}")
             return [
                 GameResult(
                     status=StatusType.FAILURE,
@@ -716,6 +770,7 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
                 ),
             ]
 
+        logger.debug(f"Dispatching to save_{type_name.lower()}")
         return dispatch_map[type_name](database, obj, table)
 
     def create(
@@ -729,14 +784,16 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         based on object type.
         """
         type_name = get_struct_type_name(obj)
+        obj_id = getattr(obj, 'id', None) if hasattr(obj, 'id') else None
+        logger.info(f"=== CREATE (dispatch): type={type_name}, id={obj_id}, database={database}")
 
         dispatch_map = {
-            'Attribute': self.create_attribute,
-            'Item': self.create_item,
-            'ItemBlueprint': self.create_item_blueprint,
-            'Inventory': self.create_inventory,
-            'Mobile': self.create_mobile,
-            'Player': self.create_player,
+            "Attribute": self.create_attribute,
+            "Item": self.create_item,
+            "ItemBlueprint": self.create_item_blueprint,
+            "Inventory": self.create_inventory,
+            "Mobile": self.create_mobile,
+            "Player": self.create_player,
         }
 
         if type_name not in dispatch_map:
@@ -761,14 +818,16 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         based on object type.
         """
         type_name = get_struct_type_name(obj)
+        obj_id = getattr(obj, 'id', None) if hasattr(obj, 'id') else None
+        logger.info(f"=== UPDATE (dispatch): type={type_name}, id={obj_id}, database={database}")
 
         dispatch_map = {
-            'Attribute': self.update_attribute,
-            'Item': self.update_item,
-            'ItemBlueprint': self.update_item_blueprint,
-            'Inventory': self.update_inventory,
-            'Mobile': self.update_mobile,
-            'Player': self.update_player,
+            "Attribute": self.update_attribute,
+            "Item": self.update_item,
+            "ItemBlueprint": self.update_item_blueprint,
+            "Inventory": self.update_inventory,
+            "Mobile": self.update_mobile,
+            "Player": self.update_player,
         }
 
         if type_name not in dispatch_map:
@@ -794,7 +853,8 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         Can accept either an object (will use its id) or an id with obj_type specified.
         """
         # If obj_or_id is an object, extract its type and id
-        if hasattr(obj_or_id, '__class__') and hasattr(obj_or_id, 'id'):
+        logger.info(f"=== DESTROY (dispatch): obj_or_id={obj_or_id}, obj_type={obj_type}, database={database}")
+        if hasattr(obj_or_id, "__class__") and hasattr(obj_or_id, "id"):
             type_name = get_struct_type_name(obj_or_id)
             obj_id = obj_or_id.id
         elif obj_type:
@@ -810,12 +870,12 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
             ]
 
         dispatch_map = {
-            'Attribute': self.destroy_attribute,
-            'Item': self.destroy_item,
-            'ItemBlueprint': self.destroy_item_blueprint,
-            'Inventory': self.destroy_inventory,
-            'Mobile': self.destroy_mobile,
-            'Player': self.destroy_player,
+            "Attribute": self.destroy_attribute,
+            "Item": self.destroy_item,
+            "ItemBlueprint": self.destroy_item_blueprint,
+            "Inventory": self.destroy_inventory,
+            "Mobile": self.destroy_mobile,
+            "Player": self.destroy_player,
         }
 
         if type_name not in dispatch_map:
@@ -841,12 +901,12 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         Requires obj_type to be specified (e.g., 'Item', 'Mobile', etc.).
         """
         dispatch_map = {
-            'Attribute': self.load_attribute,
-            'Item': self.load_item,
-            'ItemBlueprint': self.load_item_blueprint,
-            'Inventory': self.load_inventory,
-            'Mobile': self.load_mobile,
-            'Player': self.load_player,
+            "Attribute": self.load_attribute,
+            "Item": self.load_item,
+            "ItemBlueprint": self.load_item_blueprint,
+            "Inventory": self.load_inventory,
+            "Mobile": self.load_mobile,
+            "Player": self.load_player,
         }
 
         if obj_type not in dispatch_map:

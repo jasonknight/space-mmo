@@ -1,13 +1,14 @@
 import sys
-sys.path.append('../../gen-py')
-sys.path.append('..')
+
+sys.path.append("../../gen-py")
+sys.path.append("..")
 
 import logging
 
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -100,14 +101,18 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                 )
 
             # Cache miss - load from database
-            logger.debug(f"Cache miss, loading from DATABASE for inventory_id={inventory_id}")
+            logger.debug(
+                f"Cache miss, loading from DATABASE for inventory_id={inventory_id}"
+            )
             result, inventory = self.db.load_inventory(
                 self.database,
                 inventory_id,
             )
 
             if inventory:
-                logger.info(f"SUCCESS: Loaded inventory_id={inventory_id} from DATABASE")
+                logger.info(
+                    f"SUCCESS: Loaded inventory_id={inventory_id} from DATABASE"
+                )
                 # Store in cache for future requests
                 self.cache.put(inventory_id, inventory)
 
@@ -121,7 +126,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                     response_data=response_data,
                 )
             else:
-                logger.warning(f"FAILURE: Inventory_id={inventory_id} not found in database")
+                logger.warning(
+                    f"FAILURE: Inventory_id={inventory_id} not found in database"
+                )
                 return InventoryResponse(
                     results=[result],
                     response_data=None,
@@ -158,7 +165,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                 )
 
             create_data = request.data.create_inventory
-            logger.info(f"Creating inventory with max_entries={create_data.inventory.max_entries}, max_volume={create_data.inventory.max_volume}")
+            logger.info(
+                f"Creating inventory with max_entries={create_data.inventory.max_entries}, max_volume={create_data.inventory.max_volume}"
+            )
             logger.debug(f"Inventory has {len(create_data.inventory.entries)} entries")
 
             results = self.db.create_inventory(
@@ -167,7 +176,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             )
 
             if is_ok(results):
-                logger.info(f"SUCCESS: Created inventory with id={create_data.inventory.id}")
+                logger.info(
+                    f"SUCCESS: Created inventory with id={create_data.inventory.id}"
+                )
                 # Add to cache after successful creation
                 if create_data.inventory.id is not None:
                     self.cache.put(create_data.inventory.id, create_data.inventory)
@@ -182,7 +193,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                     response_data=response_data,
                 )
             else:
-                logger.warning(f"FAILURE: Could not create inventory - {results[0].message if results else 'unknown error'}")
+                logger.warning(
+                    f"FAILURE: Could not create inventory - {results[0].message if results else 'unknown error'}"
+                )
                 return InventoryResponse(
                     results=results,
                     response_data=None,
@@ -244,7 +257,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                     response_data=response_data,
                 )
             else:
-                logger.warning(f"FAILURE: Could not save inventory - {results[0].message if results else 'unknown error'}")
+                logger.warning(
+                    f"FAILURE: Could not save inventory - {results[0].message if results else 'unknown error'}"
+                )
                 return InventoryResponse(
                     results=results,
                     response_data=None,
@@ -282,7 +297,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
 
             split_data = request.data.split_stack
             inventory_id = split_data.inventory_id
-            logger.info(f"Splitting stack in inventory_id={inventory_id}, item_id={split_data.item_id}, quantity={split_data.quantity_to_split}")
+            logger.info(
+                f"Splitting stack in inventory_id={inventory_id}, item_id={split_data.item_id}, quantity={split_data.quantity_to_split}"
+            )
 
             # Check cache first
             logger.debug("Checking cache...")
@@ -291,7 +308,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
 
             if not inventory:
                 # Cache miss - load from database
-                logger.debug(f"Cache miss, loading from DATABASE for inventory_id={inventory_id}")
+                logger.debug(
+                    f"Cache miss, loading from DATABASE for inventory_id={inventory_id}"
+                )
                 result, inventory = self.db.load_inventory(
                     self.database,
                     inventory_id,
@@ -306,16 +325,22 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
 
             # Find the entry index that matches the item_id
             # inventory.split_stack expects entry_index, not item_id
-            logger.debug(f"Searching for item_id={split_data.item_id} in {len(inventory.entries)} entries")
+            logger.debug(
+                f"Searching for item_id={split_data.item_id} in {len(inventory.entries)} entries"
+            )
             entry_index = None
             for idx, entry in enumerate(inventory.entries):
                 if entry.item_id == split_data.item_id:
                     entry_index = idx
-                    logger.debug(f"Found item at entry_index={idx}, current quantity={entry.quantity}")
+                    logger.debug(
+                        f"Found item at entry_index={idx}, current quantity={entry.quantity}"
+                    )
                     break
 
             if entry_index is None:
-                logger.warning(f"Item_id={split_data.item_id} not found in inventory_id={inventory_id}")
+                logger.warning(
+                    f"Item_id={split_data.item_id} not found in inventory_id={inventory_id}"
+                )
                 return InventoryResponse(
                     results=[
                         GameResult(
@@ -328,7 +353,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                 )
 
             # Perform the split - pass entry_index, not item_id
-            logger.debug(f"Calling split_stack() with entry_index={entry_index}, quantity={split_data.quantity_to_split}")
+            logger.debug(
+                f"Calling split_stack() with entry_index={entry_index}, quantity={split_data.quantity_to_split}"
+            )
             split_results = split_stack(
                 inventory,
                 entry_index,
@@ -336,13 +363,17 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             )
 
             if not is_ok(split_results):
-                logger.warning(f"Split operation failed: {split_results[0].message if split_results else 'unknown'}")
+                logger.warning(
+                    f"Split operation failed: {split_results[0].message if split_results else 'unknown'}"
+                )
                 return InventoryResponse(
                     results=split_results,
                     response_data=None,
                 )
 
-            logger.debug(f"Split successful, now inventory has {len(inventory.entries)} entries")
+            logger.debug(
+                f"Split successful, now inventory has {len(inventory.entries)} entries"
+            )
 
             # Save the updated inventory to database
             logger.debug("Saving updated inventory to database...")
@@ -352,7 +383,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             )
 
             if is_ok(save_results):
-                logger.info(f"SUCCESS: Split stack completed for inventory_id={inventory_id}")
+                logger.info(
+                    f"SUCCESS: Split stack completed for inventory_id={inventory_id}"
+                )
                 # Update cache with modified inventory
                 self.cache.put(inventory_id, inventory)
 
@@ -367,7 +400,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                     response_data=response_data,
                 )
             else:
-                logger.error(f"Failed to save inventory after split: {save_results[0].message if save_results else 'unknown'}")
+                logger.error(
+                    f"Failed to save inventory after split: {save_results[0].message if save_results else 'unknown'}"
+                )
                 return InventoryResponse(
                     results=save_results,
                     response_data=None,
@@ -406,7 +441,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             transfer_data = request.data.transfer_item
             source_id = transfer_data.source_inventory_id
             dest_id = transfer_data.destination_inventory_id
-            logger.info(f"Transferring item_id={transfer_data.item_id}, quantity={transfer_data.quantity} from inventory_id={source_id} to inventory_id={dest_id}")
+            logger.info(
+                f"Transferring item_id={transfer_data.item_id}, quantity={transfer_data.quantity} from inventory_id={source_id} to inventory_id={dest_id}"
+            )
 
             # Load the item from database - inventory.transfer_item needs Item object, not item_id
             logger.debug(f"Loading item_id={transfer_data.item_id} from database...")
@@ -457,8 +494,12 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                     )
 
             # Perform the transfer - pass Item object, not item_id
-            logger.debug(f"Calling transfer_item() with quantity={transfer_data.quantity}")
-            logger.debug(f"Source has {len(source_inv.entries)} entries, destination has {len(dest_inv.entries)} entries")
+            logger.debug(
+                f"Calling transfer_item() with quantity={transfer_data.quantity}"
+            )
+            logger.debug(
+                f"Source has {len(source_inv.entries)} entries, destination has {len(dest_inv.entries)} entries"
+            )
             transfer_results = transfer_item(
                 source_inv,
                 dest_inv,
@@ -467,13 +508,17 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             )
 
             if not is_ok(transfer_results):
-                logger.warning(f"Transfer failed: {transfer_results[0].message if transfer_results else 'unknown'}")
+                logger.warning(
+                    f"Transfer failed: {transfer_results[0].message if transfer_results else 'unknown'}"
+                )
                 return InventoryResponse(
                     results=transfer_results,
                     response_data=None,
                 )
 
-            logger.debug(f"Transfer successful. Source now has {len(source_inv.entries)} entries, destination has {len(dest_inv.entries)} entries")
+            logger.debug(
+                f"Transfer successful. Source now has {len(source_inv.entries)} entries, destination has {len(dest_inv.entries)} entries"
+            )
 
             # Save both inventories to database
             logger.debug("Saving both inventories to database...")
@@ -487,7 +532,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             )
 
             if is_ok(save_results1) and is_ok(save_results2):
-                logger.info(f"SUCCESS: Transfer completed from inventory_id={source_id} to inventory_id={dest_id}")
+                logger.info(
+                    f"SUCCESS: Transfer completed from inventory_id={source_id} to inventory_id={dest_id}"
+                )
                 # Update both inventories in cache
                 self.cache.put(source_id, source_inv)
                 self.cache.put(dest_id, dest_inv)
@@ -540,11 +587,15 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                 )
 
             list_data = request.data.list_inventory
-            page = list_data.page
+            page = max(0, list_data.page)
             results_per_page = list_data.results_per_page
-            search_string = list_data.search_string if hasattr(list_data, 'search_string') else None
+            search_string = (
+                list_data.search_string if hasattr(list_data, "search_string") else None
+            )
 
-            logger.info(f"Listing inventories: page={page}, results_per_page={results_per_page}, search_string={search_string}")
+            logger.info(
+                f"Listing inventories: page={page}, results_per_page={results_per_page}, search_string={search_string}"
+            )
 
             result, inventories, total_count = self.db.list_inventory(
                 self.database,
@@ -554,7 +605,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             )
 
             if inventories is not None:
-                logger.info(f"SUCCESS: Listed {len(inventories)} inventories (total: {total_count})")
+                logger.info(
+                    f"SUCCESS: Listed {len(inventories)} inventories (total: {total_count})"
+                )
                 response_data = InventoryResponseData(
                     list_inventory=ListInventoryResponseData(
                         inventories=inventories,
@@ -566,7 +619,9 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                     response_data=response_data,
                 )
             else:
-                logger.warning(f"FAILURE: Could not list inventories - {result.message}")
+                logger.warning(
+                    f"FAILURE: Could not list inventories - {result.message}"
+                )
                 return InventoryResponse(
                     results=[result],
                     response_data=None,

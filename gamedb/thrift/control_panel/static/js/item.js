@@ -133,7 +133,7 @@ var ItemModule = (function() {
             url: '/api/items',
             method: 'GET',
             data: {
-                page: currentPage,
+                page: currentPage - 1,
                 per_page: itemsPerPage,
                 search: searchQuery,
             },
