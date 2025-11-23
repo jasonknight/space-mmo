@@ -963,6 +963,34 @@ var ItemModule = (function() {
     // ========================================================================
 
     /**
+     * Format a number with thousand separators
+     * @param {Number} num - The number to format
+     * @returns {String} Formatted number string (e.g., "1,234.56")
+     */
+    function formatNumber(num) {
+        if (num === null || num === undefined) return 'N/A';
+
+        // Handle whole numbers vs decimals
+        let parts = num.toString().split('.');
+        let intPart = parts[0];
+        let decPart = parts.length > 1 ? parts[1] : null;
+
+        // Add thousand separators to integer part
+        intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+        // Reconstruct with decimal part if it exists
+        if (decPart !== null) {
+            // Limit to 2 decimal places if it's not already
+            if (decPart.length > 2) {
+                decPart = parseFloat('0.' + decPart).toFixed(2).split('.')[1];
+            }
+            return intPart + '.' + decPart;
+        }
+
+        return intPart;
+    }
+
+    /**
      * Load an item's name by ID
      */
     function loadItemName(itemId, callback) {
@@ -1125,7 +1153,7 @@ var ItemModule = (function() {
             `;
         }
 
-        // Blueprint tree section
+        // Blueprint tree section with tabs
         if (tree.blueprint) {
             let rootBakeTime = tree.blueprint.bake_time_ms;
             let totalBakeTime = tree.total_bake_time_ms;
@@ -1133,7 +1161,7 @@ var ItemModule = (function() {
             html += `
                 <div class="card mb-3">
                     <div class="card-header">
-                        <h5>Blueprint Tree</h5>
+                        <h5>Blueprint Information</h5>
                         <p class="mb-0 text-muted">
                             <strong>Bake Time:</strong> ${rootBakeTime}ms |
                             <strong>Total Bake Time:</strong> ${totalBakeTime}ms
@@ -1141,7 +1169,38 @@ var ItemModule = (function() {
                         </p>
                     </div>
                     <div class="card-body">
-                        ${renderBlueprintTree(tree, 0)}
+                        <!-- Nav tabs -->
+                        <ul class="nav nav-tabs" id="blueprintTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="tree-tab" data-bs-toggle="tab" data-bs-target="#tree-pane" type="button" role="tab" aria-controls="tree-pane" aria-selected="true">
+                                    <i class="bi bi-diagram-3"></i> Blueprint Tree
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="materials-tab" data-bs-toggle="tab" data-bs-target="#materials-pane" type="button" role="tab" aria-controls="materials-pane" aria-selected="false">
+                                    <i class="bi bi-list-check"></i> Materials List
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Tab content -->
+                        <div class="tab-content pt-3" id="blueprintTabContent">
+                            <!-- Blueprint Tree Tab -->
+                            <div class="tab-pane fade show active" id="tree-pane" role="tabpanel" aria-labelledby="tree-tab">
+                                ${renderBlueprintTree(tree, 0)}
+                            </div>
+
+                            <!-- Materials List Tab -->
+                            <div class="tab-pane fade" id="materials-pane" role="tabpanel" aria-labelledby="materials-tab">
+                                <div class="mb-3">
+                                    <label for="quantity-input" class="form-label">Quantity to Make:</label>
+                                    <input type="number" class="form-control" id="quantity-input" value="1" min="1" step="1" style="max-width: 200px;">
+                                </div>
+                                <div id="materials-table-container">
+                                    <!-- Materials table will be rendered here -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1154,6 +1213,24 @@ var ItemModule = (function() {
         }
 
         $('#content').html(html);
+
+        // Store tree for materials calculation
+        if (tree.blueprint) {
+            $('#content').data('blueprintTree', tree);
+
+            // Initial materials list render
+            renderMaterialsList(tree, 1);
+
+            // Set up quantity input handler
+            $('#quantity-input').on('input', function() {
+                let quantity = parseFloat($(this).val()) || 1;
+                if (quantity < 1) {
+                    quantity = 1;
+                    $(this).val(1);
+                }
+                renderMaterialsList(tree, quantity);
+            });
+        }
 
         // Set up back button handler
         $('#back-to-list-btn').on('click', function() {
@@ -1224,6 +1301,220 @@ var ItemModule = (function() {
         }
 
         return html;
+    }
+
+    /**
+     * Calculate materials needed from a blueprint tree
+     * @param {Object} node - The current tree node
+     * @param {Number} multiplier - The quantity multiplier from parent nodes
+     * @param {Object} materials - Map of item_id -> {item_id, internal_name, item_type, quantity}
+     */
+    function calculateMaterialsFromTree(node, multiplier, materials) {
+        // If this node has components
+        if (node.component_nodes && node.component_nodes.length > 0) {
+            for (let i = 0; i < node.component_nodes.length; i++) {
+                let componentNode = node.component_nodes[i];
+                let ratio = node.component_ratios[i];
+
+                // Calculate how many of this component we need
+                // ratio is "parts of component per parent", so 1.0/ratio gives us units needed
+                let componentMultiplier = multiplier * (1.0 / ratio);
+
+                // Add to materials map
+                let itemId = componentNode.item.id;
+                if (!materials[itemId]) {
+                    materials[itemId] = {
+                        item_id: itemId,
+                        internal_name: componentNode.item.internal_name,
+                        item_type: componentNode.item.item_type,
+                        quantity: 0,
+                    };
+                }
+                materials[itemId].quantity += componentMultiplier;
+
+                // Recurse into this component's blueprint
+                calculateMaterialsFromTree(componentNode, componentMultiplier, materials);
+            }
+        }
+    }
+
+    /**
+     * Render the materials list table
+     * @param {Object} tree - The blueprint tree
+     * @param {Number} quantity - The quantity to make
+     */
+    function renderMaterialsList(tree, quantity) {
+        // Calculate materials
+        let materials = {};
+        calculateMaterialsFromTree(tree, quantity, materials);
+
+        // Convert to array
+        let materialsList = Object.values(materials);
+
+        // Get current sort state (or default to name ascending)
+        let sortColumn = $('#materials-table-container').data('sortColumn') || 'internal_name';
+        let sortAsc = $('#materials-table-container').data('sortAsc');
+        if (sortAsc === undefined) sortAsc = true;
+
+        // Get current filter
+        let filterValue = $('#materials-name-filter').val() || '';
+
+        // Render table
+        let html = '';
+
+        if (materialsList.length === 0) {
+            html = `
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> This item has no components.
+                </div>
+            `;
+        } else {
+            // Add filter input
+            html += `
+                <div class="mb-3">
+                    <label for="materials-name-filter" class="form-label">Filter by Name:</label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="materials-name-filter"
+                        placeholder="Type to filter..."
+                        value="${App.escapeHtml(filterValue)}"
+                        style="max-width: 300px;"
+                    >
+                </div>
+            `;
+
+            // Sort materials
+            materialsList.sort((a, b) => {
+                let valA, valB;
+
+                if (sortColumn === 'item_id') {
+                    valA = a.item_id;
+                    valB = b.item_id;
+                } else if (sortColumn === 'internal_name') {
+                    valA = a.internal_name.toLowerCase();
+                    valB = b.internal_name.toLowerCase();
+                    return sortAsc
+                        ? valA.localeCompare(valB)
+                        : valB.localeCompare(valA);
+                } else if (sortColumn === 'item_type') {
+                    valA = App.getEnumName('ItemType', a.item_type);
+                    valB = App.getEnumName('ItemType', b.item_type);
+                    return sortAsc
+                        ? valA.localeCompare(valB)
+                        : valB.localeCompare(valA);
+                } else if (sortColumn === 'quantity') {
+                    valA = a.quantity;
+                    valB = b.quantity;
+                }
+
+                if (sortAsc) {
+                    return valA < valB ? -1 : (valA > valB ? 1 : 0);
+                } else {
+                    return valA > valB ? -1 : (valA < valB ? 1 : 0);
+                }
+            });
+
+            // Filter materials by name
+            if (filterValue) {
+                let filterLower = filterValue.toLowerCase();
+                materialsList = materialsList.filter(m =>
+                    m.internal_name.toLowerCase().includes(filterLower)
+                );
+            }
+
+            // Helper function to render sort indicator
+            function getSortIcon(column) {
+                if (sortColumn !== column) {
+                    return '<i class="bi bi-arrow-down-up text-muted"></i>';
+                }
+                return sortAsc
+                    ? '<i class="bi bi-arrow-up"></i>'
+                    : '<i class="bi bi-arrow-down"></i>';
+            }
+
+            html += `
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover" id="materials-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-column="item_id" style="cursor: pointer;">
+                                    Item ID ${getSortIcon('item_id')}
+                                </th>
+                                <th class="sortable" data-column="internal_name" style="cursor: pointer;">
+                                    Internal Name ${getSortIcon('internal_name')}
+                                </th>
+                                <th class="sortable" data-column="item_type" style="cursor: pointer;">
+                                    Item Type ${getSortIcon('item_type')}
+                                </th>
+                                <th class="sortable" data-column="quantity" style="cursor: pointer;">
+                                    Quantity Needed ${getSortIcon('quantity')}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            for (let material of materialsList) {
+                let itemType = App.getEnumName('ItemType', material.item_type);
+
+                // Format quantity with thousand separators
+                let qtyDisplay;
+                if (material.quantity % 1 === 0) {
+                    qtyDisplay = formatNumber(material.quantity);
+                } else {
+                    qtyDisplay = formatNumber(parseFloat(material.quantity.toFixed(2)));
+                }
+
+                html += `
+                    <tr>
+                        <td>${formatNumber(material.item_id)}</td>
+                        <td><strong>${App.escapeHtml(material.internal_name)}</strong></td>
+                        <td><span class="badge bg-secondary">${itemType}</span></td>
+                        <td>${qtyDisplay}</td>
+                    </tr>
+                `;
+            }
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            // Show count
+            html += `
+                <p class="text-muted">
+                    Showing ${materialsList.length} material${materialsList.length !== 1 ? 's' : ''}
+                    ${filterValue ? ' (filtered)' : ''}
+                </p>
+            `;
+        }
+
+        $('#materials-table-container').html(html);
+
+        // Set up filter handler
+        $('#materials-name-filter').on('input', function() {
+            renderMaterialsList(tree, quantity);
+        });
+
+        // Set up sort handlers
+        $('.sortable').on('click', function() {
+            let column = $(this).data('column');
+            let currentSort = $('#materials-table-container').data('sortColumn');
+            let currentAsc = $('#materials-table-container').data('sortAsc');
+
+            // Toggle sort direction if clicking the same column
+            if (currentSort === column) {
+                $('#materials-table-container').data('sortAsc', !currentAsc);
+            } else {
+                // Default to ascending for new column
+                $('#materials-table-container').data('sortColumn', column);
+                $('#materials-table-container').data('sortAsc', true);
+            }
+
+            renderMaterialsList(tree, quantity);
+        });
     }
 
     /**
