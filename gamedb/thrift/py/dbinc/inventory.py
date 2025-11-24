@@ -49,6 +49,7 @@ class InventoryMixin:
                 item_id BIGINT NOT NULL,
                 quantity DOUBLE NOT NULL,
                 is_max_stacked BOOLEAN DEFAULT FALSE,
+                mobile_item_id BIGINT NULL,
                 FOREIGN KEY (inventory_id) REFERENCES {database}.inventories(id)
             );""",
         ]
@@ -160,10 +161,15 @@ class InventoryMixin:
         if obj.entries:
             for entry in obj.entries:
                 is_max_stacked = 1 if entry.is_max_stacked else 0
+                mobile_item_id_val = (
+                    entry.mobile_item_id
+                    if hasattr(entry, "mobile_item_id") and entry.mobile_item_id
+                    else "NULL"
+                )
                 statements.append(
                     f"INSERT INTO {database}.{inventory_entries_table} "
-                    f"(inventory_id, item_id, quantity, is_max_stacked) "
-                    f"VALUES ({{inventory_id}}, {entry.item_id}, {entry.quantity}, {is_max_stacked});"
+                    f"(inventory_id, item_id, quantity, is_max_stacked, mobile_item_id) "
+                    f"VALUES ({{inventory_id}}, {entry.item_id}, {entry.quantity}, {is_max_stacked}, {mobile_item_id_val});"
                 )
 
         # Insert inventory owner (one-to-one)
@@ -368,10 +374,15 @@ class InventoryMixin:
                 logger.debug(f"Inserting {len(obj.entries)} new entries")
                 for entry in obj.entries:
                     is_max_stacked = 1 if entry.is_max_stacked else 0
+                    mobile_item_id_val = (
+                        entry.mobile_item_id
+                        if hasattr(entry, "mobile_item_id") and entry.mobile_item_id
+                        else "NULL"
+                    )
                     cursor.execute(
                         f"INSERT INTO {database}.{inventory_entries_table} "
-                        f"(inventory_id, item_id, quantity, is_max_stacked) "
-                        f"VALUES ({obj.id}, {entry.item_id}, {entry.quantity}, {is_max_stacked});"
+                        f"(inventory_id, item_id, quantity, is_max_stacked, mobile_item_id) "
+                        f"VALUES ({obj.id}, {entry.item_id}, {entry.quantity}, {is_max_stacked}, {mobile_item_id_val});"
                     )
 
             # Update owner (delete and re-insert)
@@ -469,6 +480,7 @@ class InventoryMixin:
                     item_id=row["item_id"],
                     quantity=row["quantity"],
                     is_max_stacked=row["is_max_stacked"],
+                    mobile_item_id=row.get("mobile_item_id"),
                 )
                 entries.append(entry)
 
@@ -690,6 +702,7 @@ class InventoryMixin:
                         item_id=entry_row["item_id"],
                         quantity=entry_row["quantity"],
                         is_max_stacked=entry_row["is_max_stacked"],
+                        mobile_item_id=entry_row.get("mobile_item_id"),
                     )
                     entries.append(entry)
 
