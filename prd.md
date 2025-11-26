@@ -23,6 +23,8 @@ The AI should adapt its questions based on the prompt, but here are some common 
 8. Design/UI: "Are there any existing design mockups or UI guidelines to follow?" or "Can you describe the desired look and feel?"
 9. Edge Cases: "Are there any potential edge cases or error conditions we should consider?"
 
+ONCE YOU HAVE FORMULATED YOUR QUESTIONS, ASK THEM ONE BY ONE. 
+
 # PRD Structure
 
 The generated PRD should include the following sections:
@@ -52,3 +54,9 @@ Assume the primary reader of the PRD is a junior developer. Therefore, requireme
 1. Do NOT start implementing the PRD
 2. Make sure to ask the user clarifying questions
 3. Take the user's answers to the clarifying questions and improve the PRD
+
+# Next Steps
+
+***IMPORTANT***
+
+After generating and saving the PRD Ask the user if they'd like to continue, if they answer "y" or "yes", load `/vagrant/tasks.md` for context and begin generating tasks for the PRD you just created.

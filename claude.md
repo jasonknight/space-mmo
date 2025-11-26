@@ -1,5 +1,9 @@
 Consider this the only claude.md you can import. Do not import any claude.md higher than this file. If you have imported a higher claude.md, clear it from your context.
 
+# When asking questions
+
+ALWAYS ASK QUESTIONS ONE BY ONE. 
+
 When writing code, if the function is small, or the names of things seem common, or likely to be obvious. Don't add a comment.
 
 For instance:

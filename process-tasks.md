@@ -35,3 +35,7 @@ When working with task lists, the AI must:
 4. Keep "Relevant Files" accurate and up to date.
 5. Before starting work, check which sub‑task is next.
 6. After implementing a sub‑task, update the file and then pause for user approval.
+
+# Next Steps
+
+When complete, look in the working directory to see if there is a README.md, if so, load `/vagrant/gen-documents.md` and proceed to updating the documentation for the PRD.
