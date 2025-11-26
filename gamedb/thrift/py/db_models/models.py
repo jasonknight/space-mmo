@@ -37,7 +37,7 @@ class AttributeOwner:
           PRIMARY KEY (`id`),
           KEY `attribute_id` (`attribute_id`),
           CONSTRAINT `attribute_owners_ibfk_1` FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=461 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=474 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -330,6 +330,7 @@ class AttributeOwner:
 
 
 
+
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
         Save the record to the database with transaction support and cascading saves.
@@ -615,7 +616,7 @@ class Attribute:
           `vector3_z` double DEFAULT NULL,
           `asset_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=460 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=473 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -771,6 +772,115 @@ class Attribute:
         return iter(results) if lazy else results
 
 
+    def from_thrift(self, thrift_obj: 'Attribute') -> 'Attribute':
+        """
+        Populate this Model instance from a Thrift Attribute object.
+
+        This method performs pure data conversion without database queries.
+        Call save() after this to persist to the database.
+
+        Args:
+            thrift_obj: Thrift Attribute instance
+
+        Returns:
+            self for method chaining
+        """
+        # Map simple fields from Thrift to Model
+        if hasattr(thrift_obj, 'id'):
+            self._data['id'] = thrift_obj.id
+        if hasattr(thrift_obj, 'internal_name'):
+            self._data['internal_name'] = thrift_obj.internal_name
+        if hasattr(thrift_obj, 'visible'):
+            self._data['visible'] = thrift_obj.visible
+        if hasattr(thrift_obj, 'attribute_type'):
+            self._data['attribute_type'] = thrift_obj.attribute_type
+
+        # Convert AttributeValue union to flattened database columns
+        if hasattr(thrift_obj, 'value') and thrift_obj.value is not None:
+            value = thrift_obj.value
+            # Reset all value fields to None first
+            self._data['bool_value'] = None
+            self._data['double_value'] = None
+            self._data['vector3_x'] = None
+            self._data['vector3_y'] = None
+            self._data['vector3_z'] = None
+            self._data['asset_id'] = None
+
+            # Set the appropriate field based on which union field is set
+            if hasattr(value, 'bool_value') and value.bool_value is not None:
+                self._data['bool_value'] = value.bool_value
+            elif hasattr(value, 'double_value') and value.double_value is not None:
+                self._data['double_value'] = value.double_value
+            elif hasattr(value, 'vector3') and value.vector3 is not None:
+                self._data['vector3_x'] = value.vector3.x
+                self._data['vector3_y'] = value.vector3.y
+                self._data['vector3_z'] = value.vector3.z
+            elif hasattr(value, 'asset_id') and value.asset_id is not None:
+                self._data['asset_id'] = value.asset_id
+
+        self._dirty = True
+        return self
+
+
+    def into_thrift(self) -> Tuple[list[GameResult], Optional['Attribute']]:
+        """
+        Convert this Model instance to a Thrift Attribute object.
+
+        Loads all relationships recursively and converts them to Thrift.
+
+        Returns:
+            Tuple of (list[GameResult], Optional[Thrift object])
+        """
+        results = []
+
+        try:
+            # Build parameters for Thrift object constructor
+            thrift_params = {}
+
+            thrift_params['id'] = self._data.get('id')
+            thrift_params['internal_name'] = self._data.get('internal_name')
+            thrift_params['visible'] = self._data.get('visible')
+            thrift_params['attribute_type'] = self._data.get('attribute_type')
+
+        # Convert flattened database columns to AttributeValue union
+        value = None
+        if self._data.get('bool_value') is not None:
+            value = AttributeValue(bool_value=self._data['bool_value'])
+        elif self._data.get('double_value') is not None:
+            value = AttributeValue(double_value=self._data['double_value'])
+        elif self._data.get('vector3_x') is not None:
+            value = AttributeValue(
+                vector3=ItemVector3(
+                    x=self._data['vector3_x'],
+                    y=self._data['vector3_y'],
+                    z=self._data['vector3_z'],
+                ),
+            )
+        elif self._data.get('asset_id') is not None:
+            value = AttributeValue(asset_id=self._data['asset_id'])
+            thrift_params['value'] = value
+
+            # Create Thrift object
+            thrift_obj = Attribute(**thrift_params)
+
+            results.append(GameResult(
+                status=StatusType.SUCCESS,
+                message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
+            ))
+
+            return (results, thrift_obj)
+
+        except Exception as e:
+            return (
+                [GameResult(
+                    status=StatusType.FAILURE,
+                    message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
+                    error_code=GameError.DB_QUERY_FAILED,
+                )],
+                None,
+            )
+
+
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
         Save the record to the database with transaction support and cascading saves.
@@ -912,7 +1022,7 @@ class Inventory:
           `max_volume` double NOT NULL,
           `last_calculated_volume` double DEFAULT '0',
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1064,6 +1174,80 @@ class Inventory:
             setattr(self, cache_key, results)
 
         return iter(results) if lazy else results
+
+
+    def from_thrift(self, thrift_obj: 'Inventory') -> 'Inventory':
+        """
+        Populate this Model instance from a Thrift Inventory object.
+
+        This method performs pure data conversion without database queries.
+        Call save() after this to persist to the database.
+
+        Args:
+            thrift_obj: Thrift Inventory instance
+
+        Returns:
+            self for method chaining
+        """
+        # Map simple fields from Thrift to Model
+        if hasattr(thrift_obj, 'id'):
+            self._data['id'] = thrift_obj.id
+        if hasattr(thrift_obj, 'owner_id'):
+            self._data['owner_id'] = thrift_obj.owner_id
+        if hasattr(thrift_obj, 'owner_type'):
+            self._data['owner_type'] = thrift_obj.owner_type
+        if hasattr(thrift_obj, 'max_entries'):
+            self._data['max_entries'] = thrift_obj.max_entries
+        if hasattr(thrift_obj, 'max_volume'):
+            self._data['max_volume'] = thrift_obj.max_volume
+        if hasattr(thrift_obj, 'last_calculated_volume'):
+            self._data['last_calculated_volume'] = thrift_obj.last_calculated_volume
+
+        self._dirty = True
+        return self
+
+
+    def into_thrift(self) -> Tuple[list[GameResult], Optional['Inventory']]:
+        """
+        Convert this Model instance to a Thrift Inventory object.
+
+        Loads all relationships recursively and converts them to Thrift.
+
+        Returns:
+            Tuple of (list[GameResult], Optional[Thrift object])
+        """
+        results = []
+
+        try:
+            # Build parameters for Thrift object constructor
+            thrift_params = {}
+
+            thrift_params['id'] = self._data.get('id')
+            thrift_params['owner_id'] = self._data.get('owner_id')
+            thrift_params['owner_type'] = self._data.get('owner_type')
+            thrift_params['max_entries'] = self._data.get('max_entries')
+            thrift_params['max_volume'] = self._data.get('max_volume')
+            thrift_params['last_calculated_volume'] = self._data.get('last_calculated_volume')
+
+            # Create Thrift object
+            thrift_obj = Inventory(**thrift_params)
+
+            results.append(GameResult(
+                status=StatusType.SUCCESS,
+                message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
+            ))
+
+            return (results, thrift_obj)
+
+        except Exception as e:
+            return (
+                [GameResult(
+                    status=StatusType.FAILURE,
+                    message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
+                    error_code=GameError.DB_QUERY_FAILED,
+                )],
+                None,
+            )
 
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
@@ -1444,6 +1628,107 @@ class InventoryEntry:
 
 
 
+    def from_thrift(self, thrift_obj: 'InventoryEntry') -> 'InventoryEntry':
+        """
+        Populate this Model instance from a Thrift InventoryEntry object.
+
+        This method performs pure data conversion without database queries.
+        Call save() after this to persist to the database.
+
+        Args:
+            thrift_obj: Thrift InventoryEntry instance
+
+        Returns:
+            self for method chaining
+        """
+        # Map simple fields from Thrift to Model
+        if hasattr(thrift_obj, 'id'):
+            self._data['id'] = thrift_obj.id
+        if hasattr(thrift_obj, 'inventory_id'):
+            self._data['inventory_id'] = thrift_obj.inventory_id
+        if hasattr(thrift_obj, 'item_id'):
+            self._data['item_id'] = thrift_obj.item_id
+        if hasattr(thrift_obj, 'quantity'):
+            self._data['quantity'] = thrift_obj.quantity
+        if hasattr(thrift_obj, 'is_max_stacked'):
+            self._data['is_max_stacked'] = thrift_obj.is_max_stacked
+        if hasattr(thrift_obj, 'mobile_item_id'):
+            self._data['mobile_item_id'] = thrift_obj.mobile_item_id
+
+        self._dirty = True
+        return self
+
+
+    def into_thrift(self) -> Tuple[list[GameResult], Optional['InventoryEntry']]:
+        """
+        Convert this Model instance to a Thrift InventoryEntry object.
+
+        Loads all relationships recursively and converts them to Thrift.
+
+        Returns:
+            Tuple of (list[GameResult], Optional[Thrift object])
+        """
+        results = []
+
+        try:
+            # Build parameters for Thrift object constructor
+            thrift_params = {}
+
+            thrift_params['id'] = self._data.get('id')
+            thrift_params['inventory_id'] = self._data.get('inventory_id')
+            thrift_params['item_id'] = self._data.get('item_id')
+            thrift_params['quantity'] = self._data.get('quantity')
+            thrift_params['is_max_stacked'] = self._data.get('is_max_stacked')
+            thrift_params['mobile_item_id'] = self._data.get('mobile_item_id')
+
+            # Load inventory relationship
+            inventory_model = self.get_inventory()
+            if inventory_model is not None:
+                inventory_results, inventory_thrift = inventory_model.into_thrift()
+                if inventory_thrift is not None:
+                    thrift_params['inventory'] = inventory_thrift
+                else:
+                    results.extend(inventory_results)
+
+            # Load item relationship
+            item_model = self.get_item()
+            if item_model is not None:
+                item_results, item_thrift = item_model.into_thrift()
+                if item_thrift is not None:
+                    thrift_params['item'] = item_thrift
+                else:
+                    results.extend(item_results)
+
+            # Load mobile_item relationship
+            mobile_item_model = self.get_mobile_item()
+            if mobile_item_model is not None:
+                mobile_item_results, mobile_item_thrift = mobile_item_model.into_thrift()
+                if mobile_item_thrift is not None:
+                    thrift_params['mobile_item'] = mobile_item_thrift
+                else:
+                    results.extend(mobile_item_results)
+
+            # Create Thrift object
+            thrift_obj = InventoryEntry(**thrift_params)
+
+            results.append(GameResult(
+                status=StatusType.SUCCESS,
+                message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
+            ))
+
+            return (results, thrift_obj)
+
+        except Exception as e:
+            return (
+                [GameResult(
+                    status=StatusType.FAILURE,
+                    message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
+                    error_code=GameError.DB_QUERY_FAILED,
+                )],
+                None,
+            )
+
+
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
         Save the record to the database with transaction support and cascading saves.
@@ -1661,7 +1946,7 @@ class InventoryOwner:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_owners_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=49 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=56 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1950,6 +2235,7 @@ class InventoryOwner:
             self.set_player_id(None)
         else:
             self.set_player_id(model.get_id())
+
 
 
 
@@ -2350,6 +2636,83 @@ class ItemBlueprintComponent:
 
 
 
+    def from_thrift(self, thrift_obj: 'ItemBlueprintComponent') -> 'ItemBlueprintComponent':
+        """
+        Populate this Model instance from a Thrift ItemBlueprintComponent object.
+
+        This method performs pure data conversion without database queries.
+        Call save() after this to persist to the database.
+
+        Args:
+            thrift_obj: Thrift ItemBlueprintComponent instance
+
+        Returns:
+            self for method chaining
+        """
+        # Map simple fields from Thrift to Model
+        if hasattr(thrift_obj, 'id'):
+            self._data['id'] = thrift_obj.id
+        if hasattr(thrift_obj, 'item_blueprint_id'):
+            self._data['item_blueprint_id'] = thrift_obj.item_blueprint_id
+        if hasattr(thrift_obj, 'component_item_id'):
+            self._data['component_item_id'] = thrift_obj.component_item_id
+        if hasattr(thrift_obj, 'ratio'):
+            self._data['ratio'] = thrift_obj.ratio
+
+        self._dirty = True
+        return self
+
+
+    def into_thrift(self) -> Tuple[list[GameResult], Optional['ItemBlueprintComponent']]:
+        """
+        Convert this Model instance to a Thrift ItemBlueprintComponent object.
+
+        Loads all relationships recursively and converts them to Thrift.
+
+        Returns:
+            Tuple of (list[GameResult], Optional[Thrift object])
+        """
+        results = []
+
+        try:
+            # Build parameters for Thrift object constructor
+            thrift_params = {}
+
+            thrift_params['id'] = self._data.get('id')
+            thrift_params['item_blueprint_id'] = self._data.get('item_blueprint_id')
+            thrift_params['component_item_id'] = self._data.get('component_item_id')
+            thrift_params['ratio'] = self._data.get('ratio')
+
+            # Load item_blueprint relationship
+            item_blueprint_model = self.get_item_blueprint()
+            if item_blueprint_model is not None:
+                item_blueprint_results, item_blueprint_thrift = item_blueprint_model.into_thrift()
+                if item_blueprint_thrift is not None:
+                    thrift_params['item_blueprint'] = item_blueprint_thrift
+                else:
+                    results.extend(item_blueprint_results)
+
+            # Create Thrift object
+            thrift_obj = ItemBlueprintComponent(**thrift_params)
+
+            results.append(GameResult(
+                status=StatusType.SUCCESS,
+                message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
+            ))
+
+            return (results, thrift_obj)
+
+        except Exception as e:
+            return (
+                [GameResult(
+                    status=StatusType.FAILURE,
+                    message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
+                    error_code=GameError.DB_QUERY_FAILED,
+                )],
+                None,
+            )
+
+
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
         Save the record to the database with transaction support and cascading saves.
@@ -2598,6 +2961,68 @@ class ItemBlueprint:
             setattr(self, cache_key, results)
 
         return iter(results) if lazy else results
+
+
+    def from_thrift(self, thrift_obj: 'ItemBlueprint') -> 'ItemBlueprint':
+        """
+        Populate this Model instance from a Thrift ItemBlueprint object.
+
+        This method performs pure data conversion without database queries.
+        Call save() after this to persist to the database.
+
+        Args:
+            thrift_obj: Thrift ItemBlueprint instance
+
+        Returns:
+            self for method chaining
+        """
+        # Map simple fields from Thrift to Model
+        if hasattr(thrift_obj, 'id'):
+            self._data['id'] = thrift_obj.id
+        if hasattr(thrift_obj, 'bake_time_ms'):
+            self._data['bake_time_ms'] = thrift_obj.bake_time_ms
+
+        self._dirty = True
+        return self
+
+
+    def into_thrift(self) -> Tuple[list[GameResult], Optional['ItemBlueprint']]:
+        """
+        Convert this Model instance to a Thrift ItemBlueprint object.
+
+        Loads all relationships recursively and converts them to Thrift.
+
+        Returns:
+            Tuple of (list[GameResult], Optional[Thrift object])
+        """
+        results = []
+
+        try:
+            # Build parameters for Thrift object constructor
+            thrift_params = {}
+
+            thrift_params['id'] = self._data.get('id')
+            thrift_params['bake_time_ms'] = self._data.get('bake_time_ms')
+
+            # Create Thrift object
+            thrift_obj = ItemBlueprint(**thrift_params)
+
+            results.append(GameResult(
+                status=StatusType.SUCCESS,
+                message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
+            ))
+
+            return (results, thrift_obj)
+
+        except Exception as e:
+            return (
+                [GameResult(
+                    status=StatusType.FAILURE,
+                    message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
+                    error_code=GameError.DB_QUERY_FAILED,
+                )],
+                None,
+            )
 
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
@@ -3363,6 +3788,101 @@ class Item:
             raise
 
 
+    def from_thrift(self, thrift_obj: 'Item') -> 'Item':
+        """
+        Populate this Model instance from a Thrift Item object.
+
+        This method performs pure data conversion without database queries.
+        Call save() after this to persist to the database.
+
+        Args:
+            thrift_obj: Thrift Item instance
+
+        Returns:
+            self for method chaining
+        """
+        # Map simple fields from Thrift to Model
+        if hasattr(thrift_obj, 'id'):
+            self._data['id'] = thrift_obj.id
+        if hasattr(thrift_obj, 'internal_name'):
+            self._data['internal_name'] = thrift_obj.internal_name
+        if hasattr(thrift_obj, 'max_stack_size'):
+            self._data['max_stack_size'] = thrift_obj.max_stack_size
+        if hasattr(thrift_obj, 'item_type'):
+            self._data['item_type'] = thrift_obj.item_type
+        if hasattr(thrift_obj, 'blueprint_id'):
+            self._data['blueprint_id'] = thrift_obj.blueprint_id
+
+        # Store attributes map for later conversion via set_attributes()
+        # The actual pivot table records will be created when save() is called
+        if hasattr(thrift_obj, 'attributes') and thrift_obj.attributes is not None:
+            # Convert thrift attributes to Attribute models
+            self._pending_attributes = []
+            for attr_type, attr_thrift in thrift_obj.attributes.items():
+                # Import Attribute model (assumes it's available)
+                attr_model = Attribute()
+                attr_model.from_thrift(attr_thrift)
+                self._pending_attributes.append((attr_type, attr_model))
+
+        self._dirty = True
+        return self
+
+
+    def into_thrift(self) -> Tuple[list[GameResult], Optional['Item']]:
+        """
+        Convert this Model instance to a Thrift Item object.
+
+        Loads all relationships recursively and converts them to Thrift.
+
+        Returns:
+            Tuple of (list[GameResult], Optional[Thrift object])
+        """
+        results = []
+
+        try:
+            # Build parameters for Thrift object constructor
+            thrift_params = {}
+
+            thrift_params['id'] = self._data.get('id')
+            thrift_params['internal_name'] = self._data.get('internal_name')
+            thrift_params['max_stack_size'] = self._data.get('max_stack_size')
+            thrift_params['item_type'] = self._data.get('item_type')
+            thrift_params['blueprint_id'] = self._data.get('blueprint_id')
+
+        # Load attributes via pivot table and convert to map<AttributeType, Attribute>
+        attributes_map = {}
+        if self.get_id() is not None:
+            # Get attributes through the pivot relationship
+            attribute_models = self.get_attributes(reload=True)
+            for attr_model in attribute_models:
+                # Convert each attribute model to Thrift
+                attr_results, attr_thrift = attr_model.into_thrift()
+                if attr_thrift is not None:
+                    # Use attribute_type as the map key
+                    attributes_map[attr_thrift.attribute_type] = attr_thrift
+            thrift_params['attributes'] = attributes_map
+
+            # Create Thrift object
+            thrift_obj = Item(**thrift_params)
+
+            results.append(GameResult(
+                status=StatusType.SUCCESS,
+                message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
+            ))
+
+            return (results, thrift_obj)
+
+        except Exception as e:
+            return (
+                [GameResult(
+                    status=StatusType.FAILURE,
+                    message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
+                    error_code=GameError.DB_QUERY_FAILED,
+                )],
+                None,
+            )
+
+
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
         Save the record to the database with transaction support and cascading saves.
@@ -3721,6 +4241,7 @@ class MobileItemAttribute:
 
 
 
+
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
         Save the record to the database with transaction support and cascading saves.
@@ -4006,6 +4527,7 @@ class MobileItemBlueprintComponent:
 
 
 
+
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
         Save the record to the database with transaction support and cascading saves.
@@ -4254,6 +4776,7 @@ class MobileItemBlueprint:
             setattr(self, cache_key, results)
 
         return iter(results) if lazy else results
+
 
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
@@ -4626,6 +5149,125 @@ class MobileItem:
         return iter(results) if lazy else results
 
 
+    def from_thrift(self, thrift_obj: 'MobileItem') -> 'MobileItem':
+        """
+        Populate this Model instance from a Thrift MobileItem object.
+
+        This method performs pure data conversion without database queries.
+        Call save() after this to persist to the database.
+
+        Args:
+            thrift_obj: Thrift MobileItem instance
+
+        Returns:
+            self for method chaining
+        """
+        # Map simple fields from Thrift to Model
+        if hasattr(thrift_obj, 'id'):
+            self._data['id'] = thrift_obj.id
+        if hasattr(thrift_obj, 'mobile_id'):
+            self._data['mobile_id'] = thrift_obj.mobile_id
+        if hasattr(thrift_obj, 'internal_name'):
+            self._data['internal_name'] = thrift_obj.internal_name
+        if hasattr(thrift_obj, 'max_stack_size'):
+            self._data['max_stack_size'] = thrift_obj.max_stack_size
+        if hasattr(thrift_obj, 'item_type'):
+            self._data['item_type'] = thrift_obj.item_type
+        if hasattr(thrift_obj, 'blueprint_id'):
+            self._data['blueprint_id'] = thrift_obj.blueprint_id
+        if hasattr(thrift_obj, 'item_id'):
+            self._data['item_id'] = thrift_obj.item_id
+
+        # Store attributes map for later conversion via set_attributes()
+        # The actual pivot table records will be created when save() is called
+        if hasattr(thrift_obj, 'attributes') and thrift_obj.attributes is not None:
+            # Convert thrift attributes to Attribute models
+            self._pending_attributes = []
+            for attr_type, attr_thrift in thrift_obj.attributes.items():
+                # Import Attribute model (assumes it's available)
+                attr_model = Attribute()
+                attr_model.from_thrift(attr_thrift)
+                self._pending_attributes.append((attr_type, attr_model))
+
+        self._dirty = True
+        return self
+
+
+    def into_thrift(self) -> Tuple[list[GameResult], Optional['MobileItem']]:
+        """
+        Convert this Model instance to a Thrift MobileItem object.
+
+        Loads all relationships recursively and converts them to Thrift.
+
+        Returns:
+            Tuple of (list[GameResult], Optional[Thrift object])
+        """
+        results = []
+
+        try:
+            # Build parameters for Thrift object constructor
+            thrift_params = {}
+
+            thrift_params['id'] = self._data.get('id')
+            thrift_params['mobile_id'] = self._data.get('mobile_id')
+            thrift_params['internal_name'] = self._data.get('internal_name')
+            thrift_params['max_stack_size'] = self._data.get('max_stack_size')
+            thrift_params['item_type'] = self._data.get('item_type')
+            thrift_params['blueprint_id'] = self._data.get('blueprint_id')
+            thrift_params['item_id'] = self._data.get('item_id')
+
+        # Load attributes via pivot table and convert to map<AttributeType, Attribute>
+        attributes_map = {}
+        if self.get_id() is not None:
+            # Get attributes through the pivot relationship
+            attribute_models = self.get_attributes(reload=True)
+            for attr_model in attribute_models:
+                # Convert each attribute model to Thrift
+                attr_results, attr_thrift = attr_model.into_thrift()
+                if attr_thrift is not None:
+                    # Use attribute_type as the map key
+                    attributes_map[attr_thrift.attribute_type] = attr_thrift
+            thrift_params['attributes'] = attributes_map
+
+            # Load mobile relationship
+            mobile_model = self.get_mobile()
+            if mobile_model is not None:
+                mobile_results, mobile_thrift = mobile_model.into_thrift()
+                if mobile_thrift is not None:
+                    thrift_params['mobile'] = mobile_thrift
+                else:
+                    results.extend(mobile_results)
+
+            # Load item relationship
+            item_model = self.get_item()
+            if item_model is not None:
+                item_results, item_thrift = item_model.into_thrift()
+                if item_thrift is not None:
+                    thrift_params['item'] = item_thrift
+                else:
+                    results.extend(item_results)
+
+            # Create Thrift object
+            thrift_obj = MobileItem(**thrift_params)
+
+            results.append(GameResult(
+                status=StatusType.SUCCESS,
+                message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
+            ))
+
+            return (results, thrift_obj)
+
+        except Exception as e:
+            return (
+                [GameResult(
+                    status=StatusType.FAILURE,
+                    message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
+                    error_code=GameError.DB_QUERY_FAILED,
+                )],
+                None,
+            )
+
+
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
         Save the record to the database with transaction support and cascading saves.
@@ -4849,7 +5491,7 @@ class Mobile:
           `owner_player_id` bigint DEFAULT NULL,
           `what_we_call_you` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=160 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=165 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5588,6 +6230,126 @@ class Mobile:
             raise
 
 
+    def from_thrift(self, thrift_obj: 'Mobile') -> 'Mobile':
+        """
+        Populate this Model instance from a Thrift Mobile object.
+
+        This method performs pure data conversion without database queries.
+        Call save() after this to persist to the database.
+
+        Args:
+            thrift_obj: Thrift Mobile instance
+
+        Returns:
+            self for method chaining
+        """
+        # Map simple fields from Thrift to Model
+        if hasattr(thrift_obj, 'id'):
+            self._data['id'] = thrift_obj.id
+        if hasattr(thrift_obj, 'mobile_type'):
+            self._data['mobile_type'] = thrift_obj.mobile_type
+        if hasattr(thrift_obj, 'what_we_call_you'):
+            self._data['what_we_call_you'] = thrift_obj.what_we_call_you
+
+        # Convert Owner union to database owner_* columns
+        if hasattr(thrift_obj, 'owner') and thrift_obj.owner is not None:
+            owner = thrift_obj.owner
+            # Reset all owner fields to None first
+            self._data['owner_player_id'] = None
+            self._data['owner_mobile_id'] = None
+            self._data['owner_item_id'] = None
+            self._data['owner_asset_id'] = None
+
+            # Set the appropriate owner field based on which union field is set
+            if hasattr(owner, 'player_id') and owner.player_id is not None:
+                self._data['owner_player_id'] = owner.player_id
+            elif hasattr(owner, 'mobile_id') and owner.mobile_id is not None:
+                self._data['owner_mobile_id'] = owner.mobile_id
+            elif hasattr(owner, 'item_id') and owner.item_id is not None:
+                self._data['owner_item_id'] = owner.item_id
+            elif hasattr(owner, 'asset_id') and owner.asset_id is not None:
+                self._data['owner_asset_id'] = owner.asset_id
+
+        # Store attributes map for later conversion via set_attributes()
+        # The actual pivot table records will be created when save() is called
+        if hasattr(thrift_obj, 'attributes') and thrift_obj.attributes is not None:
+            # Convert thrift attributes to Attribute models
+            self._pending_attributes = []
+            for attr_type, attr_thrift in thrift_obj.attributes.items():
+                # Import Attribute model (assumes it's available)
+                attr_model = Attribute()
+                attr_model.from_thrift(attr_thrift)
+                self._pending_attributes.append((attr_type, attr_model))
+
+        self._dirty = True
+        return self
+
+
+    def into_thrift(self) -> Tuple[list[GameResult], Optional['Mobile']]:
+        """
+        Convert this Model instance to a Thrift Mobile object.
+
+        Loads all relationships recursively and converts them to Thrift.
+
+        Returns:
+            Tuple of (list[GameResult], Optional[Thrift object])
+        """
+        results = []
+
+        try:
+            # Build parameters for Thrift object constructor
+            thrift_params = {}
+
+            thrift_params['id'] = self._data.get('id')
+            thrift_params['mobile_type'] = self._data.get('mobile_type')
+            thrift_params['what_we_call_you'] = self._data.get('what_we_call_you')
+
+        # Convert database owner_* columns to Owner union
+        owner = None
+        if self._data.get('owner_player_id') is not None:
+            owner = Owner(player_id=self._data['owner_player_id'])
+        elif self._data.get('owner_mobile_id') is not None:
+            owner = Owner(mobile_id=self._data['owner_mobile_id'])
+        elif self._data.get('owner_item_id') is not None:
+            owner = Owner(item_id=self._data['owner_item_id'])
+        elif self._data.get('owner_asset_id') is not None:
+            owner = Owner(asset_id=self._data['owner_asset_id'])
+            thrift_params['owner'] = owner
+
+        # Load attributes via pivot table and convert to map<AttributeType, Attribute>
+        attributes_map = {}
+        if self.get_id() is not None:
+            # Get attributes through the pivot relationship
+            attribute_models = self.get_attributes(reload=True)
+            for attr_model in attribute_models:
+                # Convert each attribute model to Thrift
+                attr_results, attr_thrift = attr_model.into_thrift()
+                if attr_thrift is not None:
+                    # Use attribute_type as the map key
+                    attributes_map[attr_thrift.attribute_type] = attr_thrift
+            thrift_params['attributes'] = attributes_map
+
+            # Create Thrift object
+            thrift_obj = Mobile(**thrift_params)
+
+            results.append(GameResult(
+                status=StatusType.SUCCESS,
+                message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
+            ))
+
+            return (results, thrift_obj)
+
+        except Exception as e:
+            return (
+                [GameResult(
+                    status=StatusType.FAILURE,
+                    message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
+                    error_code=GameError.DB_QUERY_FAILED,
+                )],
+                None,
+            )
+
+
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
         Save the record to the database with transaction support and cascading saves.
@@ -5856,7 +6618,7 @@ class Player:
           `year_of_birth` bigint NOT NULL,
           `email` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=68 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=78 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -6454,6 +7216,83 @@ class Player:
         except Exception as e:
             self._connection.rollback()
             raise
+
+
+    def from_thrift(self, thrift_obj: 'Player') -> 'Player':
+        """
+        Populate this Model instance from a Thrift Player object.
+
+        This method performs pure data conversion without database queries.
+        Call save() after this to persist to the database.
+
+        Args:
+            thrift_obj: Thrift Player instance
+
+        Returns:
+            self for method chaining
+        """
+        # Map simple fields from Thrift to Model
+        if hasattr(thrift_obj, 'id'):
+            self._data['id'] = thrift_obj.id
+        if hasattr(thrift_obj, 'full_name'):
+            self._data['full_name'] = thrift_obj.full_name
+        if hasattr(thrift_obj, 'what_we_call_you'):
+            self._data['what_we_call_you'] = thrift_obj.what_we_call_you
+        if hasattr(thrift_obj, 'security_token'):
+            self._data['security_token'] = thrift_obj.security_token
+        if hasattr(thrift_obj, 'over_13'):
+            self._data['over_13'] = thrift_obj.over_13
+        if hasattr(thrift_obj, 'year_of_birth'):
+            self._data['year_of_birth'] = thrift_obj.year_of_birth
+        if hasattr(thrift_obj, 'email'):
+            self._data['email'] = thrift_obj.email
+
+        self._dirty = True
+        return self
+
+
+    def into_thrift(self) -> Tuple[list[GameResult], Optional['Player']]:
+        """
+        Convert this Model instance to a Thrift Player object.
+
+        Loads all relationships recursively and converts them to Thrift.
+
+        Returns:
+            Tuple of (list[GameResult], Optional[Thrift object])
+        """
+        results = []
+
+        try:
+            # Build parameters for Thrift object constructor
+            thrift_params = {}
+
+            thrift_params['id'] = self._data.get('id')
+            thrift_params['full_name'] = self._data.get('full_name')
+            thrift_params['what_we_call_you'] = self._data.get('what_we_call_you')
+            thrift_params['security_token'] = self._data.get('security_token')
+            thrift_params['over_13'] = self._data.get('over_13')
+            thrift_params['year_of_birth'] = self._data.get('year_of_birth')
+            thrift_params['email'] = self._data.get('email')
+
+            # Create Thrift object
+            thrift_obj = Player(**thrift_params)
+
+            results.append(GameResult(
+                status=StatusType.SUCCESS,
+                message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
+            ))
+
+            return (results, thrift_obj)
+
+        except Exception as e:
+            return (
+                [GameResult(
+                    status=StatusType.FAILURE,
+                    message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
+                    error_code=GameError.DB_QUERY_FAILED,
+                )],
+                None,
+            )
 
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:

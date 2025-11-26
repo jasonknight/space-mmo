@@ -55,6 +55,7 @@ class {class_name}:
 
 {has_many_methods}
 {pivot_owner_methods}
+{thrift_conversion_methods}
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """

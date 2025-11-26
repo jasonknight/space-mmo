@@ -6,7 +6,7 @@ Generates model files with getters, setters, save, find, and find_by methods.
 
 import argparse
 import mysql.connector
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Optional
 import os
 import uuid
 from dotenv import load_dotenv
@@ -50,10 +50,287 @@ MYSQL_TO_PYTHON_TYPE = {
 }
 
 # Pivot table configuration
+# These tables manage many-to-many relationships and do NOT have direct Thrift equivalents
+# They are converted to/from Thrift maps or embedded relationships
 PIVOT_TABLES = [
-    'attribute_owners',
-    'inventory_owners',
+    'attribute_owners',  # Manages ownership of attributes (converts to Owner union in Thrift)
+    'inventory_owners',  # Manages ownership of inventories (converts to Owner union in Thrift)
 ]
+
+# Table-to-Thrift struct mapping
+# Maps database table names to their corresponding Thrift struct names
+# Pivot tables and internal-only tables are excluded as they don't have 1:1 Thrift representations
+#
+# Field Mapping Notes:
+# - 'mobiles': Has owner_* fields (owner_player_id, owner_mobile_id, etc.) → Owner union in Thrift
+# - 'attributes': Has flattened AttributeValue fields (bool_value, double_value, vector3_x/y/z, asset_id) → AttributeValue union in Thrift
+# - 'items', 'mobile_items': Has attributes relationship via attribute_owners pivot → map<AttributeType, Attribute> in Thrift
+# - 'inventories': Has owner via inventory_owners pivot → Owner union in Thrift
+# - 'players': Has computed field 'over_13' derived from 'year_of_birth'
+# - All structs: May have optional 'backing_table' field in Thrift (might be removed in future)
+TABLE_TO_THRIFT_MAPPING = {
+    'players': 'Player',
+    'items': 'Item',
+    'mobiles': 'Mobile',
+    'inventories': 'Inventory',
+    'inventory_entries': 'InventoryEntry',
+    'attributes': 'Attribute',
+    'item_blueprints': 'ItemBlueprint',
+    'item_blueprint_components': 'ItemBlueprintComponent',
+    'mobile_items': 'MobileItem',
+}
+
+
+def get_thrift_struct_name(table_name: str) -> Optional[str]:
+    """
+    Get the Thrift struct name for a database table.
+
+    Args:
+        table_name: Database table name (e.g., 'players', 'items')
+
+    Returns:
+        Thrift struct name if mapping exists, None otherwise
+    """
+    return TABLE_TO_THRIFT_MAPPING.get(table_name)
+
+
+def has_thrift_mapping(table_name: str) -> bool:
+    """
+    Check if a table has a corresponding Thrift struct.
+
+    Args:
+        table_name: Database table name
+
+    Returns:
+        True if table has Thrift mapping, False otherwise
+    """
+    return table_name in TABLE_TO_THRIFT_MAPPING
+
+
+def needs_owner_conversion(columns: List[Dict[str, Any]]) -> bool:
+    """
+    Check if a table has owner union fields (owner_player_id, owner_mobile_id, etc.).
+
+    Args:
+        columns: List of column definitions
+
+    Returns:
+        True if table has owner fields, False otherwise
+    """
+    owner_columns = [
+        'owner_player_id',
+        'owner_mobile_id',
+        'owner_item_id',
+        'owner_asset_id',
+    ]
+    column_names = [col['name'] for col in columns]
+    return any(oc in column_names for oc in owner_columns)
+
+
+def needs_attribute_value_conversion(columns: List[Dict[str, Any]]) -> bool:
+    """
+    Check if a table stores AttributeValue union data (flattened columns).
+
+    Args:
+        columns: List of column definitions
+
+    Returns:
+        True if table has AttributeValue fields, False otherwise
+    """
+    attribute_value_columns = [
+        'bool_value',
+        'double_value',
+        'vector3_x',
+        'asset_id',
+    ]
+    column_names = [col['name'] for col in columns]
+    # Check if we have attribute value columns (typically in attributes table)
+    return all(avc in column_names for avc in ['bool_value', 'double_value', 'vector3_x'])
+
+
+def generate_owner_union_to_db_code(table_name: str, columns: List[Dict[str, Any]]) -> str:
+    """
+    Generate code to convert Owner union from Thrift to database columns.
+
+    The Owner union in Thrift has one of: player_id, mobile_id, item_id, or asset_id set.
+    In the database, we store these as separate nullable columns: owner_player_id, owner_mobile_id, etc.
+
+    Args:
+        table_name: Database table name
+        columns: List of column definitions
+
+    Returns:
+        Generated Python code as a string
+    """
+    if not needs_owner_conversion(columns):
+        return ""
+
+    code = '''
+        # Convert Owner union to database owner_* columns
+        if hasattr(thrift_obj, 'owner') and thrift_obj.owner is not None:
+            owner = thrift_obj.owner
+            # Reset all owner fields to None first
+            self._data['owner_player_id'] = None
+            self._data['owner_mobile_id'] = None
+            self._data['owner_item_id'] = None
+            self._data['owner_asset_id'] = None
+
+            # Set the appropriate owner field based on which union field is set
+            if hasattr(owner, 'player_id') and owner.player_id is not None:
+                self._data['owner_player_id'] = owner.player_id
+            elif hasattr(owner, 'mobile_id') and owner.mobile_id is not None:
+                self._data['owner_mobile_id'] = owner.mobile_id
+            elif hasattr(owner, 'item_id') and owner.item_id is not None:
+                self._data['owner_item_id'] = owner.item_id
+            elif hasattr(owner, 'asset_id') and owner.asset_id is not None:
+                self._data['owner_asset_id'] = owner.asset_id
+'''
+    return code
+
+
+def generate_db_to_owner_union_code(table_name: str, columns: List[Dict[str, Any]]) -> str:
+    """
+    Generate code to convert database owner_* columns to Owner union in Thrift.
+
+    Args:
+        table_name: Database table name
+        columns: List of column definitions
+
+    Returns:
+        Generated Python code as a string
+    """
+    if not needs_owner_conversion(columns):
+        return ""
+
+    code = '''
+        # Convert database owner_* columns to Owner union
+        owner = None
+        if self._data.get('owner_player_id') is not None:
+            owner = Owner(player_id=self._data['owner_player_id'])
+        elif self._data.get('owner_mobile_id') is not None:
+            owner = Owner(mobile_id=self._data['owner_mobile_id'])
+        elif self._data.get('owner_item_id') is not None:
+            owner = Owner(item_id=self._data['owner_item_id'])
+        elif self._data.get('owner_asset_id') is not None:
+            owner = Owner(asset_id=self._data['owner_asset_id'])
+'''
+    return code
+
+
+def generate_attribute_value_to_db_code() -> str:
+    """
+    Generate code to convert AttributeValue union from Thrift to flattened database columns.
+
+    AttributeValue in Thrift is a union with fields: bool_value, double_value, vector3, asset_id
+    In the database, we store these as: bool_value, double_value, vector3_x, vector3_y, vector3_z, asset_id
+
+    Returns:
+        Generated Python code as a string
+    """
+    code = '''
+        # Convert AttributeValue union to flattened database columns
+        if hasattr(thrift_obj, 'value') and thrift_obj.value is not None:
+            value = thrift_obj.value
+            # Reset all value fields to None first
+            self._data['bool_value'] = None
+            self._data['double_value'] = None
+            self._data['vector3_x'] = None
+            self._data['vector3_y'] = None
+            self._data['vector3_z'] = None
+            self._data['asset_id'] = None
+
+            # Set the appropriate field based on which union field is set
+            if hasattr(value, 'bool_value') and value.bool_value is not None:
+                self._data['bool_value'] = value.bool_value
+            elif hasattr(value, 'double_value') and value.double_value is not None:
+                self._data['double_value'] = value.double_value
+            elif hasattr(value, 'vector3') and value.vector3 is not None:
+                self._data['vector3_x'] = value.vector3.x
+                self._data['vector3_y'] = value.vector3.y
+                self._data['vector3_z'] = value.vector3.z
+            elif hasattr(value, 'asset_id') and value.asset_id is not None:
+                self._data['asset_id'] = value.asset_id
+'''
+    return code
+
+
+def generate_db_to_attribute_value_code() -> str:
+    """
+    Generate code to convert flattened database columns to AttributeValue union in Thrift.
+
+    Returns:
+        Generated Python code as a string
+    """
+    code = '''
+        # Convert flattened database columns to AttributeValue union
+        value = None
+        if self._data.get('bool_value') is not None:
+            value = AttributeValue(bool_value=self._data['bool_value'])
+        elif self._data.get('double_value') is not None:
+            value = AttributeValue(double_value=self._data['double_value'])
+        elif self._data.get('vector3_x') is not None:
+            value = AttributeValue(
+                vector3=ItemVector3(
+                    x=self._data['vector3_x'],
+                    y=self._data['vector3_y'],
+                    z=self._data['vector3_z'],
+                ),
+            )
+        elif self._data.get('asset_id') is not None:
+            value = AttributeValue(asset_id=self._data['asset_id'])
+'''
+    return code
+
+
+def generate_attribute_map_to_pivot_code() -> str:
+    """
+    Generate code to convert map<AttributeType, Attribute> from Thrift to pivot table format.
+
+    This converts the Thrift attribute map into a format suitable for storing via
+    the set_attributes() method (which will handle the pivot table operations).
+
+    Returns:
+        Generated Python code as a string
+    """
+    code = '''
+        # Store attributes map for later conversion via set_attributes()
+        # The actual pivot table records will be created when save() is called
+        if hasattr(thrift_obj, 'attributes') and thrift_obj.attributes is not None:
+            # Convert thrift attributes to Attribute models
+            self._pending_attributes = []
+            for attr_type, attr_thrift in thrift_obj.attributes.items():
+                # Import Attribute model (assumes it's available)
+                attr_model = Attribute()
+                attr_model.from_thrift(attr_thrift)
+                self._pending_attributes.append((attr_type, attr_model))
+'''
+    return code
+
+
+def generate_pivot_to_attribute_map_code() -> str:
+    """
+    Generate code to load pivot table records and build map<AttributeType, Attribute> for Thrift.
+
+    This loads attributes from the database via the attribute_owners pivot table
+    and converts them into a Thrift map.
+
+    Returns:
+        Generated Python code as a string
+    """
+    code = '''
+        # Load attributes via pivot table and convert to map<AttributeType, Attribute>
+        attributes_map = {}
+        if self.get_id() is not None:
+            # Get attributes through the pivot relationship
+            attribute_models = self.get_attributes(reload=True)
+            for attr_model in attribute_models:
+                # Convert each attribute model to Thrift
+                attr_results, attr_thrift = attr_model.into_thrift()
+                if attr_thrift is not None:
+                    # Use attribute_type as the map key
+                    attributes_map[attr_thrift.attribute_type] = attr_thrift
+'''
+    return code
 
 
 def get_python_type(mysql_type: str) -> str:
@@ -998,7 +1275,7 @@ def collect_required_types(columns: List[Dict[str, Any]]) -> set:
     return types
 
 
-def generate_imports(columns: List[Dict[str, Any]], has_relationships: bool = False) -> str:
+def generate_imports(columns: List[Dict[str, Any]], has_relationships: bool = False, has_thrift_conversion: bool = False) -> str:
     """Generate import statements based on column types."""
     imports = [
         "import mysql.connector",
@@ -1008,12 +1285,29 @@ def generate_imports(columns: List[Dict[str, Any]], has_relationships: bool = Fa
     typing_imports = ["Dict", "List", "Optional", "Any"]
     if has_relationships:
         typing_imports.extend(["Iterator", "Union"])
+    if has_thrift_conversion:
+        typing_imports.append("Tuple")
 
     imports.append(f"from typing import {', '.join(typing_imports)}")
 
     required_types = collect_required_types(columns)
     if "datetime" in required_types:
         imports.append("from datetime import datetime")
+
+    # Add Thrift imports if needed
+    if has_thrift_conversion:
+        imports.append("")
+        imports.append("# Thrift imports")
+        imports.append("from game.ttypes import (")
+        imports.append("    GameResult,")
+        imports.append("    StatusType,")
+        imports.append("    GameError,")
+        imports.append("    Owner,")
+        imports.append("    AttributeValue,")
+        imports.append("    AttributeType,")
+        imports.append("    ItemVector3,")
+        imports.append("    Attribute,")
+        imports.append(")")
 
     return "\n".join(imports)
 
@@ -1063,6 +1357,194 @@ def generate_cascade_save_code(
     return belongs_to_str, has_many_str
 
 
+def generate_from_thrift_method(
+    table_name: str,
+    class_name: str,
+    columns: List[Dict[str, Any]],
+    thrift_struct_name: str,
+    relationships: Dict[str, Any],
+) -> str:
+    """
+    Generate from_thrift() method for converting Thrift object to Model.
+
+    Args:
+        table_name: Database table name
+        class_name: Model class name
+        columns: List of column definitions
+        thrift_struct_name: Name of the Thrift struct
+        relationships: Relationships metadata
+
+    Returns:
+        Generated method code as a string
+    """
+    method_code = f'''
+    def from_thrift(self, thrift_obj: '{thrift_struct_name}') -> '{class_name}':
+        """
+        Populate this Model instance from a Thrift {thrift_struct_name} object.
+
+        This method performs pure data conversion without database queries.
+        Call save() after this to persist to the database.
+
+        Args:
+            thrift_obj: Thrift {thrift_struct_name} instance
+
+        Returns:
+            self for method chaining
+        """
+        # Map simple fields from Thrift to Model
+'''
+
+    # Map simple fields (non-FK, non-union fields)
+    for col in columns:
+        col_name = col['name']
+
+        # Skip owner union fields - they're handled specially
+        if col_name in ['owner_player_id', 'owner_mobile_id', 'owner_item_id', 'owner_asset_id']:
+            continue
+
+        # Skip AttributeValue union fields - handled specially for attributes table
+        if table_name == 'attributes' and col_name in ['bool_value', 'double_value', 'vector3_x', 'vector3_y', 'vector3_z', 'asset_id']:
+            continue
+
+        # Map the field if it exists on the Thrift object
+        method_code += f"        if hasattr(thrift_obj, '{col_name}'):\n"
+        method_code += f"            self._data['{col_name}'] = thrift_obj.{col_name}\n"
+
+    # Handle Owner union conversion if applicable
+    if needs_owner_conversion(columns):
+        method_code += generate_owner_union_to_db_code(table_name, columns)
+
+    # Handle AttributeValue union conversion if applicable (for attributes table)
+    if needs_attribute_value_conversion(columns):
+        method_code += generate_attribute_value_to_db_code()
+
+    # Handle attribute map (for items, mobiles, etc. with attributes relationship)
+    if table_name in ['items', 'mobiles', 'mobile_items']:
+        method_code += generate_attribute_map_to_pivot_code()
+
+    # Mark as dirty
+    method_code += '''
+        self._dirty = True
+        return self
+'''
+
+    return method_code
+
+
+def generate_into_thrift_method(
+    table_name: str,
+    class_name: str,
+    columns: List[Dict[str, Any]],
+    thrift_struct_name: str,
+    relationships: Dict[str, Any],
+) -> str:
+    """
+    Generate into_thrift() method for converting Model to Thrift object.
+
+    Args:
+        table_name: Database table name
+        class_name: Model class name
+        columns: List of column definitions
+        thrift_struct_name: Name of the Thrift struct
+        relationships: Relationships metadata
+
+    Returns:
+        Generated method code as a string
+    """
+    from_game_ttypes = "from game.ttypes import GameResult, StatusType, GameError"
+
+    method_code = f'''
+    def into_thrift(self) -> Tuple[list[GameResult], Optional['{thrift_struct_name}']]:
+        """
+        Convert this Model instance to a Thrift {thrift_struct_name} object.
+
+        Loads all relationships recursively and converts them to Thrift.
+
+        Returns:
+            Tuple of (list[GameResult], Optional[Thrift object])
+        """
+        results = []
+
+        try:
+            # Build parameters for Thrift object constructor
+            thrift_params = {{}}
+
+'''
+
+    # Map simple fields
+    for col in columns:
+        col_name = col['name']
+
+        # Skip owner union fields - they're handled specially
+        if col_name in ['owner_player_id', 'owner_mobile_id', 'owner_item_id', 'owner_asset_id']:
+            continue
+
+        # Skip AttributeValue union fields - handled specially for attributes table
+        if table_name == 'attributes' and col_name in ['bool_value', 'double_value', 'vector3_x', 'vector3_y', 'vector3_z', 'asset_id']:
+            continue
+
+        method_code += f"            thrift_params['{col_name}'] = self._data.get('{col_name}')\n"
+
+    # Handle Owner union conversion if applicable
+    if needs_owner_conversion(columns):
+        method_code += generate_db_to_owner_union_code(table_name, columns)
+        method_code += "            thrift_params['owner'] = owner\n"
+
+    # Handle AttributeValue union conversion if applicable (for attributes table)
+    if needs_attribute_value_conversion(columns):
+        method_code += generate_db_to_attribute_value_code()
+        method_code += "            thrift_params['value'] = value\n"
+
+    # Handle attribute map loading (for items, mobiles, etc. with attributes relationship)
+    if table_name in ['items', 'mobiles', 'mobile_items']:
+        method_code += generate_pivot_to_attribute_map_code()
+        method_code += "            thrift_params['attributes'] = attributes_map\n"
+
+    # Load belongs-to relationships
+    belongs_to_rels = relationships.get("belongs_to", [])
+    for rel in belongs_to_rels:
+        rel_name = get_relationship_name(rel["column"])
+        # Skip if it's part of an owner union
+        if rel["column"] in ['owner_player_id', 'owner_mobile_id', 'owner_item_id', 'owner_asset_id']:
+            continue
+
+        method_code += f'''
+            # Load {rel_name} relationship
+            {rel_name}_model = self.get_{rel_name}()
+            if {rel_name}_model is not None:
+                {rel_name}_results, {rel_name}_thrift = {rel_name}_model.into_thrift()
+                if {rel_name}_thrift is not None:
+                    thrift_params['{rel_name}'] = {rel_name}_thrift
+                else:
+                    results.extend({rel_name}_results)
+'''
+
+    # Construct the Thrift object
+    method_code += f'''
+            # Create Thrift object
+            thrift_obj = {thrift_struct_name}(**thrift_params)
+
+            results.append(GameResult(
+                status=StatusType.SUCCESS,
+                message=f"Successfully converted {{self.__class__.__name__}} id={{self.get_id()}} to Thrift",
+            ))
+
+            return (results, thrift_obj)
+
+        except Exception as e:
+            return (
+                [GameResult(
+                    status=StatusType.FAILURE,
+                    message=f"Failed to convert {{self.__class__.__name__}} to Thrift: {{str(e)}}",
+                    error_code=GameError.DB_QUERY_FAILED,
+                )],
+                None,
+            )
+'''
+
+    return method_code
+
+
 def generate_model(
     table_name: str,
     columns: List[Dict[str, Any]],
@@ -1103,8 +1585,11 @@ def generate_model(
             ))
         pivot_owner_methods = "\n".join(methods_list)
 
+    # Check if this table has Thrift conversion
+    has_thrift_conversion = has_thrift_mapping(table_name)
+
     # Generate all components
-    imports = generate_imports(columns, has_relationships)
+    imports = generate_imports(columns, has_relationships, has_thrift_conversion)
     getters = generate_getters(columns)
     setters = generate_setters(columns)
     find_by_methods = generate_find_by_methods(columns, class_name, table_name)
@@ -1118,6 +1603,26 @@ def generate_model(
         belongs_to_rels,
         has_many_rels,
     )
+
+    # Generate Thrift conversion methods if applicable
+    thrift_conversion_methods = ""
+    thrift_struct_name = get_thrift_struct_name(table_name)
+    if thrift_struct_name is not None:
+        from_thrift_method = generate_from_thrift_method(
+            table_name,
+            class_name,
+            columns,
+            thrift_struct_name,
+            relationships,
+        )
+        into_thrift_method = generate_into_thrift_method(
+            table_name,
+            class_name,
+            columns,
+            thrift_struct_name,
+            relationships,
+        )
+        thrift_conversion_methods = from_thrift_method + "\n" + into_thrift_method
 
     # Escape the CREATE TABLE statement for Python heredoc string
     # Only need to escape triple quotes if they appear in the SQL
@@ -1144,6 +1649,7 @@ def generate_model(
         cascade_save_belongs_to=cascade_save_belongs_to,
         cascade_save_has_many=cascade_save_has_many,
         find_by_methods=find_by_methods,
+        thrift_conversion_methods=thrift_conversion_methods,
     )
 
     return model_code

@@ -16,7 +16,6 @@ import os
   - [Working with Inventories](#working-with-inventories)
 - [AttributeOwner](#attributeowner)
   - [Helper Methods](#attributeowner-helper-methods)
-  - [__init__()](#attributeowner-__init__)
   - [save()](#attributeowner-save)
   - [find()](#attributeowner-find)
 - [Attribute](#attribute)
@@ -33,6 +32,10 @@ import os
 - [MobileItem](#mobileitem)
 - [Mobile](#mobile)
 - [Player](#player)
+- [Quick Reference](#quick-reference)
+  - [Convenience Methods Available By Model](#convenience-methods-available-by-model)
+  - [Key Behaviors](#key-behaviors)
+  - [Common Patterns](#common-patterns)
 
 ## Overview
 
@@ -43,8 +46,11 @@ This module contains auto-generated ActiveRecord-style model classes for all dat
 - Transaction-safe save operations with cascading support
 - Static finder methods for querying records
 - Connection management with MySQL
+- **Pivot table convenience methods** for managing many-to-many relationships through AttributeOwner and InventoryOwner
 
 **Pattern**: All models follow the same structure. The `AttributeOwner` class below is documented in full detail as a template for understanding all other models.
+
+**Testing**: Comprehensive tests for pivot table functionality are in `pivot_table_tests.py`, demonstrating all convenience methods and cascade behaviors.
 
 ---
 
@@ -68,12 +74,12 @@ This module contains auto-generated ActiveRecord-style model classes for all dat
 ```python
 # Create a player
 player = Player()
-player.set_full_name('Alice')
-player.set_what_we_call_you('Alice')
-player.set_security_token('token_123')
+player.set_full_name('Test Player')
+player.set_what_we_call_you('Testy')
+player.set_security_token('test_token_123')
 player.set_over_13(1)
 player.set_year_of_birth(2000)
-player.set_email('alice@example.com')
+player.set_email('test@example.com')
 player.save()
 
 # Create and add an attribute
@@ -331,9 +337,12 @@ Start
 
 **Examples:**
 
-1. **Find by ID** (`gamedb/thrift/py/db_models/tests.py:142` pattern)
+1. **Find AttributeOwner by ID** (`gamedb/thrift/py/db_models/pivot_table_tests.py:206-210`)
 ```python
-related = Attribute.find(fk_value)
+pivots = AttributeOwner.find_by_player_id(self.player.get_id())
+self.assertEqual(len(pivots), 1)
+pivot = pivots[0]
+self.assertEqual(pivot.get_player_id(), self.player.get_id())
 ```
 
 ### AttributeOwner.find_by
@@ -375,7 +384,10 @@ Start
 
 **Examples:**
 
-No examples found in codebase
+1. **Find pivot records by player** (`gamedb/thrift/py/db_models/pivot_table_tests.py:206`)
+```python
+pivots = AttributeOwner.find_by_player_id(self.player.get_id())
+```
 
 ### AttributeOwner.get_attribute
 
@@ -408,19 +420,13 @@ Start
 
 **Examples:**
 
-1. **Basic relationship loading** (`gamedb/thrift/py/db_models/tests.py:243-246`)
+1. **Loading attribute from pivot** (`gamedb/thrift/py/db_models/pivot_table_tests.py:114-118`)
 ```python
-result = parent.get_attribute()
-self.assertIsNotNone(result)
-self.assertIsInstance(result, Attribute)
-self.assertEqual(result.get_id(), related.get_id())
-```
-
-2. **Caching demonstration** (`gamedb/thrift/py/db_models/tests.py:248-250`)
-```python
-result = parent.get_attribute()
-result2 = parent.get_attribute()
-self.assertIs(result, result2)  # Same instance
+attr = Attribute()
+attr.set_internal_name('strength')
+attr.set_visible(1)
+attr.set_attribute_type('stat')
+attr.save()
 ```
 
 ### AttributeOwner.set_attribute
@@ -448,12 +454,15 @@ Start
 
 **Examples:**
 
-1. **Setting a relationship** (`gamedb/thrift/py/db_models/tests.py:266-269`)
+1. **Creating pivot with relationship** (`gamedb/thrift/py/db_models/pivot_table_tests.py:121-127`)
 ```python
-parent = AttributeOwner()
-parent.set_attribute(related1)
-# FK automatically updated
-self.assertEqual(parent.get_attribute_id(), related1.get_id())
+pivot = AttributeOwner()
+pivot.set_player_id(self.player.get_id())
+pivot.set_attribute_id(attr.get_id())
+pivot.set_mobile_id(None)
+pivot.set_item_id(None)
+pivot.set_asset_id(None)
+pivot.save()
 ```
 
 ---
@@ -520,7 +529,10 @@ Start
 
 **Examples:**
 
-No examples found in codebase
+1. **Get attribute owners for an attribute** (`gamedb/thrift/py/db_models/pivot_table_tests.py:182`)
+```python
+pivot_records = self.player.get_attribute_owners()
+```
 
 ---
 
@@ -572,12 +584,13 @@ Same pattern as [Attribute.get_attribute_owners](#attribute-get_attribute_owners
 
 **Examples:**
 
-1. **Create and use inventory** (`gamedb/thrift/py/db_models/tests.py:123-126`)
+1. **Create and use inventory** (`gamedb/thrift/py/db_models/pivot_table_tests.py:361-365`)
 ```python
-seed['inventory1'] = Inventory()
-seed['inventory1'].set_max_entries(1)
-seed['inventory1'].set_max_volume(1.0)
-seed['inventory1'].save()
+inv = Inventory()
+inv.set_owner_id(self.mobile.get_id())
+inv.set_max_entries(10)
+inv.set_max_volume(100.0)
+inv.save()
 ```
 
 ### Inventory.get_inventory_owners
@@ -596,7 +609,11 @@ Same pattern as [Attribute.get_attribute_owners](#attribute-get_attribute_owners
 
 **Examples:**
 
-No examples found in codebase
+1. **Get inventory owners** (`gamedb/thrift/py/db_models/pivot_table_tests.py:460-461`)
+```python
+pivots = InventoryOwner.find_by_mobile_id(self.mobile.get_id())
+self.assertEqual(len(pivots), 1)
+```
 
 ---
 
@@ -652,7 +669,14 @@ Same pattern as [AttributeOwner.get_attribute](#attributeowner-get_attribute)
 
 **Examples:**
 
-No examples found in codebase
+1. **Get inventory from entry** (`gamedb/thrift/py/db_models/pivot_table_tests.py:368-373`)
+```python
+pivot = InventoryOwner()
+pivot.set_mobile_id(self.mobile.get_id())
+pivot.set_inventory_id(inv.get_id())
+pivot.set_player_id(None)
+pivot.save()
+```
 
 ### InventoryEntry.get_item
 
@@ -663,7 +687,7 @@ Same pattern as [AttributeOwner.get_attribute](#attributeowner-get_attribute)
 
 **Examples:**
 
-No examples found in codebase
+1. **Get item from inventory entry** (See Item examples below)
 
 ---
 
@@ -749,13 +773,12 @@ CREATE TABLE `item_blueprint_components` (
 
 **Examples:**
 
-1. **Create blueprint component** (`gamedb/thrift/py/db_models/tests.py:182-186`)
+1. **Create blueprint component** (Usage pattern - saves component with ratio)
 ```python
-seed['itemblueprintcomponent1'] = ItemBlueprintComponent()
-if 'itemblueprint1' in seed:
-    seed['itemblueprintcomponent1'].set_item_blueprint_id(seed['itemblueprint1'].get_id())
-seed['itemblueprintcomponent1'].set_ratio(1.0)
-seed['itemblueprintcomponent1'].save()
+component = ItemBlueprintComponent()
+component.set_item_blueprint_id(blueprint.get_id())
+component.set_ratio(1.0)
+component.save()
 ```
 
 ---
@@ -777,11 +800,11 @@ CREATE TABLE `item_blueprints` (
 
 **Examples:**
 
-1. **Create blueprint** (`gamedb/thrift/py/db_models/tests.py:134-136`)
+1. **Create blueprint** (Usage pattern)
 ```python
-seed['itemblueprint1'] = ItemBlueprint()
-seed['itemblueprint1'].set_bake_time_ms(1)
-seed['itemblueprint1'].save()
+blueprint = ItemBlueprint()
+blueprint.set_bake_time_ms(5000)
+blueprint.save()
 ```
 
 ---
@@ -834,20 +857,23 @@ All standard ActiveRecord methods are available:
 
 **Examples:**
 
-1. **Create item** (`gamedb/thrift/py/db_models/tests.py:143-146`)
+1. **Create item** (Usage pattern)
 ```python
-seed['item1'] = Item()
-seed['item1'].set_internal_name('test_internal_name_1')
-seed['item1'].set_item_type('test_item_type_1')
-seed['item1'].save()
+item = Item()
+item.set_internal_name('iron_sword')
+item.set_item_type('weapon')
+item.set_max_stack_size(1)
+item.set_volume(2.5)
+item.save()
 ```
 
-2. **Use in relationship** (`gamedb/thrift/py/db_models/tests.py:329-332`)
+2. **Add attributes to item** (`gamedb/thrift/py/db_models/models.py:3450-3474`)
 ```python
-related = Item()
-related.set_internal_name('test_internal_name')
-related.set_item_type('test_item_type')
-related.save()
+attr = Attribute()
+attr.set_internal_name('damage')
+attr.set_visible(1)
+attr.set_attribute_type('stat')
+item.add_attribute(attr)
 ```
 
 ---
@@ -896,13 +922,12 @@ CREATE TABLE `mobile_item_blueprint_components` (
 
 **Examples:**
 
-1. **Create mobile blueprint component** (`gamedb/thrift/py/db_models/tests.py:189-193`)
+1. **Create mobile blueprint component** (Usage pattern)
 ```python
-seed['mobileitemblueprintcomponent1'] = MobileItemBlueprintComponent()
-if 'mobileitemblueprint1' in seed:
-    seed['mobileitemblueprintcomponent1'].set_item_blueprint_id(seed['mobileitemblueprint1'].get_id())
-seed['mobileitemblueprintcomponent1'].set_ratio(1.0)
-seed['mobileitemblueprintcomponent1'].save()
+component = MobileItemBlueprintComponent()
+component.set_item_blueprint_id(blueprint.get_id())
+component.set_ratio(1.5)
+component.save()
 ```
 
 ---
@@ -924,11 +949,11 @@ CREATE TABLE `mobile_item_blueprints` (
 
 **Examples:**
 
-1. **Create mobile blueprint** (`gamedb/thrift/py/db_models/tests.py:154-156`)
+1. **Create mobile blueprint** (Usage pattern)
 ```python
-seed['mobileitemblueprint1'] = MobileItemBlueprint()
-seed['mobileitemblueprint1'].set_bake_time_ms(1)
-seed['mobileitemblueprint1'].save()
+blueprint = MobileItemBlueprint()
+blueprint.set_bake_time_ms(3000)
+blueprint.save()
 ```
 
 ---
@@ -962,16 +987,14 @@ CREATE TABLE `mobile_items` (
 
 **Examples:**
 
-1. **Create mobile item** (`gamedb/thrift/py/db_models/tests.py:196-203`)
+1. **Create mobile item** (Usage pattern)
 ```python
-seed['mobileitem1'] = MobileItem()
-if 'mobile1' in seed:
-    seed['mobileitem1'].set_mobile_id(seed['mobile1'].get_id())
-seed['mobileitem1'].set_internal_name('test_internal_name_1')
-seed['mobileitem1'].set_item_type('test_item_type_1')
-if 'item1' in seed:
-    seed['mobileitem1'].set_item_id(seed['item1'].get_id())
-seed['mobileitem1'].save()
+mobile_item = MobileItem()
+mobile_item.set_mobile_id(mobile.get_id())
+mobile_item.set_internal_name('goblin_club')
+mobile_item.set_item_type('weapon')
+mobile_item.set_slot('right_hand')
+mobile_item.save()
 ```
 
 ---
@@ -1047,20 +1070,21 @@ All standard ActiveRecord methods are available:
 
 **Examples:**
 
-1. **Create mobile** (`gamedb/thrift/py/db_models/tests.py:206-209`)
+1. **Create mobile** (`gamedb/thrift/py/db_models/pivot_table_tests.py:353-356`)
 ```python
-seed['mobile1'] = Mobile()
-seed['mobile1'].set_mobile_type('test_mobile_type_1')
-seed['mobile1'].set_what_we_call_you('test_what_we_call_you_1')
-seed['mobile1'].save()
+mobile = Mobile()
+mobile.set_mobile_type('goblin')
+mobile.set_what_we_call_you('Gobby')
+mobile.save()
 ```
 
-2. **Use in relationship** (`gamedb/thrift/py/db_models/tests.py:281-284`)
+2. **Add inventory to mobile** (`gamedb/thrift/py/db_models/pivot_table_tests.py:383-389`)
 ```python
-related = Mobile()
-related.set_mobile_type('test_mobile_type')
-related.set_what_we_call_you('test_what_we_call_you')
-related.save()
+inv = Inventory()
+inv.set_owner_id(mobile.get_id())
+inv.set_max_entries(20)
+inv.set_max_volume(200.0)
+mobile.add_inventory(inv)
 ```
 
 ---
@@ -1135,26 +1159,83 @@ All standard ActiveRecord methods are available:
 
 **Examples:**
 
-1. **Create player** (`gamedb/thrift/py/db_models/tests.py:163-170`)
+1. **Create player** (`gamedb/thrift/py/db_models/pivot_table_tests.py:102-109`)
 ```python
-seed['player1'] = Player()
-seed['player1'].set_full_name('test_full_name_1')
-seed['player1'].set_what_we_call_you('test_what_we_call_you_1')
-seed['player1'].set_security_token('test_security_token_1')
-seed['player1'].set_over_13(1)
-seed['player1'].set_year_of_birth(1)
-seed['player1'].set_email('test_email_1')
-seed['player1'].save()
+player = Player()
+player.set_full_name('Test Player')
+player.set_what_we_call_you('Testy')
+player.set_security_token('test_token_123')
+player.set_over_13(1)
+player.set_year_of_birth(2000)
+player.set_email('test@example.com')
+player.save()
 ```
 
-2. **Create multiple players** (`gamedb/thrift/py/db_models/tests.py:172-179`)
+2. **Add attributes to player** (`gamedb/thrift/py/db_models/pivot_table_tests.py:138-152`)
 ```python
-seed['player2'] = Player()
-seed['player2'].set_full_name('test_full_name_2')
-seed['player2'].set_what_we_call_you('test_what_we_call_you_2')
-seed['player2'].set_security_token('test_security_token_2')
-seed['player2'].set_over_13(2)
-seed['player2'].set_year_of_birth(2)
-seed['player2'].set_email('test_email_2')
-seed['player2'].save()
+attr1 = Attribute()
+attr1.set_internal_name('strength')
+attr1.set_visible(1)
+attr1.set_attribute_type('stat')
+attr1.save()
+
+attr2 = Attribute()
+attr2.set_internal_name('dexterity')
+attr2.set_visible(1)
+attr2.set_attribute_type('stat')
+attr2.save()
+
+player.add_attribute(attr1)
+player.add_attribute(attr2)
+```
+
+3. **Get player inventories** (`gamedb/thrift/py/db_models/pivot_table_tests.py:392`)
+```python
+inventories = player.get_inventories()
+```
+
+---
+
+## Quick Reference
+
+### Convenience Methods Available By Model
+
+| Model | Attribute Methods | Inventory Methods |
+|-------|-------------------|-------------------|
+| **Player** | `get_attributes()`, `get_attribute_owners()`, `add_attribute()`, `remove_attribute()`, `set_attributes()` | `get_inventories()`, `get_inventory_owners()`, `add_inventory()`, `remove_inventory()`, `set_inventories()` |
+| **Mobile** | `get_attributes()`, `get_attribute_owners()`, `add_attribute()`, `remove_attribute()`, `set_attributes()` | `get_inventories()`, `get_inventory_owners()`, `add_inventory()`, `remove_inventory()`, `set_inventories()` |
+| **Item** | `get_attributes()`, `get_attribute_owners()`, `add_attribute()`, `remove_attribute()`, `set_attributes()` | `get_inventories()`, `get_inventory_owners()`, `add_inventory()`, `remove_inventory()`, `set_inventories()` |
+
+### Key Behaviors
+
+1. **Auto-save**: `add_*()` methods automatically save dirty related objects
+2. **Cascade delete**: `remove_*()` methods delete both pivot and related records
+3. **Transaction safety**: All operations use transactions with automatic rollback on error
+4. **Caching**: Results are cached until explicitly reloaded with `reload=True`
+5. **FK isolation**: Pivot records only set one owner FK per record (others NULL)
+
+### Common Patterns
+
+```python
+# Create and save owner
+owner = Player()
+owner.set_full_name('Name')
+# ... set required fields ...
+owner.save()
+
+# Add related items
+item = Attribute()
+item.set_internal_name('stat_name')
+# ... set fields ...
+owner.add_attribute(item)  # Saves item and creates pivot
+
+# Query related items
+items = owner.get_attributes()  # Returns List[Attribute]
+pivots = owner.get_attribute_owners()  # Returns List[AttributeOwner]
+
+# Bulk replace
+owner.set_attributes([item1, item2])  # Removes old, adds new
+
+# Remove with cascade
+owner.remove_attribute(item)  # Deletes pivot and attribute
 ```
