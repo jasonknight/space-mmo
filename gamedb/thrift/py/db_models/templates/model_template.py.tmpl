@@ -49,10 +49,12 @@ class {class_name}:
 {getters}
 
 {setters}
+{pivot_helper_methods}
 
 {belongs_to_methods}
 
 {has_many_methods}
+{pivot_owner_methods}
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """

@@ -37,7 +37,7 @@ class AttributeOwner:
           PRIMARY KEY (`id`),
           KEY `attribute_id` (`attribute_id`),
           CONSTRAINT `attribute_owners_ibfk_1` FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=421 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=461 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -118,6 +118,26 @@ class AttributeOwner:
         """Set the value of player_id."""
         self._data['player_id'] = value
         self._dirty = True
+
+    def is_mobile(self) -> bool:
+        """Check if this pivot record belongs to a mobile."""
+        return self.get_mobile_id() is not None
+
+
+    def is_item(self) -> bool:
+        """Check if this pivot record belongs to a item."""
+        return self.get_item_id() is not None
+
+
+    def is_asset(self) -> bool:
+        """Check if this pivot record belongs to a asset."""
+        return self.get_asset_id() is not None
+
+
+    def is_player(self) -> bool:
+        """Check if this pivot record belongs to a player."""
+        return self.get_player_id() is not None
+
 
     def get_attribute(self, strict: bool = False) -> 'Attribute':
         """
@@ -306,6 +326,7 @@ class AttributeOwner:
             self.set_player_id(None)
         else:
             self.set_player_id(model.get_id())
+
 
 
 
@@ -594,7 +615,7 @@ class Attribute:
           `vector3_z` double DEFAULT NULL,
           `asset_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=420 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=460 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -714,6 +735,7 @@ class Attribute:
 
 
 
+
     def get_attribute_owners(self, reload: bool = False, lazy: bool = False):
         """
         Get all associated AttributeOwner records.
@@ -747,6 +769,7 @@ class Attribute:
             setattr(self, cache_key, results)
 
         return iter(results) if lazy else results
+
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
@@ -889,7 +912,7 @@ class Inventory:
           `max_volume` double NOT NULL,
           `last_calculated_volume` double DEFAULT '0',
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -973,6 +996,7 @@ class Inventory:
 
 
 
+
     def get_inventory_entries(self, reload: bool = False, lazy: bool = False):
         """
         Get all associated InventoryEntry records.
@@ -1040,6 +1064,7 @@ class Inventory:
             setattr(self, cache_key, results)
 
         return iter(results) if lazy else results
+
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
@@ -1274,6 +1299,7 @@ class InventoryEntry:
         self._data['mobile_item_id'] = value
         self._dirty = True
 
+
     def get_inventory(self, strict: bool = False) -> 'Inventory':
         """
         Get the associated Inventory for this inventory relationship.
@@ -1414,6 +1440,7 @@ class InventoryEntry:
             self.set_mobile_item_id(None)
         else:
             self.set_mobile_item_id(model.get_id())
+
 
 
 
@@ -1634,7 +1661,7 @@ class InventoryOwner:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_owners_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=49 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1715,6 +1742,26 @@ class InventoryOwner:
         """Set the value of player_id."""
         self._data['player_id'] = value
         self._dirty = True
+
+    def is_mobile(self) -> bool:
+        """Check if this pivot record belongs to a mobile."""
+        return self.get_mobile_id() is not None
+
+
+    def is_item(self) -> bool:
+        """Check if this pivot record belongs to a item."""
+        return self.get_item_id() is not None
+
+
+    def is_asset(self) -> bool:
+        """Check if this pivot record belongs to a asset."""
+        return self.get_asset_id() is not None
+
+
+    def is_player(self) -> bool:
+        """Check if this pivot record belongs to a player."""
+        return self.get_player_id() is not None
+
 
     def get_inventory(self, strict: bool = False) -> 'Inventory':
         """
@@ -1903,6 +1950,7 @@ class InventoryOwner:
             self.set_player_id(None)
         else:
             self.set_player_id(model.get_id())
+
 
 
 
@@ -2251,6 +2299,7 @@ class ItemBlueprintComponent:
         self._data['ratio'] = value
         self._dirty = True
 
+
     def get_item_blueprint(self, strict: bool = False) -> 'ItemBlueprint':
         """
         Get the associated ItemBlueprint for this item_blueprint relationship.
@@ -2297,6 +2346,7 @@ class ItemBlueprintComponent:
             self.set_item_blueprint_id(None)
         else:
             self.set_item_blueprint_id(model.get_id())
+
 
 
 
@@ -2466,7 +2516,7 @@ class ItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=49 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2514,6 +2564,7 @@ class ItemBlueprint:
 
 
 
+
     def get_item_blueprint_components(self, reload: bool = False, lazy: bool = False):
         """
         Get all associated ItemBlueprintComponent records.
@@ -2547,6 +2598,7 @@ class ItemBlueprint:
             setattr(self, cache_key, results)
 
         return iter(results) if lazy else results
+
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
@@ -2661,7 +2713,7 @@ class Item:
           `item_type` varchar(50) NOT NULL,
           `blueprint_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1091 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1116 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2733,6 +2785,7 @@ class Item:
         """Set the value of blueprint_id."""
         self._data['blueprint_id'] = value
         self._dirty = True
+
 
 
 
@@ -2905,6 +2958,410 @@ class Item:
             setattr(self, cache_key, results)
 
         return iter(results) if lazy else results
+
+    def get_attributes(self, reload: bool = False) -> List['Attribute']:
+        """
+        Get all attributes for this Item through the attribute_owners pivot table.
+        Returns a list of Attribute objects.
+        """
+        cache_key = '_attributes_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        # Query through pivot table
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        results = []
+
+        try:
+            query = """
+                SELECT r.*
+                FROM attributes r
+                INNER JOIN attribute_owners p ON r.id = p.attribute_id
+                WHERE p.item_id = %s
+            """
+            cursor.execute(query, (self.get_id(),))
+            rows = cursor.fetchall()
+
+            for row in rows:
+                instance = Attribute()
+                instance._data = row
+                instance._dirty = False
+                results.append(instance)
+        finally:
+            cursor.close()
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def get_attribute_owners(self, reload: bool = False) -> List['AttributeOwner']:
+        """
+        Get all AttributeOwner pivot records for this Item.
+        Returns a list of AttributeOwner objects.
+        """
+        cache_key = '_attribute_owners_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        results = AttributeOwner.find_by_item_id(self.get_id())
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def add_attribute(self, attribute: 'Attribute') -> None:
+        """
+        Add a attribute to this Item through the attribute_owners pivot table.
+        Creates the pivot record and saves the attribute if it's new or dirty.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot add attribute to unsaved Item. Save the Item first.")
+
+        # Save the related object if it's new or dirty
+        if attribute._dirty:
+            attribute.save()
+
+        # Create pivot record
+        pivot = AttributeOwner()
+        pivot.set_item_id(self.get_id())
+        pivot.set_attribute_id(attribute.get_id())
+
+        # Set all other owner FKs to NULL explicitly
+        # This ensures only one owner FK is set per pivot record
+        for attr_name in dir(pivot):
+            if attr_name.startswith('set_') and attr_name.endswith('_id') and attr_name != 'set_id' and attr_name != 'set_item_id' and attr_name != 'set_attribute_id':
+                setter = getattr(pivot, attr_name)
+                setter(None)
+
+        pivot.save()
+
+        # Clear cache
+        cache_key = '_attributes_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_attribute_owners_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def remove_attribute(self, attribute: 'Attribute') -> None:
+        """
+        Remove a attribute from this Item through the attribute_owners pivot table.
+        Deletes both the pivot record and the attribute record (cascade delete).
+        """
+        if self.get_id() is None or attribute.get_id() is None:
+            return
+
+        # Use a fresh connection to avoid transaction conflicts
+        connection = mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+        cursor = connection.cursor()
+
+        try:
+            # Start transaction
+            connection.start_transaction()
+
+            # Delete pivot record first
+            cursor.execute(
+                f"DELETE FROM attribute_owners WHERE item_id = %s AND attribute_id = %s",
+                (self.get_id(), attribute.get_id()),
+            )
+
+            # Delete the related record
+            cursor.execute(
+                f"DELETE FROM attributes WHERE id = %s",
+                (attribute.get_id(),),
+            )
+
+            connection.commit()
+        except Exception as e:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
+        # Clear cache
+        cache_key = '_attributes_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_attribute_owners_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def set_attributes(self, attributes_list: List['Attribute']) -> None:
+        """
+        Replace all attributes for this Item.
+        Removes all existing attributes and adds the new ones.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot set attributes on unsaved Item. Save the Item first.")
+
+        self._connect()
+
+        try:
+            # Start transaction for all operations
+            self._connection.start_transaction()
+
+            # Get existing attributes
+            existing = self.get_attributes(reload=True)
+
+            # Delete all existing pivot records and related records
+            cursor = self._connection.cursor()
+            for item in existing:
+                if item.get_id() is not None:
+                    # Delete pivot record
+                    cursor.execute(
+                        f"DELETE FROM attribute_owners WHERE item_id = %s AND attribute_id = %s",
+                        (self.get_id(), item.get_id()),
+                    )
+                    # Delete related record
+                    cursor.execute(
+                        f"DELETE FROM attributes WHERE id = %s",
+                        (item.get_id(),),
+                    )
+            cursor.close()
+
+            # Commit deletions
+            self._connection.commit()
+
+            # Add new ones (each will start its own transaction)
+            for item in attributes_list:
+                self.add_attribute(item)
+
+            # Clear cache
+            cache_key = '_attributes_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+            cache_key = '_attribute_owners_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+
+        except Exception as e:
+            self._connection.rollback()
+            raise
+
+
+    def get_inventories(self, reload: bool = False) -> List['Inventory']:
+        """
+        Get all inventories for this Item through the inventory_owners pivot table.
+        Returns a list of Inventory objects.
+        """
+        cache_key = '_inventories_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        # Query through pivot table
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        results = []
+
+        try:
+            query = """
+                SELECT r.*
+                FROM inventories r
+                INNER JOIN inventory_owners p ON r.id = p.inventory_id
+                WHERE p.item_id = %s
+            """
+            cursor.execute(query, (self.get_id(),))
+            rows = cursor.fetchall()
+
+            for row in rows:
+                instance = Inventory()
+                instance._data = row
+                instance._dirty = False
+                results.append(instance)
+        finally:
+            cursor.close()
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def get_inventory_owners(self, reload: bool = False) -> List['InventoryOwner']:
+        """
+        Get all InventoryOwner pivot records for this Item.
+        Returns a list of InventoryOwner objects.
+        """
+        cache_key = '_inventory_owners_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        results = InventoryOwner.find_by_item_id(self.get_id())
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def add_inventory(self, inventory: 'Inventory') -> None:
+        """
+        Add a inventory to this Item through the inventory_owners pivot table.
+        Creates the pivot record and saves the inventory if it's new or dirty.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot add inventory to unsaved Item. Save the Item first.")
+
+        # Save the related object if it's new or dirty
+        if inventory._dirty:
+            inventory.save()
+
+        # Create pivot record
+        pivot = InventoryOwner()
+        pivot.set_item_id(self.get_id())
+        pivot.set_inventory_id(inventory.get_id())
+
+        # Set all other owner FKs to NULL explicitly
+        # This ensures only one owner FK is set per pivot record
+        for attr_name in dir(pivot):
+            if attr_name.startswith('set_') and attr_name.endswith('_id') and attr_name != 'set_id' and attr_name != 'set_item_id' and attr_name != 'set_inventory_id':
+                setter = getattr(pivot, attr_name)
+                setter(None)
+
+        pivot.save()
+
+        # Clear cache
+        cache_key = '_inventories_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_inventory_owners_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def remove_inventory(self, inventory: 'Inventory') -> None:
+        """
+        Remove a inventory from this Item through the inventory_owners pivot table.
+        Deletes both the pivot record and the inventory record (cascade delete).
+        """
+        if self.get_id() is None or inventory.get_id() is None:
+            return
+
+        # Use a fresh connection to avoid transaction conflicts
+        connection = mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+        cursor = connection.cursor()
+
+        try:
+            # Start transaction
+            connection.start_transaction()
+
+            # Delete pivot record first
+            cursor.execute(
+                f"DELETE FROM inventory_owners WHERE item_id = %s AND inventory_id = %s",
+                (self.get_id(), inventory.get_id()),
+            )
+
+            # Delete the related record
+            cursor.execute(
+                f"DELETE FROM inventories WHERE id = %s",
+                (inventory.get_id(),),
+            )
+
+            connection.commit()
+        except Exception as e:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
+        # Clear cache
+        cache_key = '_inventories_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_inventory_owners_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def set_inventories(self, inventories_list: List['Inventory']) -> None:
+        """
+        Replace all inventories for this Item.
+        Removes all existing inventories and adds the new ones.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot set inventories on unsaved Item. Save the Item first.")
+
+        self._connect()
+
+        try:
+            # Start transaction for all operations
+            self._connection.start_transaction()
+
+            # Get existing inventories
+            existing = self.get_inventories(reload=True)
+
+            # Delete all existing pivot records and related records
+            cursor = self._connection.cursor()
+            for item in existing:
+                if item.get_id() is not None:
+                    # Delete pivot record
+                    cursor.execute(
+                        f"DELETE FROM inventory_owners WHERE item_id = %s AND inventory_id = %s",
+                        (self.get_id(), item.get_id()),
+                    )
+                    # Delete related record
+                    cursor.execute(
+                        f"DELETE FROM inventories WHERE id = %s",
+                        (item.get_id(),),
+                    )
+            cursor.close()
+
+            # Commit deletions
+            self._connection.commit()
+
+            # Add new ones (each will start its own transaction)
+            for item in inventories_list:
+                self.add_inventory(item)
+
+            # Clear cache
+            cache_key = '_inventories_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+            cache_key = '_inventory_owners_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+
+        except Exception as e:
+            self._connection.rollback()
+            raise
+
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
@@ -3213,6 +3670,7 @@ class MobileItemAttribute:
         self._data['asset_id'] = value
         self._dirty = True
 
+
     def get_mobile_item(self, strict: bool = False) -> 'MobileItem':
         """
         Get the associated MobileItem for this mobile_item relationship.
@@ -3259,6 +3717,7 @@ class MobileItemAttribute:
             self.set_mobile_item_id(None)
         else:
             self.set_mobile_item_id(model.get_id())
+
 
 
 
@@ -3496,6 +3955,7 @@ class MobileItemBlueprintComponent:
         self._data['ratio'] = value
         self._dirty = True
 
+
     def get_item_blueprint(self, strict: bool = False) -> 'MobileItemBlueprint':
         """
         Get the associated MobileItemBlueprint for this item_blueprint relationship.
@@ -3542,6 +4002,7 @@ class MobileItemBlueprintComponent:
             self.set_item_blueprint_id(None)
         else:
             self.set_item_blueprint_id(model.get_id())
+
 
 
 
@@ -3711,7 +4172,7 @@ class MobileItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3759,6 +4220,7 @@ class MobileItemBlueprint:
 
 
 
+
     def get_mobile_item_blueprint_components(self, reload: bool = False, lazy: bool = False):
         """
         Get all associated MobileItemBlueprintComponent records.
@@ -3792,6 +4254,7 @@ class MobileItemBlueprint:
             setattr(self, cache_key, results)
 
         return iter(results) if lazy else results
+
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
@@ -3908,7 +4371,7 @@ class MobileItem:
           `blueprint_id` bigint DEFAULT NULL,
           `item_id` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3998,6 +4461,7 @@ class MobileItem:
         """Set the value of item_id."""
         self._data['item_id'] = value
         self._dirty = True
+
 
     def get_mobile(self, strict: bool = False) -> 'Mobile':
         """
@@ -4160,6 +4624,7 @@ class MobileItem:
             setattr(self, cache_key, results)
 
         return iter(results) if lazy else results
+
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
@@ -4384,7 +4849,7 @@ class Mobile:
           `owner_player_id` bigint DEFAULT NULL,
           `what_we_call_you` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=119 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=160 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -4474,6 +4939,7 @@ class Mobile:
         """Set the value of what_we_call_you."""
         self._data['what_we_call_you'] = value
         self._dirty = True
+
 
     def get_owner_mobile(self, strict: bool = False) -> Optional['Mobile']:
         """
@@ -4717,6 +5183,410 @@ class Mobile:
             setattr(self, cache_key, results)
 
         return iter(results) if lazy else results
+
+    def get_attributes(self, reload: bool = False) -> List['Attribute']:
+        """
+        Get all attributes for this Mobile through the attribute_owners pivot table.
+        Returns a list of Attribute objects.
+        """
+        cache_key = '_attributes_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        # Query through pivot table
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        results = []
+
+        try:
+            query = """
+                SELECT r.*
+                FROM attributes r
+                INNER JOIN attribute_owners p ON r.id = p.attribute_id
+                WHERE p.mobile_id = %s
+            """
+            cursor.execute(query, (self.get_id(),))
+            rows = cursor.fetchall()
+
+            for row in rows:
+                instance = Attribute()
+                instance._data = row
+                instance._dirty = False
+                results.append(instance)
+        finally:
+            cursor.close()
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def get_attribute_owners(self, reload: bool = False) -> List['AttributeOwner']:
+        """
+        Get all AttributeOwner pivot records for this Mobile.
+        Returns a list of AttributeOwner objects.
+        """
+        cache_key = '_attribute_owners_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        results = AttributeOwner.find_by_mobile_id(self.get_id())
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def add_attribute(self, attribute: 'Attribute') -> None:
+        """
+        Add a attribute to this Mobile through the attribute_owners pivot table.
+        Creates the pivot record and saves the attribute if it's new or dirty.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot add attribute to unsaved Mobile. Save the Mobile first.")
+
+        # Save the related object if it's new or dirty
+        if attribute._dirty:
+            attribute.save()
+
+        # Create pivot record
+        pivot = AttributeOwner()
+        pivot.set_mobile_id(self.get_id())
+        pivot.set_attribute_id(attribute.get_id())
+
+        # Set all other owner FKs to NULL explicitly
+        # This ensures only one owner FK is set per pivot record
+        for attr_name in dir(pivot):
+            if attr_name.startswith('set_') and attr_name.endswith('_id') and attr_name != 'set_id' and attr_name != 'set_mobile_id' and attr_name != 'set_attribute_id':
+                setter = getattr(pivot, attr_name)
+                setter(None)
+
+        pivot.save()
+
+        # Clear cache
+        cache_key = '_attributes_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_attribute_owners_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def remove_attribute(self, attribute: 'Attribute') -> None:
+        """
+        Remove a attribute from this Mobile through the attribute_owners pivot table.
+        Deletes both the pivot record and the attribute record (cascade delete).
+        """
+        if self.get_id() is None or attribute.get_id() is None:
+            return
+
+        # Use a fresh connection to avoid transaction conflicts
+        connection = mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+        cursor = connection.cursor()
+
+        try:
+            # Start transaction
+            connection.start_transaction()
+
+            # Delete pivot record first
+            cursor.execute(
+                f"DELETE FROM attribute_owners WHERE mobile_id = %s AND attribute_id = %s",
+                (self.get_id(), attribute.get_id()),
+            )
+
+            # Delete the related record
+            cursor.execute(
+                f"DELETE FROM attributes WHERE id = %s",
+                (attribute.get_id(),),
+            )
+
+            connection.commit()
+        except Exception as e:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
+        # Clear cache
+        cache_key = '_attributes_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_attribute_owners_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def set_attributes(self, attributes_list: List['Attribute']) -> None:
+        """
+        Replace all attributes for this Mobile.
+        Removes all existing attributes and adds the new ones.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot set attributes on unsaved Mobile. Save the Mobile first.")
+
+        self._connect()
+
+        try:
+            # Start transaction for all operations
+            self._connection.start_transaction()
+
+            # Get existing attributes
+            existing = self.get_attributes(reload=True)
+
+            # Delete all existing pivot records and related records
+            cursor = self._connection.cursor()
+            for item in existing:
+                if item.get_id() is not None:
+                    # Delete pivot record
+                    cursor.execute(
+                        f"DELETE FROM attribute_owners WHERE mobile_id = %s AND attribute_id = %s",
+                        (self.get_id(), item.get_id()),
+                    )
+                    # Delete related record
+                    cursor.execute(
+                        f"DELETE FROM attributes WHERE id = %s",
+                        (item.get_id(),),
+                    )
+            cursor.close()
+
+            # Commit deletions
+            self._connection.commit()
+
+            # Add new ones (each will start its own transaction)
+            for item in attributes_list:
+                self.add_attribute(item)
+
+            # Clear cache
+            cache_key = '_attributes_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+            cache_key = '_attribute_owners_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+
+        except Exception as e:
+            self._connection.rollback()
+            raise
+
+
+    def get_inventories(self, reload: bool = False) -> List['Inventory']:
+        """
+        Get all inventories for this Mobile through the inventory_owners pivot table.
+        Returns a list of Inventory objects.
+        """
+        cache_key = '_inventories_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        # Query through pivot table
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        results = []
+
+        try:
+            query = """
+                SELECT r.*
+                FROM inventories r
+                INNER JOIN inventory_owners p ON r.id = p.inventory_id
+                WHERE p.mobile_id = %s
+            """
+            cursor.execute(query, (self.get_id(),))
+            rows = cursor.fetchall()
+
+            for row in rows:
+                instance = Inventory()
+                instance._data = row
+                instance._dirty = False
+                results.append(instance)
+        finally:
+            cursor.close()
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def get_inventory_owners(self, reload: bool = False) -> List['InventoryOwner']:
+        """
+        Get all InventoryOwner pivot records for this Mobile.
+        Returns a list of InventoryOwner objects.
+        """
+        cache_key = '_inventory_owners_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        results = InventoryOwner.find_by_mobile_id(self.get_id())
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def add_inventory(self, inventory: 'Inventory') -> None:
+        """
+        Add a inventory to this Mobile through the inventory_owners pivot table.
+        Creates the pivot record and saves the inventory if it's new or dirty.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot add inventory to unsaved Mobile. Save the Mobile first.")
+
+        # Save the related object if it's new or dirty
+        if inventory._dirty:
+            inventory.save()
+
+        # Create pivot record
+        pivot = InventoryOwner()
+        pivot.set_mobile_id(self.get_id())
+        pivot.set_inventory_id(inventory.get_id())
+
+        # Set all other owner FKs to NULL explicitly
+        # This ensures only one owner FK is set per pivot record
+        for attr_name in dir(pivot):
+            if attr_name.startswith('set_') and attr_name.endswith('_id') and attr_name != 'set_id' and attr_name != 'set_mobile_id' and attr_name != 'set_inventory_id':
+                setter = getattr(pivot, attr_name)
+                setter(None)
+
+        pivot.save()
+
+        # Clear cache
+        cache_key = '_inventories_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_inventory_owners_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def remove_inventory(self, inventory: 'Inventory') -> None:
+        """
+        Remove a inventory from this Mobile through the inventory_owners pivot table.
+        Deletes both the pivot record and the inventory record (cascade delete).
+        """
+        if self.get_id() is None or inventory.get_id() is None:
+            return
+
+        # Use a fresh connection to avoid transaction conflicts
+        connection = mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+        cursor = connection.cursor()
+
+        try:
+            # Start transaction
+            connection.start_transaction()
+
+            # Delete pivot record first
+            cursor.execute(
+                f"DELETE FROM inventory_owners WHERE mobile_id = %s AND inventory_id = %s",
+                (self.get_id(), inventory.get_id()),
+            )
+
+            # Delete the related record
+            cursor.execute(
+                f"DELETE FROM inventories WHERE id = %s",
+                (inventory.get_id(),),
+            )
+
+            connection.commit()
+        except Exception as e:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
+        # Clear cache
+        cache_key = '_inventories_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_inventory_owners_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def set_inventories(self, inventories_list: List['Inventory']) -> None:
+        """
+        Replace all inventories for this Mobile.
+        Removes all existing inventories and adds the new ones.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot set inventories on unsaved Mobile. Save the Mobile first.")
+
+        self._connect()
+
+        try:
+            # Start transaction for all operations
+            self._connection.start_transaction()
+
+            # Get existing inventories
+            existing = self.get_inventories(reload=True)
+
+            # Delete all existing pivot records and related records
+            cursor = self._connection.cursor()
+            for item in existing:
+                if item.get_id() is not None:
+                    # Delete pivot record
+                    cursor.execute(
+                        f"DELETE FROM inventory_owners WHERE mobile_id = %s AND inventory_id = %s",
+                        (self.get_id(), item.get_id()),
+                    )
+                    # Delete related record
+                    cursor.execute(
+                        f"DELETE FROM inventories WHERE id = %s",
+                        (item.get_id(),),
+                    )
+            cursor.close()
+
+            # Commit deletions
+            self._connection.commit()
+
+            # Add new ones (each will start its own transaction)
+            for item in inventories_list:
+                self.add_inventory(item)
+
+            # Clear cache
+            cache_key = '_inventories_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+            cache_key = '_inventory_owners_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+
+        except Exception as e:
+            self._connection.rollback()
+            raise
+
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
@@ -4986,7 +5856,7 @@ class Player:
           `year_of_birth` bigint NOT NULL,
           `email` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=68 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5076,6 +5946,7 @@ class Player:
         """Set the value of email."""
         self._data['email'] = value
         self._dirty = True
+
 
 
 
@@ -5180,6 +6051,410 @@ class Player:
             setattr(self, cache_key, results)
 
         return iter(results) if lazy else results
+
+    def get_attributes(self, reload: bool = False) -> List['Attribute']:
+        """
+        Get all attributes for this Player through the attribute_owners pivot table.
+        Returns a list of Attribute objects.
+        """
+        cache_key = '_attributes_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        # Query through pivot table
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        results = []
+
+        try:
+            query = """
+                SELECT r.*
+                FROM attributes r
+                INNER JOIN attribute_owners p ON r.id = p.attribute_id
+                WHERE p.player_id = %s
+            """
+            cursor.execute(query, (self.get_id(),))
+            rows = cursor.fetchall()
+
+            for row in rows:
+                instance = Attribute()
+                instance._data = row
+                instance._dirty = False
+                results.append(instance)
+        finally:
+            cursor.close()
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def get_attribute_owners(self, reload: bool = False) -> List['AttributeOwner']:
+        """
+        Get all AttributeOwner pivot records for this Player.
+        Returns a list of AttributeOwner objects.
+        """
+        cache_key = '_attribute_owners_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        results = AttributeOwner.find_by_player_id(self.get_id())
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def add_attribute(self, attribute: 'Attribute') -> None:
+        """
+        Add a attribute to this Player through the attribute_owners pivot table.
+        Creates the pivot record and saves the attribute if it's new or dirty.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot add attribute to unsaved Player. Save the Player first.")
+
+        # Save the related object if it's new or dirty
+        if attribute._dirty:
+            attribute.save()
+
+        # Create pivot record
+        pivot = AttributeOwner()
+        pivot.set_player_id(self.get_id())
+        pivot.set_attribute_id(attribute.get_id())
+
+        # Set all other owner FKs to NULL explicitly
+        # This ensures only one owner FK is set per pivot record
+        for attr_name in dir(pivot):
+            if attr_name.startswith('set_') and attr_name.endswith('_id') and attr_name != 'set_id' and attr_name != 'set_player_id' and attr_name != 'set_attribute_id':
+                setter = getattr(pivot, attr_name)
+                setter(None)
+
+        pivot.save()
+
+        # Clear cache
+        cache_key = '_attributes_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_attribute_owners_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def remove_attribute(self, attribute: 'Attribute') -> None:
+        """
+        Remove a attribute from this Player through the attribute_owners pivot table.
+        Deletes both the pivot record and the attribute record (cascade delete).
+        """
+        if self.get_id() is None or attribute.get_id() is None:
+            return
+
+        # Use a fresh connection to avoid transaction conflicts
+        connection = mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+        cursor = connection.cursor()
+
+        try:
+            # Start transaction
+            connection.start_transaction()
+
+            # Delete pivot record first
+            cursor.execute(
+                f"DELETE FROM attribute_owners WHERE player_id = %s AND attribute_id = %s",
+                (self.get_id(), attribute.get_id()),
+            )
+
+            # Delete the related record
+            cursor.execute(
+                f"DELETE FROM attributes WHERE id = %s",
+                (attribute.get_id(),),
+            )
+
+            connection.commit()
+        except Exception as e:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
+        # Clear cache
+        cache_key = '_attributes_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_attribute_owners_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def set_attributes(self, attributes_list: List['Attribute']) -> None:
+        """
+        Replace all attributes for this Player.
+        Removes all existing attributes and adds the new ones.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot set attributes on unsaved Player. Save the Player first.")
+
+        self._connect()
+
+        try:
+            # Start transaction for all operations
+            self._connection.start_transaction()
+
+            # Get existing attributes
+            existing = self.get_attributes(reload=True)
+
+            # Delete all existing pivot records and related records
+            cursor = self._connection.cursor()
+            for item in existing:
+                if item.get_id() is not None:
+                    # Delete pivot record
+                    cursor.execute(
+                        f"DELETE FROM attribute_owners WHERE player_id = %s AND attribute_id = %s",
+                        (self.get_id(), item.get_id()),
+                    )
+                    # Delete related record
+                    cursor.execute(
+                        f"DELETE FROM attributes WHERE id = %s",
+                        (item.get_id(),),
+                    )
+            cursor.close()
+
+            # Commit deletions
+            self._connection.commit()
+
+            # Add new ones (each will start its own transaction)
+            for item in attributes_list:
+                self.add_attribute(item)
+
+            # Clear cache
+            cache_key = '_attributes_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+            cache_key = '_attribute_owners_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+
+        except Exception as e:
+            self._connection.rollback()
+            raise
+
+
+    def get_inventories(self, reload: bool = False) -> List['Inventory']:
+        """
+        Get all inventories for this Player through the inventory_owners pivot table.
+        Returns a list of Inventory objects.
+        """
+        cache_key = '_inventories_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        # Query through pivot table
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        results = []
+
+        try:
+            query = """
+                SELECT r.*
+                FROM inventories r
+                INNER JOIN inventory_owners p ON r.id = p.inventory_id
+                WHERE p.player_id = %s
+            """
+            cursor.execute(query, (self.get_id(),))
+            rows = cursor.fetchall()
+
+            for row in rows:
+                instance = Inventory()
+                instance._data = row
+                instance._dirty = False
+                results.append(instance)
+        finally:
+            cursor.close()
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def get_inventory_owners(self, reload: bool = False) -> List['InventoryOwner']:
+        """
+        Get all InventoryOwner pivot records for this Player.
+        Returns a list of InventoryOwner objects.
+        """
+        cache_key = '_inventory_owners_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        results = InventoryOwner.find_by_player_id(self.get_id())
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def add_inventory(self, inventory: 'Inventory') -> None:
+        """
+        Add a inventory to this Player through the inventory_owners pivot table.
+        Creates the pivot record and saves the inventory if it's new or dirty.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot add inventory to unsaved Player. Save the Player first.")
+
+        # Save the related object if it's new or dirty
+        if inventory._dirty:
+            inventory.save()
+
+        # Create pivot record
+        pivot = InventoryOwner()
+        pivot.set_player_id(self.get_id())
+        pivot.set_inventory_id(inventory.get_id())
+
+        # Set all other owner FKs to NULL explicitly
+        # This ensures only one owner FK is set per pivot record
+        for attr_name in dir(pivot):
+            if attr_name.startswith('set_') and attr_name.endswith('_id') and attr_name != 'set_id' and attr_name != 'set_player_id' and attr_name != 'set_inventory_id':
+                setter = getattr(pivot, attr_name)
+                setter(None)
+
+        pivot.save()
+
+        # Clear cache
+        cache_key = '_inventories_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_inventory_owners_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def remove_inventory(self, inventory: 'Inventory') -> None:
+        """
+        Remove a inventory from this Player through the inventory_owners pivot table.
+        Deletes both the pivot record and the inventory record (cascade delete).
+        """
+        if self.get_id() is None or inventory.get_id() is None:
+            return
+
+        # Use a fresh connection to avoid transaction conflicts
+        connection = mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+        cursor = connection.cursor()
+
+        try:
+            # Start transaction
+            connection.start_transaction()
+
+            # Delete pivot record first
+            cursor.execute(
+                f"DELETE FROM inventory_owners WHERE player_id = %s AND inventory_id = %s",
+                (self.get_id(), inventory.get_id()),
+            )
+
+            # Delete the related record
+            cursor.execute(
+                f"DELETE FROM inventories WHERE id = %s",
+                (inventory.get_id(),),
+            )
+
+            connection.commit()
+        except Exception as e:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
+        # Clear cache
+        cache_key = '_inventories_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_inventory_owners_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def set_inventories(self, inventories_list: List['Inventory']) -> None:
+        """
+        Replace all inventories for this Player.
+        Removes all existing inventories and adds the new ones.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot set inventories on unsaved Player. Save the Player first.")
+
+        self._connect()
+
+        try:
+            # Start transaction for all operations
+            self._connection.start_transaction()
+
+            # Get existing inventories
+            existing = self.get_inventories(reload=True)
+
+            # Delete all existing pivot records and related records
+            cursor = self._connection.cursor()
+            for item in existing:
+                if item.get_id() is not None:
+                    # Delete pivot record
+                    cursor.execute(
+                        f"DELETE FROM inventory_owners WHERE player_id = %s AND inventory_id = %s",
+                        (self.get_id(), item.get_id()),
+                    )
+                    # Delete related record
+                    cursor.execute(
+                        f"DELETE FROM inventories WHERE id = %s",
+                        (item.get_id(),),
+                    )
+            cursor.close()
+
+            # Commit deletions
+            self._connection.commit()
+
+            # Add new ones (each will start its own transaction)
+            for item in inventories_list:
+                self.add_inventory(item)
+
+            # Clear cache
+            cache_key = '_inventories_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+            cache_key = '_inventory_owners_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+
+        except Exception as e:
+            self._connection.rollback()
+            raise
+
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """

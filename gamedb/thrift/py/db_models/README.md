@@ -10,28 +10,20 @@ import os
 
 ## Table of Contents
 - [Overview](#overview)
+- [Pivot Table Pattern](#pivot-table-pattern)
+  - [Understanding Pivot Tables](#understanding-pivot-tables)
+  - [Working with Attributes](#working-with-attributes)
+  - [Working with Inventories](#working-with-inventories)
 - [AttributeOwner](#attributeowner)
+  - [Helper Methods](#attributeowner-helper-methods)
   - [__init__()](#attributeowner-__init__)
   - [save()](#attributeowner-save)
   - [find()](#attributeowner-find)
-  - [find_by_*()](#attributeowner-find_by)
-  - [get_attribute()](#attributeowner-get_attribute)
-  - [set_attribute()](#attributeowner-set_attribute)
 - [Attribute](#attribute)
-  - [save()](#attribute-save)
-  - [find()](#attribute-find)
-  - [get_attribute_owners()](#attribute-get_attribute_owners)
-- [Inventory](#inventory)
-  - [save()](#inventory-save)
-  - [find()](#inventory-find)
-  - [get_inventory_entries()](#inventory-get_inventory_entries)
-  - [get_inventory_owners()](#inventory-get_inventory_owners)
-- [InventoryEntry](#inventoryentry)
-  - [save()](#inventoryentry-save)
-  - [find()](#inventoryentry-find)
-  - [get_inventory()](#inventoryentry-get_inventory)
-  - [get_item()](#inventoryentry-get_item)
 - [InventoryOwner](#inventoryowner)
+  - [Helper Methods](#inventoryowner-helper-methods)
+- [Inventory](#inventory)
+- [InventoryEntry](#inventoryentry)
 - [ItemBlueprintComponent](#itemblueprintcomponent)
 - [ItemBlueprint](#itemblueprint)
 - [Item](#item)
@@ -56,9 +48,204 @@ This module contains auto-generated ActiveRecord-style model classes for all dat
 
 ---
 
+## Pivot Table Pattern
+
+### Understanding Pivot Tables
+
+**Pivot tables** (`attribute_owners` and `inventory_owners`) implement many-to-many relationships between owners (Player, Mobile, Item) and their associated data (Attributes, Inventories).
+
+**Key Characteristics:**
+- Each pivot record links exactly ONE owner to ONE related record
+- Only one owner foreign key is set per pivot record (others are NULL)
+- Provides both convenience methods (pivot hidden) and explicit pivot access
+- Cascade delete: removing a relationship deletes both the pivot and related record
+- No sharing: each owner gets its own copy of related records
+
+### Working with Attributes
+
+#### Quick Start
+
+```python
+# Create a player
+player = Player()
+player.set_full_name('Alice')
+player.set_what_we_call_you('Alice')
+player.set_security_token('token_123')
+player.set_over_13(1)
+player.set_year_of_birth(2000)
+player.set_email('alice@example.com')
+player.save()
+
+# Create and add an attribute
+strength = Attribute()
+strength.set_internal_name('strength')
+strength.set_visible(1)
+strength.set_attribute_type('stat')
+strength.set_double_value(15.5)
+
+player.add_attribute(strength)  # Creates pivot automatically
+
+# Get all attributes
+attributes = player.get_attributes()
+for attr in attributes:
+    print(f"{attr.get_internal_name()}: {attr.get_double_value()}")
+
+# Remove an attribute (cascade delete)
+player.remove_attribute(strength)  # Deletes both pivot and attribute
+
+# Bulk replace all attributes
+new_attrs = [attr1, attr2, attr3]
+player.set_attributes(new_attrs)  # Removes old, adds new
+```
+
+#### Convenience Methods (Recommended)
+
+**On Owner Models** (Player, Mobile, Item):
+
+```python
+# Get all attributes (returns List[Attribute])
+attributes = player.get_attributes()
+attributes = mobile.get_attributes()
+attributes = item.get_attributes()
+
+# Add an attribute
+player.add_attribute(strength_attr)
+# - Saves the attribute if dirty/new
+# - Creates pivot with only player_id set
+# - All other owner FKs set to NULL
+
+# Remove an attribute (cascade delete)
+player.remove_attribute(strength_attr)
+# - Deletes the AttributeOwner pivot record
+# - Deletes the Attribute record
+# - Commits in single transaction
+
+# Replace all attributes
+player.set_attributes([attr1, attr2, attr3])
+# - Removes all existing attributes (cascade delete)
+# - Adds all new attributes
+```
+
+#### Explicit Pivot Access (Advanced)
+
+```python
+# Get pivot records directly
+attribute_owners = player.get_attribute_owners()
+for ao in attribute_owners:
+    if ao.is_player():
+        print(f"Player {ao.get_player_id()} owns attribute {ao.get_attribute_id()}")
+
+# Manual pivot management
+pivot = AttributeOwner()
+pivot.set_player_id(player.get_id())
+pivot.set_attribute_id(attr.get_id())
+pivot.set_mobile_id(None)  # Explicitly NULL
+pivot.set_item_id(None)
+pivot.set_asset_id(None)
+pivot.save()
+```
+
+#### Helper Methods on AttributeOwner
+
+```python
+pivot = AttributeOwner.find(pivot_id)
+
+# Determine owner type
+if pivot.is_player():
+    print("Belongs to a player")
+elif pivot.is_mobile():
+    print("Belongs to a mobile")
+elif pivot.is_item():
+    print("Belongs to an item")
+elif pivot.is_asset():
+    print("Belongs to an asset")
+```
+
+### Working with Inventories
+
+#### Quick Start
+
+```python
+# Create a mobile
+mobile = Mobile()
+mobile.set_mobile_type('goblin')
+mobile.set_what_we_call_you('Gobby')
+mobile.save()
+
+# Create and add an inventory
+backpack = Inventory()
+backpack.set_owner_id(mobile.get_id())  # Required field
+backpack.set_max_entries(20)
+backpack.set_max_volume(100.0)
+
+mobile.add_inventory(backpack)  # Creates pivot automatically
+
+# Get all inventories
+inventories = mobile.get_inventories()
+for inv in inventories:
+    print(f"Max entries: {inv.get_max_entries()}")
+
+# Remove an inventory (cascade delete)
+mobile.remove_inventory(backpack)
+
+# Bulk replace
+new_invs = [inv1, inv2]
+mobile.set_inventories(new_invs)
+```
+
+#### Convenience Methods
+
+**On Player and Mobile Models**:
+
+```python
+# Get all inventories (returns List[Inventory])
+inventories = player.get_inventories()
+inventories = mobile.get_inventories()
+
+# Add an inventory
+mobile.add_inventory(backpack_inv)
+# - Saves the inventory if dirty/new
+# - Creates pivot with only mobile_id set
+# - All other owner FKs set to NULL
+
+# Remove an inventory (cascade delete)
+mobile.remove_inventory(backpack_inv)
+# - Deletes the InventoryOwner pivot record
+# - Deletes the Inventory record
+
+# Replace all inventories
+mobile.set_inventories([inv1, inv2])
+```
+
+#### Helper Methods on InventoryOwner
+
+```python
+pivot = InventoryOwner.find(pivot_id)
+
+# Determine owner type
+if pivot.is_player():
+    print("Belongs to a player")
+elif pivot.is_mobile():
+    print("Belongs to a mobile")
+elif pivot.is_item():
+    print("Belongs to an item")
+```
+
+#### Important Notes
+
+- **No Sharing**: Each owner gets its own Attribute/Inventory records - modifications don't affect other owners
+- **Transaction Safety**: All operations are transaction-safe with automatic rollback on error
+- **Cascade Delete**: Removing a relationship deletes both the pivot and the related record
+- **Optimized Saves**: Only dirty/new records are saved to minimize database calls
+- **FK Isolation**: Only one owner FK is set per pivot record to maintain data integrity
+
+---
+
 ## AttributeOwner
 
-ActiveRecord-style model for the `attribute_owners` table.
+**Pivot table** linking attributes to their owners (Player, Mobile, Item, Asset).
+
+See [Pivot Table Pattern](#pivot-table-pattern) for comprehensive usage examples.
 
 **Table Schema**:
 ```sql
@@ -69,92 +256,50 @@ CREATE TABLE `attribute_owners` (
   `item_id` bigint DEFAULT NULL,
   `asset_id` bigint DEFAULT NULL,
   `player_id` bigint DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `attribute_id` (`attribute_id`),
-  CONSTRAINT `attribute_owners_ibfk_1` FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`)
+  PRIMARY KEY (`id`)
 )
 ```
 
-### AttributeOwner.__init__
+### AttributeOwner Helper Methods
 
 ```python
-def __init__(self):
+def is_player(self) -> bool:
+    """Check if this pivot record belongs to a player."""
+    ...
+
+def is_mobile(self) -> bool:
+    """Check if this pivot record belongs to a mobile."""
+    ...
+
+def is_item(self) -> bool:
+    """Check if this pivot record belongs to an item."""
+    ...
+
+def is_asset(self) -> bool:
+    """Check if this pivot record belongs to an asset."""
     ...
 ```
 
-Initializes a new model instance with empty data dictionary, no database connection, and marked as dirty (requiring save).
-
-**Functions called:**
-- None
-
-**Examples:**
-
-1. **Basic instantiation** (`gamedb/thrift/py/db_models/tests.py:226`)
+**Example:**
 ```python
-model = AttributeOwner()
+pivot = AttributeOwner.find(1)
+if pivot.is_player():
+    player_id = pivot.get_player_id()
+    print(f"Attribute belongs to player {player_id}")
 ```
 
-2. **Create and save** (`gamedb/thrift/py/db_models/tests.py:238-240`)
-```python
-parent = AttributeOwner()
-parent.set_attribute_id(related.get_id())
-parent.save()
-```
+### Standard Methods
 
-### AttributeOwner.save
-
-```python
-def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
-    ...
-```
-
-Saves the record to the database with transaction support and optional cascading to related models.
-
-**ASCII Execution Graph:**
-```
-Start
-├─ Check if dirty
-│  └─ [not dirty] → Return early (no save needed)
-├─ Determine connection ownership
-│  ├─ [owns connection] → Connect and start transaction
-│  └─ [external connection] → Use provided connection
-├─ Cascade save belongs-to relationships (if cascade=True)
-│  ├─ Check cached attribute → Save if dirty
-│  ├─ Check cached mobile → Save if dirty
-│  ├─ Check cached item → Save if dirty
-│  └─ Check cached player → Save if dirty
-├─ Execute database operation
-│  ├─ [id exists] → UPDATE existing record
-│  └─ [id is None] → INSERT new record and capture lastrowid
-├─ Mark model as clean (_dirty = False)
-├─ Cascade save has-many relationships (if cascade=True)
-├─ Commit or rollback
-│  ├─ [owns connection] → Commit transaction
-│  ├─ [error occurred] → Rollback if owns connection
-│  └─ [external connection] → Caller handles commit
-└─ End
-```
-
-**Functions called:**
-- `_connect()` - [link to section](#attributeowner-_connect)
-- `connection.start_transaction()` - external call
-- `related.save()` - recursive save for belongs-to relationships
-- `cursor.execute()` - external call
-- `connection.commit()` - external call
-- `connection.rollback()` - external call
-
-**Examples:**
-
-1. **Simple save** (`gamedb/thrift/py/db_models/tests.py:113-114`)
-```python
-seed['attribute1'].set_internal_name('test_internal_name_1')
-seed['attribute1'].save()
-```
-
-2. **Transactional save with connection** (pattern used internally)
-```python
-parent.save(connection=existing_connection, cascade=True)
-```
+All standard ActiveRecord methods are available:
+- `__init__()` - Initialize new instance
+- `save()` - Save to database with transaction support
+- `find(id)` - Find by primary key
+- `find_by_attribute_id(value)` - Find all by attribute_id
+- `find_by_player_id(value)` - Find all by player_id
+- `find_by_mobile_id(value)` - Find all by mobile_id
+- `find_by_item_id(value)` - Find all by item_id
+- `find_by_asset_id(value)` - Find all by asset_id
+- Getters/setters for all columns
 
 ### AttributeOwner.find
 
@@ -524,7 +669,9 @@ No examples found in codebase
 
 ## InventoryOwner
 
-ActiveRecord-style model for the `inventory_owners` table.
+**Pivot table** linking inventories to their owners (Player, Mobile, Item).
+
+See [Pivot Table Pattern](#pivot-table-pattern) for comprehensive usage examples.
 
 **Table Schema**:
 ```sql
@@ -543,7 +690,40 @@ CREATE TABLE `inventory_owners` (
 )
 ```
 
-**Key Methods**: Same pattern as AttributeOwner
+### InventoryOwner Helper Methods
+
+```python
+def is_player(self) -> bool:
+    """Check if this pivot record belongs to a player."""
+    ...
+
+def is_mobile(self) -> bool:
+    """Check if this pivot record belongs to a mobile."""
+    ...
+
+def is_item(self) -> bool:
+    """Check if this pivot record belongs to an item."""
+    ...
+```
+
+**Example:**
+```python
+pivot = InventoryOwner.find(1)
+if pivot.is_mobile():
+    mobile_id = pivot.get_mobile_id()
+    print(f"Inventory belongs to mobile {mobile_id}")
+```
+
+### Standard Methods
+
+All standard ActiveRecord methods are available:
+- `__init__()` - Initialize new instance
+- `save()` - Save to database with transaction support
+- `find(id)` - Find by primary key
+- `find_by_inventory_id(value)` - Find all by inventory_id
+- `find_by_player_id(value)` - Find all by player_id
+- `find_by_mobile_id(value)` - Find all by mobile_id
+- Getters/setters for all columns
 
 ---
 
@@ -608,7 +788,7 @@ seed['itemblueprint1'].save()
 
 ## Item
 
-ActiveRecord-style model for the `items` table.
+ActiveRecord-style model for the `items` table. Items can have attributes through the AttributeOwner pivot table.
 
 **Table Schema**:
 ```sql
@@ -624,7 +804,33 @@ CREATE TABLE `items` (
 )
 ```
 
-**Key Methods**: Same pattern as AttributeOwner
+### Attribute Convenience Methods
+
+See [Pivot Table Pattern](#pivot-table-pattern) for comprehensive usage guide.
+
+```python
+# Get all attributes
+attributes = item.get_attributes()
+
+# Get attribute pivot records
+attribute_owners = item.get_attribute_owners()
+
+# Add an attribute (creates AttributeOwner pivot)
+item.add_attribute(strength_attr)
+
+# Remove an attribute (cascade delete pivot and attribute)
+item.remove_attribute(strength_attr)
+
+# Replace all attributes
+item.set_attributes([attr1, attr2])
+```
+
+### Standard Methods
+
+All standard ActiveRecord methods are available:
+- `__init__()`, `save()`, `find()`
+- `find_by_asset_id(value: int)`
+- Standard getters/setters for all columns
 
 **Examples:**
 
@@ -772,7 +978,7 @@ seed['mobileitem1'].save()
 
 ## Mobile
 
-ActiveRecord-style model for the `mobiles` table.
+ActiveRecord-style model for the `mobiles` table. Mobiles can have both attributes and inventories through pivot tables.
 
 **Table Schema**:
 ```sql
@@ -789,7 +995,55 @@ CREATE TABLE `mobiles` (
 )
 ```
 
-**Key Methods**: Same pattern as AttributeOwner
+### Attribute Convenience Methods
+
+See [Pivot Table Pattern](#pivot-table-pattern) for comprehensive usage guide.
+
+```python
+# Get all attributes
+attributes = mobile.get_attributes()
+
+# Get attribute pivot records
+attribute_owners = mobile.get_attribute_owners()
+
+# Add an attribute (creates AttributeOwner pivot)
+mobile.add_attribute(strength_attr)
+
+# Remove an attribute (cascade delete pivot and attribute)
+mobile.remove_attribute(strength_attr)
+
+# Replace all attributes
+mobile.set_attributes([attr1, attr2])
+```
+
+### Inventory Convenience Methods
+
+See [Pivot Table Pattern](#pivot-table-pattern) for comprehensive usage guide.
+
+```python
+# Get all inventories
+inventories = mobile.get_inventories()
+
+# Get inventory pivot records
+inventory_owners = mobile.get_inventory_owners()
+
+# Add an inventory (creates InventoryOwner pivot)
+mobile.add_inventory(backpack_inv)
+
+# Remove an inventory (cascade delete pivot and inventory)
+mobile.remove_inventory(backpack_inv)
+
+# Replace all inventories
+mobile.set_inventories([inv1, inv2])
+```
+
+### Standard Methods
+
+All standard ActiveRecord methods are available:
+- `__init__()`, `save()`, `find()`
+- `find_by_asset_id(value: int)`
+- `find_by_behavior_id(value: int)`
+- Standard getters/setters for all columns
 
 **Examples:**
 
@@ -813,7 +1067,7 @@ related.save()
 
 ## Player
 
-ActiveRecord-style model for the `players` table.
+ActiveRecord-style model for the `players` table. Players can have both attributes and inventories through pivot tables.
 
 **Table Schema**:
 ```sql
@@ -830,7 +1084,54 @@ CREATE TABLE `players` (
 )
 ```
 
-**Key Methods**: Same pattern as AttributeOwner
+### Attribute Convenience Methods
+
+See [Pivot Table Pattern](#pivot-table-pattern) for comprehensive usage guide.
+
+```python
+# Get all attributes
+attributes = player.get_attributes()
+
+# Get attribute pivot records
+attribute_owners = player.get_attribute_owners()
+
+# Add an attribute (creates AttributeOwner pivot)
+player.add_attribute(strength_attr)
+
+# Remove an attribute (cascade delete pivot and attribute)
+player.remove_attribute(strength_attr)
+
+# Replace all attributes
+player.set_attributes([attr1, attr2])
+```
+
+### Inventory Convenience Methods
+
+See [Pivot Table Pattern](#pivot-table-pattern) for comprehensive usage guide.
+
+```python
+# Get all inventories
+inventories = player.get_inventories()
+
+# Get inventory pivot records
+inventory_owners = player.get_inventory_owners()
+
+# Add an inventory (creates InventoryOwner pivot)
+player.add_inventory(backpack_inv)
+
+# Remove an inventory (cascade delete pivot and inventory)
+player.remove_inventory(backpack_inv)
+
+# Replace all inventories
+player.set_inventories([inv1, inv2])
+```
+
+### Standard Methods
+
+All standard ActiveRecord methods are available:
+- `__init__()`, `save()`, `find()`
+- `find_by_asset_id(value: int)`
+- Standard getters/setters for all columns
 
 **Examples:**
 

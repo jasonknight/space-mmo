@@ -49,6 +49,12 @@ MYSQL_TO_PYTHON_TYPE = {
     "json": "Any",
 }
 
+# Pivot table configuration
+PIVOT_TABLES = [
+    'attribute_owners',
+    'inventory_owners',
+]
+
 
 def get_python_type(mysql_type: str) -> str:
     """Convert MySQL type to Python type annotation."""
@@ -388,17 +394,377 @@ def get_relationship_name(column_name: str) -> str:
 def is_pivot_table(table_name: str, columns: List[Dict[str, Any]]) -> bool:
     """
     Detect if a table is a pivot/join table.
-    Pivot tables typically end with '_owners', '_members', etc. and have multiple foreign keys.
+    Uses explicit configuration list and validates multiple foreign keys.
     """
-    # Check for common pivot table name patterns
-    pivot_suffixes = ['_owners', '_members', '_entries', '_items']
-    if any(table_name.endswith(suffix) for suffix in pivot_suffixes):
-        # Count foreign key columns
+    # Check if table is in explicit pivot table configuration
+    if table_name in PIVOT_TABLES:
+        # Verify it has multiple foreign keys as expected
         fk_count = sum(1 for col in columns if col["name"].endswith("_id") and col["name"] != "id")
-        # Pivot tables typically have 2+ foreign keys
         return fk_count >= 2
 
     return False
+
+
+def get_pivot_table_info(
+    table_name: str,
+    columns: List[Dict[str, Any]],
+    fk_constraints: Dict[str, List[Dict[str, str]]],
+) -> Dict[str, Any]:
+    """
+    Get metadata about pivot table foreign keys.
+    Returns dict with:
+        - pivot_fk: the FK pointing to the main related table (e.g., attribute_id, inventory_id)
+        - owner_fks: list of FKs pointing to owner tables (e.g., player_id, mobile_id, item_id)
+    """
+    # Determine which FK is the "main" pivot FK based on table name
+    if table_name == "attribute_owners":
+        pivot_fk_name = "attribute_id"
+        related_table = "attributes"
+    elif table_name == "inventory_owners":
+        pivot_fk_name = "inventory_id"
+        related_table = "inventories"
+    else:
+        # For other pivot tables, try to infer from FK constraints
+        if table_name in fk_constraints and fk_constraints[table_name]:
+            pivot_fk_name = fk_constraints[table_name][0]["column"]
+            related_table = fk_constraints[table_name][0]["referenced_table"]
+        else:
+            return {"pivot_fk": None, "owner_fks": []}
+
+    # Find the pivot FK in constraints (if it exists)
+    pivot_fk = {
+        "column": pivot_fk_name,
+        "referenced_table": related_table,
+        "referenced_column": "id",
+    }
+    if table_name in fk_constraints:
+        for fk in fk_constraints[table_name]:
+            if fk["column"] == pivot_fk_name:
+                pivot_fk = fk
+                break
+
+    # Find all owner FKs from columns (not just from constraints, since they may not have constraints)
+    owner_fks = []
+    for col in columns:
+        col_name = col["name"]
+        # Skip the id column and the pivot FK column
+        if col_name == "id" or col_name == pivot_fk_name:
+            continue
+        # Check if it's an FK column (ends with _id)
+        if col_name.endswith("_id"):
+            # Infer the referenced table name from the column name
+            # e.g., player_id -> players, mobile_id -> mobiles
+            owner_type = col_name.replace("_id", "")
+            referenced_table = pluralize(owner_type)
+
+            # Check if there's an actual FK constraint for this column
+            fk_info = {
+                "column": col_name,
+                "referenced_table": referenced_table,
+                "referenced_column": "id",
+            }
+            if table_name in fk_constraints:
+                for fk in fk_constraints[table_name]:
+                    if fk["column"] == col_name:
+                        fk_info = fk
+                        break
+
+            owner_fks.append(fk_info)
+
+    return {
+        "pivot_fk": pivot_fk,
+        "owner_fks": owner_fks,
+    }
+
+
+def generate_pivot_helper_methods(
+    table_name: str,
+    owner_fks: List[Dict[str, str]],
+) -> str:
+    """
+    Generate helper methods for pivot tables (is_player, is_mobile, etc.).
+    """
+    methods = []
+
+    for fk in owner_fks:
+        column_name = fk["column"]
+        # Extract owner type from column name (e.g., player_id -> player)
+        owner_type = column_name.replace("_id", "")
+
+        method = f"""
+    def is_{owner_type}(self) -> bool:
+        \"\"\"Check if this pivot record belongs to a {owner_type}.\"\"\"
+        return self.get_{column_name}() is not None
+"""
+        methods.append(method)
+
+    return "\n".join(methods)
+
+
+def get_pivot_owner_relationships(
+    table_name: str,
+    table_columns: Dict[str, List[Dict[str, Any]]],
+    fk_constraints: Dict[str, List[Dict[str, str]]],
+) -> List[Dict[str, str]]:
+    """
+    Determine if this table is an owner in any pivot relationships.
+    Returns list of dicts with pivot_table and related_table for each relationship.
+    """
+    relationships = []
+
+    # Check each pivot table
+    for pivot_table in PIVOT_TABLES:
+        # Get the columns for this pivot table
+        pivot_columns = table_columns.get(pivot_table, [])
+        if not pivot_columns:
+            continue
+
+        # Get pivot info to determine which FK is the main pivot FK
+        pivot_info = get_pivot_table_info(pivot_table, pivot_columns, fk_constraints)
+        if not pivot_info["pivot_fk"]:
+            continue
+
+        related_table = pivot_info["pivot_fk"]["referenced_table"]
+
+        # Check if any of the owner FKs point to this table
+        for owner_fk in pivot_info["owner_fks"]:
+            if owner_fk["referenced_table"] == table_name:
+                relationships.append({
+                    "pivot_table": pivot_table,
+                    "related_table": related_table,
+                })
+                break  # Only add once per pivot table
+
+    return relationships
+
+
+def generate_pivot_owner_methods(
+    owner_table_name: str,
+    pivot_table_name: str,
+    related_table_name: str,
+) -> str:
+    """
+    Generate convenience methods on owner models for interacting with pivot tables.
+    For example, on Player model, generate methods to interact with attributes through attribute_owners pivot.
+    """
+    # Convert table names to class names
+    owner_class = to_pascal_case(singularize_table_name(owner_table_name))
+    pivot_class = to_pascal_case(singularize_table_name(pivot_table_name))
+    related_class = to_pascal_case(singularize_table_name(related_table_name))
+
+    # Determine the relationship name (e.g., attributes, inventories)
+    related_plural = pluralize(singularize_table_name(related_table_name))
+    related_singular = singularize_table_name(related_table_name)
+    pivot_singular = singularize_table_name(pivot_table_name)
+
+    # FK column names
+    owner_fk = f"{singularize_table_name(owner_table_name)}_id"
+    related_fk = f"{related_singular}_id"
+
+    methods = f"""
+    def get_{related_plural}(self, reload: bool = False) -> List['{related_class}']:
+        \"\"\"
+        Get all {related_plural} for this {owner_class} through the {pivot_table_name} pivot table.
+        Returns a list of {related_class} objects.
+        \"\"\"
+        cache_key = '_{related_plural}_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        # Query through pivot table
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        results = []
+
+        try:
+            query = \"\"\"
+                SELECT r.*
+                FROM {related_table_name} r
+                INNER JOIN {pivot_table_name} p ON r.id = p.{related_fk}
+                WHERE p.{owner_fk} = %s
+            \"\"\"
+            cursor.execute(query, (self.get_id(),))
+            rows = cursor.fetchall()
+
+            for row in rows:
+                instance = {related_class}()
+                instance._data = row
+                instance._dirty = False
+                results.append(instance)
+        finally:
+            cursor.close()
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def get_{pivot_singular}s(self, reload: bool = False) -> List['{pivot_class}']:
+        \"\"\"
+        Get all {pivot_class} pivot records for this {owner_class}.
+        Returns a list of {pivot_class} objects.
+        \"\"\"
+        cache_key = '_{pivot_singular}s_cache'
+
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        if self.get_id() is None:
+            return []
+
+        results = {pivot_class}.find_by_{owner_fk}(self.get_id())
+
+        # Cache results
+        setattr(self, cache_key, results)
+        return results
+
+    def add_{related_singular}(self, {related_singular}: '{related_class}') -> None:
+        \"\"\"
+        Add a {related_singular} to this {owner_class} through the {pivot_table_name} pivot table.
+        Creates the pivot record and saves the {related_singular} if it's new or dirty.
+        \"\"\"
+        if self.get_id() is None:
+            raise ValueError("Cannot add {related_singular} to unsaved {owner_class}. Save the {owner_class} first.")
+
+        # Save the related object if it's new or dirty
+        if {related_singular}._dirty:
+            {related_singular}.save()
+
+        # Create pivot record
+        pivot = {pivot_class}()
+        pivot.set_{owner_fk}(self.get_id())
+        pivot.set_{related_fk}({related_singular}.get_id())
+
+        # Set all other owner FKs to NULL explicitly
+        # This ensures only one owner FK is set per pivot record
+        for attr_name in dir(pivot):
+            if attr_name.startswith('set_') and attr_name.endswith('_id') and attr_name != 'set_id' and attr_name != 'set_{owner_fk}' and attr_name != 'set_{related_fk}':
+                setter = getattr(pivot, attr_name)
+                setter(None)
+
+        pivot.save()
+
+        # Clear cache
+        cache_key = '_{related_plural}_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_{pivot_singular}s_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def remove_{related_singular}(self, {related_singular}: '{related_class}') -> None:
+        \"\"\"
+        Remove a {related_singular} from this {owner_class} through the {pivot_table_name} pivot table.
+        Deletes both the pivot record and the {related_singular} record (cascade delete).
+        \"\"\"
+        if self.get_id() is None or {related_singular}.get_id() is None:
+            return
+
+        # Use a fresh connection to avoid transaction conflicts
+        connection = mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+        cursor = connection.cursor()
+
+        try:
+            # Start transaction
+            connection.start_transaction()
+
+            # Delete pivot record first
+            cursor.execute(
+                f"DELETE FROM {pivot_table_name} WHERE {owner_fk} = %s AND {related_fk} = %s",
+                (self.get_id(), {related_singular}.get_id()),
+            )
+
+            # Delete the related record
+            cursor.execute(
+                f"DELETE FROM {related_table_name} WHERE id = %s",
+                ({related_singular}.get_id(),),
+            )
+
+            connection.commit()
+        except Exception as e:
+            connection.rollback()
+            raise
+        finally:
+            cursor.close()
+            connection.close()
+
+        # Clear cache
+        cache_key = '_{related_plural}_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+        cache_key = '_{pivot_singular}s_cache'
+        if hasattr(self, cache_key):
+            delattr(self, cache_key)
+
+    def set_{related_plural}(self, {related_plural}_list: List['{related_class}']) -> None:
+        \"\"\"
+        Replace all {related_plural} for this {owner_class}.
+        Removes all existing {related_plural} and adds the new ones.
+        \"\"\"
+        if self.get_id() is None:
+            raise ValueError("Cannot set {related_plural} on unsaved {owner_class}. Save the {owner_class} first.")
+
+        self._connect()
+
+        try:
+            # Start transaction for all operations
+            self._connection.start_transaction()
+
+            # Get existing {related_plural}
+            existing = self.get_{related_plural}(reload=True)
+
+            # Delete all existing pivot records and related records
+            cursor = self._connection.cursor()
+            for item in existing:
+                if item.get_id() is not None:
+                    # Delete pivot record
+                    cursor.execute(
+                        f"DELETE FROM {pivot_table_name} WHERE {owner_fk} = %s AND {related_fk} = %s",
+                        (self.get_id(), item.get_id()),
+                    )
+                    # Delete related record
+                    cursor.execute(
+                        f"DELETE FROM {related_table_name} WHERE id = %s",
+                        (item.get_id(),),
+                    )
+            cursor.close()
+
+            # Commit deletions
+            self._connection.commit()
+
+            # Add new ones (each will start its own transaction)
+            for item in {related_plural}_list:
+                self.add_{related_singular}(item)
+
+            # Clear cache
+            cache_key = '_{related_plural}_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+            cache_key = '_{pivot_singular}s_cache'
+            if hasattr(self, cache_key):
+                delattr(self, cache_key)
+
+        except Exception as e:
+            self._connection.rollback()
+            raise
+"""
+
+    return methods
 
 
 def generate_belongs_to_methods(
@@ -704,6 +1070,7 @@ def generate_model(
     template: str,
     relationships: Dict[str, Any],
     table_columns: Dict[str, List[Dict[str, Any]]],
+    fk_constraints: Dict[str, List[Dict[str, str]]],
 ) -> str:
     """Generate a complete model file from the template."""
     # Convert plural table name to singular class name
@@ -714,6 +1081,27 @@ def generate_model(
     belongs_to_rels = relationships.get("belongs_to", [])
     has_many_rels = relationships.get("has_many", [])
     has_relationships = bool(belongs_to_rels or has_many_rels)
+
+    # Check if this is a pivot table
+    is_pivot = is_pivot_table(table_name, columns)
+    pivot_helper_methods = ""
+    if is_pivot:
+        pivot_info = get_pivot_table_info(table_name, columns, fk_constraints)
+        if pivot_info["owner_fks"]:
+            pivot_helper_methods = generate_pivot_helper_methods(table_name, pivot_info["owner_fks"])
+
+    # Check if this table is an owner in any pivot relationships
+    pivot_owner_rels = get_pivot_owner_relationships(table_name, table_columns, fk_constraints)
+    pivot_owner_methods = ""
+    if pivot_owner_rels:
+        methods_list = []
+        for rel in pivot_owner_rels:
+            methods_list.append(generate_pivot_owner_methods(
+                table_name,
+                rel["pivot_table"],
+                rel["related_table"],
+            ))
+        pivot_owner_methods = "\n".join(methods_list)
 
     # Generate all components
     imports = generate_imports(columns, has_relationships)
@@ -749,8 +1137,10 @@ def generate_model(
         create_table_statement=formatted_create_table,
         getters=getters,
         setters=setters,
+        pivot_helper_methods=pivot_helper_methods,
         belongs_to_methods=belongs_to_methods,
         has_many_methods=has_many_methods,
+        pivot_owner_methods=pivot_owner_methods,
         cascade_save_belongs_to=cascade_save_belongs_to,
         cascade_save_has_many=cascade_save_has_many,
         find_by_methods=find_by_methods,
@@ -1694,6 +2084,7 @@ def main():
                 template,
                 relationships,
                 table_columns,
+                fk_constraints,
             )
 
             # Extract just the class definition (remove imports and env setup)
