@@ -13,7 +13,7 @@ if thrift_gen_path not in sys.path:
     sys.path.insert(0, thrift_gen_path)
 
 from dotenv import load_dotenv
-from game.ttypes import GameResult, StatusType, GameError, Owner, AttributeValue, AttributeType, ItemVector3, Attribute
+from game.ttypes import GameResult as ThriftGameResult, StatusType as ThriftStatusType, GameError as ThriftGameError, Owner as ThriftOwner, AttributeValue as ThriftAttributeValue, AttributeType as ThriftAttributeType, ItemType as ThriftItemType, ItemVector3 as ThriftItemVector3, Attribute as ThriftAttribute, Item as ThriftItem, Mobile as ThriftMobile, Player as ThriftPlayer, MobileItem as ThriftMobileItem, Inventory as ThriftInventory, InventoryEntry as ThriftInventoryEntry, ItemBlueprint as ThriftItemBlueprint, ItemBlueprintComponent as ThriftItemBlueprintComponent
 from typing import Dict, List, Optional, Any, Iterator, Union, Tuple
 import mysql.connector
 
@@ -45,7 +45,7 @@ class AttributeOwner:
           PRIMARY KEY (`id`),
           KEY `attribute_id` (`attribute_id`),
           CONSTRAINT `attribute_owners_ibfk_1` FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=909 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1019 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -79,58 +79,52 @@ class AttributeOwner:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_attribute_id(self) -> int:
-        """Get the value of attribute_id."""
         return self._data.get('attribute_id')
 
     def get_mobile_id(self) -> Optional[int]:
-        """Get the value of mobile_id."""
         return self._data.get('mobile_id')
 
     def get_item_id(self) -> Optional[int]:
-        """Get the value of item_id."""
         return self._data.get('item_id')
 
     def get_asset_id(self) -> Optional[int]:
-        """Get the value of asset_id."""
         return self._data.get('asset_id')
 
     def get_player_id(self) -> Optional[int]:
-        """Get the value of player_id."""
         return self._data.get('player_id')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_attribute_id(self, value: int) -> None:
-        """Set the value of attribute_id."""
+    def set_attribute_id(self, value: int) -> 'self.__class__':
         self._data['attribute_id'] = value
         self._dirty = True
+        return self
 
-    def set_mobile_id(self, value: Optional[int]) -> None:
-        """Set the value of mobile_id."""
+    def set_mobile_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['mobile_id'] = value
         self._dirty = True
+        return self
 
-    def set_item_id(self, value: Optional[int]) -> None:
-        """Set the value of item_id."""
+    def set_item_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['item_id'] = value
         self._dirty = True
+        return self
 
-    def set_asset_id(self, value: Optional[int]) -> None:
-        """Set the value of asset_id."""
+    def set_asset_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['asset_id'] = value
         self._dirty = True
+        return self
 
-    def set_player_id(self, value: Optional[int]) -> None:
-        """Set the value of player_id."""
+    def set_player_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['player_id'] = value
         self._dirty = True
+        return self
 
     def is_mobile(self) -> bool:
         """Check if this pivot record belongs to a mobile."""
@@ -152,7 +146,7 @@ class AttributeOwner:
         return self.get_player_id() is not None
 
 
-    def get_attribute(self, strict: bool = False) -> 'Attribute':
+    def get_attribute(self, strict: bool = False) -> Optional['Attribute']:
         """
         Get the associated Attribute for this attribute relationship.
         Uses lazy loading with caching.
@@ -181,13 +175,16 @@ class AttributeOwner:
         setattr(self, cache_key, related)
         return related
 
-    def set_attribute(self, model: 'Attribute') -> None:
+    def set_attribute(self, model: 'Attribute') -> 'self.__class__':
         """
         Set the associated Attribute for this attribute relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Attribute instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_attribute_cache'
@@ -198,6 +195,7 @@ class AttributeOwner:
             self.set_attribute_id(None)
         else:
             self.set_attribute_id(model.get_id())
+        return self
 
     def get_mobile(self, strict: bool = False) -> Optional['Mobile']:
         """
@@ -228,13 +226,16 @@ class AttributeOwner:
         setattr(self, cache_key, related)
         return related
 
-    def set_mobile(self, model: Optional['Mobile']) -> None:
+    def set_mobile(self, model: Optional['Mobile']) -> 'self.__class__':
         """
         Set the associated Mobile for this mobile relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Mobile instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_mobile_cache'
@@ -245,6 +246,7 @@ class AttributeOwner:
             self.set_mobile_id(None)
         else:
             self.set_mobile_id(model.get_id())
+        return self
 
     def get_item(self, strict: bool = False) -> Optional['Item']:
         """
@@ -275,13 +277,16 @@ class AttributeOwner:
         setattr(self, cache_key, related)
         return related
 
-    def set_item(self, model: Optional['Item']) -> None:
+    def set_item(self, model: Optional['Item']) -> 'self.__class__':
         """
         Set the associated Item for this item relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Item instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_item_cache'
@@ -292,6 +297,7 @@ class AttributeOwner:
             self.set_item_id(None)
         else:
             self.set_item_id(model.get_id())
+        return self
 
     def get_player(self, strict: bool = False) -> Optional['Player']:
         """
@@ -322,13 +328,16 @@ class AttributeOwner:
         setattr(self, cache_key, related)
         return related
 
-    def set_player(self, model: Optional['Player']) -> None:
+    def set_player(self, model: Optional['Player']) -> 'self.__class__':
         """
         Set the associated Player for this player relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Player instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_player_cache'
@@ -339,6 +348,7 @@ class AttributeOwner:
             self.set_player_id(None)
         else:
             self.set_player_id(model.get_id())
+        return self
 
 
 
@@ -354,10 +364,6 @@ class AttributeOwner:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
-
         # Determine if we own the connection
         owns_connection = connection is None
         if owns_connection:
@@ -368,7 +374,7 @@ class AttributeOwner:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
+            # Cascade save belongs-to relationships first (even if parent not dirty)
             if cascade:
                 # Save attribute if cached and dirty
                 cache_key = '_attribute_cache'
@@ -403,33 +409,81 @@ class AttributeOwner:
                         # Update foreign key with saved ID
                         self._data['player_id'] = related.get_id()
 
-            cursor = connection.cursor()
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
 
-                query = f"UPDATE `attribute_owners` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
+                    query = f"UPDATE `attribute_owners` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
 
-                query = f"INSERT INTO `attribute_owners` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
+                    query = f"INSERT INTO `attribute_owners` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
 
-            # Mark as clean after successful save
-            self._dirty = False
+                # Mark as clean after successful save
+                self._dirty = False
 
-            # Cascade save has-many relationships
+            # Cascade save has-many relationships (even if parent not dirty)
             if cascade:
                 pass  # No has-many relationships
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
+
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            cursor = connection.cursor()
+
+            # Cascade destroy children and clean up associations first
+            if cascade:
+                pass  # No cascade destroys needed
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `attribute_owners` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
 
             # Only commit if we own the connection
             if owns_connection:
@@ -459,6 +513,39 @@ class AttributeOwner:
                 instance._data = row
                 return instance
             return None
+        finally:
+            cursor.close()
+
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `attribute_owners` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
         finally:
             cursor.close()
 
@@ -589,7 +676,7 @@ class Attribute:
           `vector3_z` double DEFAULT NULL,
           `asset_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=992 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1198 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -623,94 +710,133 @@ class Attribute:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_internal_name(self) -> str:
-        """Get the value of internal_name."""
         return self._data.get('internal_name')
 
     def get_visible(self) -> int:
-        """Get the value of visible."""
         return self._data.get('visible')
 
-    def get_attribute_type(self) -> str:
-        """Get the value of attribute_type."""
-        return self._data.get('attribute_type')
+    def get_attribute_type(self) -> ThriftAttributeType:
+        value = self._data.get('attribute_type')
+        return ThriftAttributeType[value] if value is not None else None
 
     def get_bool_value(self) -> Optional[int]:
-        """Get the value of bool_value."""
         return self._data.get('bool_value')
 
     def get_double_value(self) -> Optional[float]:
-        """Get the value of double_value."""
         return self._data.get('double_value')
 
     def get_vector3_x(self) -> Optional[float]:
-        """Get the value of vector3_x."""
         return self._data.get('vector3_x')
 
     def get_vector3_y(self) -> Optional[float]:
-        """Get the value of vector3_y."""
         return self._data.get('vector3_y')
 
     def get_vector3_z(self) -> Optional[float]:
-        """Get the value of vector3_z."""
         return self._data.get('vector3_z')
 
     def get_asset_id(self) -> Optional[int]:
-        """Get the value of asset_id."""
         return self._data.get('asset_id')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_internal_name(self, value: str) -> None:
-        """Set the value of internal_name."""
+    def set_internal_name(self, value: str) -> 'self.__class__':
         self._data['internal_name'] = value
         self._dirty = True
+        return self
 
-    def set_visible(self, value: int) -> None:
-        """Set the value of visible."""
+    def set_visible(self, value: int) -> 'self.__class__':
         self._data['visible'] = value
         self._dirty = True
+        return self
 
-    def set_attribute_type(self, value: str) -> None:
-        """Set the value of attribute_type."""
-        self._data['attribute_type'] = value
+    def set_attribute_type(self, value: int) -> 'self.__class__':
+        """
+        Set the attribute_type field value.
+
+        Python Thrift Enum Implementation Note:
+        ----------------------------------------
+        In Python, Thrift enums are implemented as integer constants on a class, not
+        as a separate enum type. For example:
+            - ThriftAttributeType.STRENGTH is just an int (e.g., 0)
+            - ThriftAttributeType.DEXTERITY is just an int (e.g., 1)
+
+        This is different from languages like Java or C++ where enums are distinct types.
+        Python Thrift enums are essentially namespaced integer constants.
+
+        Why this method accepts int:
+        - Thrift enums in Python ARE ints, not a distinct type
+        - Using isinstance(value, ThriftAttributeType) would fail (it's not a class you can instantiate)
+        - Type checkers understand this: passing ThriftAttributeType.STRENGTH satisfies int type hint
+        - This validates the value is a legitimate enum constant, rejecting invalid integers
+
+        The method validates the integer is a valid enum value by reverse-lookup against
+        the Thrift enum class constants, then stores the enum name as a string in the database.
+
+        Args:
+            value: Integer value of a ThriftAttributeType enum constant (e.g., ThriftAttributeType.STRENGTH)
+
+        Returns:
+            self for method chaining
+
+        Raises:
+            TypeError: If value is not an integer
+            ValueError: If value is not a valid ThriftAttributeType enum constant
+        """
+        if value is not None and not isinstance(value, int):
+            raise TypeError(f"{value} must be an integer (Thrift enum), got {type(value).__name__}")
+        # Convert enum integer to string name for storage
+        if value is not None:
+            # Reverse lookup: find the name for this enum value
+            enum_name = None
+            for attr_name in dir(ThriftAttributeType):
+                if not attr_name.startswith('_'):
+                    attr_val = getattr(ThriftAttributeType, attr_name)
+                    if isinstance(attr_val, int) and attr_val == value:
+                        enum_name = attr_name
+                        break
+            if enum_name is None:
+                raise ValueError(f"{value} is not a valid ThriftAttributeType enum value")
+            self._data['attribute_type'] = enum_name
+        else:
+            self._data['attribute_type'] = None
         self._dirty = True
+        return self
 
-    def set_bool_value(self, value: Optional[int]) -> None:
-        """Set the value of bool_value."""
+    def set_bool_value(self, value: Optional[int]) -> 'self.__class__':
         self._data['bool_value'] = value
         self._dirty = True
+        return self
 
-    def set_double_value(self, value: Optional[float]) -> None:
-        """Set the value of double_value."""
+    def set_double_value(self, value: Optional[float]) -> 'self.__class__':
         self._data['double_value'] = value
         self._dirty = True
+        return self
 
-    def set_vector3_x(self, value: Optional[float]) -> None:
-        """Set the value of vector3_x."""
+    def set_vector3_x(self, value: Optional[float]) -> 'self.__class__':
         self._data['vector3_x'] = value
         self._dirty = True
+        return self
 
-    def set_vector3_y(self, value: Optional[float]) -> None:
-        """Set the value of vector3_y."""
+    def set_vector3_y(self, value: Optional[float]) -> 'self.__class__':
         self._data['vector3_y'] = value
         self._dirty = True
+        return self
 
-    def set_vector3_z(self, value: Optional[float]) -> None:
-        """Set the value of vector3_z."""
+    def set_vector3_z(self, value: Optional[float]) -> 'self.__class__':
         self._data['vector3_z'] = value
         self._dirty = True
+        return self
 
-    def set_asset_id(self, value: Optional[int]) -> None:
-        """Set the value of asset_id."""
+    def set_asset_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['asset_id'] = value
         self._dirty = True
+        return self
 
 
 
@@ -750,15 +876,15 @@ class Attribute:
         return iter(results) if lazy else results
 
 
-    def from_thrift(self, thrift_obj: 'Attribute') -> 'Attribute':
+    def from_thrift(self, thrift_obj: 'ThriftAttribute') -> 'Attribute':
         """
-        Populate this Model instance from a Thrift Attribute object.
+        Populate this Model instance from a Thrift ThriftAttribute object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift Attribute instance
+            thrift_obj: Thrift ThriftAttribute instance
 
         Returns:
             self for method chaining
@@ -771,9 +897,9 @@ class Attribute:
         if hasattr(thrift_obj, 'visible'):
             self._data['visible'] = thrift_obj.visible
         if hasattr(thrift_obj, 'attribute_type'):
-            self._data['attribute_type'] = thrift_obj.attribute_type
+            self._data['attribute_type'] = thrift_obj.attribute_type.name if thrift_obj.attribute_type is not None else None
 
-        # Convert AttributeValue union to flattened database columns
+        # Convert ThriftAttributeValue union to flattened database columns
         if hasattr(thrift_obj, 'value') and thrift_obj.value is not None:
             value = thrift_obj.value
             # Reset all value fields to None first
@@ -785,29 +911,34 @@ class Attribute:
             self._data['asset_id'] = None
 
             # Set the appropriate field based on which union field is set
-            if hasattr(value, 'bool_value') and value.bool_value is not None:
-                self._data['bool_value'] = value.bool_value
-            elif hasattr(value, 'double_value') and value.double_value is not None:
-                self._data['double_value'] = value.double_value
-            elif hasattr(value, 'vector3') and value.vector3 is not None:
+            # Priority: vector3 -> asset_id -> double_value -> bool_value (default)
+            if hasattr(value, 'vector3') and value.vector3 is not None:
                 self._data['vector3_x'] = value.vector3.x
                 self._data['vector3_y'] = value.vector3.y
                 self._data['vector3_z'] = value.vector3.z
             elif hasattr(value, 'asset_id') and value.asset_id is not None:
                 self._data['asset_id'] = value.asset_id
+            elif hasattr(value, 'double_value') and value.double_value is not None:
+                self._data['double_value'] = value.double_value
+            else:
+                # bool_value is the default/fallback
+                if hasattr(value, 'bool_value') and value.bool_value is not None:
+                    self._data['bool_value'] = value.bool_value
+                else:
+                    self._data['bool_value'] = False
 
         self._dirty = True
         return self
 
 
-    def into_thrift(self) -> Tuple[list[GameResult], Optional['Attribute']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftAttribute']]:
         """
-        Convert this Model instance to a Thrift Attribute object.
+        Convert this Model instance to a Thrift ThriftAttribute object.
 
         Loads all relationships recursively and converts them to Thrift.
 
         Returns:
-            Tuple of (list[GameResult], Optional[Thrift object])
+            Tuple of (list[ThriftGameResult], Optional[Thrift object])
         """
         results = []
 
@@ -818,31 +949,33 @@ class Attribute:
             thrift_params['id'] = self._data.get('id')
             thrift_params['internal_name'] = self._data.get('internal_name')
             thrift_params['visible'] = self._data.get('visible')
-            thrift_params['attribute_type'] = self._data.get('attribute_type')
+            thrift_params['attribute_type'] = ThriftAttributeType[self._data.get('attribute_type')] if self._data.get('attribute_type') is not None else None
 
-            # Convert flattened database columns to AttributeValue union
+            # Convert flattened database columns to ThriftAttributeValue union
+            # Priority: vector3 -> asset_id -> double_value -> bool_value (default)
             value = None
-            if self._data.get('bool_value') is not None:
-                value = AttributeValue(bool_value=self._data['bool_value'])
-            elif self._data.get('double_value') is not None:
-                value = AttributeValue(double_value=self._data['double_value'])
-            elif self._data.get('vector3_x') is not None:
-                value = AttributeValue(
-                    vector3=ItemVector3(
+            if self._data.get('vector3_x') is not None:
+                value = ThriftAttributeValue(
+                    vector3=ThriftItemVector3(
                         x=self._data['vector3_x'],
                         y=self._data['vector3_y'],
                         z=self._data['vector3_z'],
                     ),
                 )
             elif self._data.get('asset_id') is not None:
-                value = AttributeValue(asset_id=self._data['asset_id'])
+                value = ThriftAttributeValue(asset_id=self._data['asset_id'])
+            elif self._data.get('double_value') is not None:
+                value = ThriftAttributeValue(double_value=self._data['double_value'])
+            else:
+                # bool_value is the default/fallback
+                value = ThriftAttributeValue(bool_value=self._data.get('bool_value', False))
             thrift_params['value'] = value
 
             # Create Thrift object
-            thrift_obj = Attribute(**thrift_params)
+            thrift_obj = ThriftAttribute(**thrift_params)
 
-            results.append(GameResult(
-                status=StatusType.SUCCESS,
+            results.append(ThriftGameResult(
+                status=ThriftStatusType.SUCCESS,
                 message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
             ))
 
@@ -850,10 +983,10 @@ class Attribute:
 
         except Exception as e:
             return (
-                [GameResult(
-                    status=StatusType.FAILURE,
+                [ThriftGameResult(
+                    status=ThriftStatusType.FAILURE,
                     message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
-                    error_code=GameError.DB_QUERY_FAILED,
+                    error_code=ThriftGameError.DB_QUERY_FAILED,
                 )],
                 None,
             )
@@ -869,9 +1002,80 @@ class Attribute:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            # Cascade save belongs-to relationships first (even if parent not dirty)
+            if cascade:
+                pass  # No belongs-to relationships
+
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
+
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
+
+                    query = f"UPDATE `attributes` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
+
+                    query = f"INSERT INTO `attributes` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
+
+                # Mark as clean after successful save
+                self._dirty = False
+
+            # Cascade save has-many relationships (even if parent not dirty)
+            if cascade:
+                # Save attribute_owners if cached
+                cache_key = '_attribute_owners_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, '_dirty') and related._dirty:
+                                related.save(connection=connection, cascade=cascade)
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
 
         # Determine if we own the connection
         owns_connection = connection is None
@@ -883,44 +1087,34 @@ class Attribute:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
-            if cascade:
-                pass  # No belongs-to relationships
-
             cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
-
-                query = f"UPDATE `attributes` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
-
-                query = f"INSERT INTO `attributes` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
-
-            # Mark as clean after successful save
-            self._dirty = False
-
-            # Cascade save has-many relationships
+            # Cascade destroy children and clean up associations first
             if cascade:
-                # Save attribute_owners if cached
+                # Cascade destroy attribute_owners children
                 cache_key = '_attribute_owners_cache'
                 if hasattr(self, cache_key):
                     related_list = getattr(self, cache_key)
                     if related_list is not None:
                         for related in related_list:
-                            if hasattr(related, '_dirty') and related._dirty:
-                                related.save(connection=connection, cascade=cascade)
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_attribute_owners(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `attributes` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
 
             # Only commit if we own the connection
             if owns_connection:
@@ -950,6 +1144,39 @@ class Attribute:
                 instance._data = row
                 return instance
             return None
+        finally:
+            cursor.close()
+
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `attributes` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
         finally:
             cursor.close()
 
@@ -992,7 +1219,7 @@ class Inventory:
           `max_volume` double NOT NULL,
           `last_calculated_volume` double DEFAULT '0',
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=103 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=233 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1026,58 +1253,52 @@ class Inventory:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_owner_id(self) -> int:
-        """Get the value of owner_id."""
         return self._data.get('owner_id')
 
     def get_owner_type(self) -> Optional[str]:
-        """Get the value of owner_type."""
         return self._data.get('owner_type')
 
     def get_max_entries(self) -> int:
-        """Get the value of max_entries."""
         return self._data.get('max_entries')
 
     def get_max_volume(self) -> float:
-        """Get the value of max_volume."""
         return self._data.get('max_volume')
 
     def get_last_calculated_volume(self) -> Optional[float]:
-        """Get the value of last_calculated_volume."""
         return self._data.get('last_calculated_volume')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_owner_id(self, value: int) -> None:
-        """Set the value of owner_id."""
+    def set_owner_id(self, value: int) -> 'self.__class__':
         self._data['owner_id'] = value
         self._dirty = True
+        return self
 
-    def set_owner_type(self, value: Optional[str]) -> None:
-        """Set the value of owner_type."""
+    def set_owner_type(self, value: Optional[str]) -> 'self.__class__':
         self._data['owner_type'] = value
         self._dirty = True
+        return self
 
-    def set_max_entries(self, value: int) -> None:
-        """Set the value of max_entries."""
+    def set_max_entries(self, value: int) -> 'self.__class__':
         self._data['max_entries'] = value
         self._dirty = True
+        return self
 
-    def set_max_volume(self, value: float) -> None:
-        """Set the value of max_volume."""
+    def set_max_volume(self, value: float) -> 'self.__class__':
         self._data['max_volume'] = value
         self._dirty = True
+        return self
 
-    def set_last_calculated_volume(self, value: Optional[float]) -> None:
-        """Set the value of last_calculated_volume."""
+    def set_last_calculated_volume(self, value: Optional[float]) -> 'self.__class__':
         self._data['last_calculated_volume'] = value
         self._dirty = True
+        return self
 
 
 
@@ -1151,15 +1372,15 @@ class Inventory:
         return iter(results) if lazy else results
 
 
-    def from_thrift(self, thrift_obj: 'Inventory') -> 'Inventory':
+    def from_thrift(self, thrift_obj: 'ThriftInventory') -> 'Inventory':
         """
-        Populate this Model instance from a Thrift Inventory object.
+        Populate this Model instance from a Thrift ThriftInventory object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift Inventory instance
+            thrift_obj: Thrift ThriftInventory instance
 
         Returns:
             self for method chaining
@@ -1182,14 +1403,14 @@ class Inventory:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[GameResult], Optional['Inventory']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftInventory']]:
         """
-        Convert this Model instance to a Thrift Inventory object.
+        Convert this Model instance to a Thrift ThriftInventory object.
 
         Loads all relationships recursively and converts them to Thrift.
 
         Returns:
-            Tuple of (list[GameResult], Optional[Thrift object])
+            Tuple of (list[ThriftGameResult], Optional[Thrift object])
         """
         results = []
 
@@ -1205,10 +1426,10 @@ class Inventory:
             thrift_params['last_calculated_volume'] = self._data.get('last_calculated_volume')
 
             # Create Thrift object
-            thrift_obj = Inventory(**thrift_params)
+            thrift_obj = ThriftInventory(**thrift_params)
 
-            results.append(GameResult(
-                status=StatusType.SUCCESS,
+            results.append(ThriftGameResult(
+                status=ThriftStatusType.SUCCESS,
                 message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
             ))
 
@@ -1216,10 +1437,10 @@ class Inventory:
 
         except Exception as e:
             return (
-                [GameResult(
-                    status=StatusType.FAILURE,
+                [ThriftGameResult(
+                    status=ThriftStatusType.FAILURE,
                     message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
-                    error_code=GameError.DB_QUERY_FAILED,
+                    error_code=ThriftGameError.DB_QUERY_FAILED,
                 )],
                 None,
             )
@@ -1235,10 +1456,6 @@ class Inventory:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
-
         # Determine if we own the connection
         owns_connection = connection is None
         if owns_connection:
@@ -1249,35 +1466,37 @@ class Inventory:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
+            # Cascade save belongs-to relationships first (even if parent not dirty)
             if cascade:
                 pass  # No belongs-to relationships
 
-            cursor = connection.cursor()
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
 
-                query = f"UPDATE `inventories` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
+                    query = f"UPDATE `inventories` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
 
-                query = f"INSERT INTO `inventories` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
+                    query = f"INSERT INTO `inventories` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
 
-            # Mark as clean after successful save
-            self._dirty = False
+                # Mark as clean after successful save
+                self._dirty = False
 
-            # Cascade save has-many relationships
+            # Cascade save has-many relationships (even if parent not dirty)
             if cascade:
                 # Save inventory_entries if cached
                 cache_key = '_inventory_entries_cache'
@@ -1308,6 +1527,87 @@ class Inventory:
             if cursor:
                 cursor.close()
 
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
+
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            cursor = connection.cursor()
+
+            # Cascade destroy children and clean up associations first
+            if cascade:
+                # Cascade destroy inventory_entries children
+                cache_key = '_inventory_entries_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_inventory_entries(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Cascade destroy inventory_owners children
+                cache_key = '_inventory_owners_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_inventory_owners(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `inventories` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
     @staticmethod
     def find(id: int) -> Optional['Inventory']:
         """
@@ -1324,6 +1624,39 @@ class Inventory:
                 instance._data = row
                 return instance
             return None
+        finally:
+            cursor.close()
+
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `inventories` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
         finally:
             cursor.close()
 
@@ -1368,7 +1701,7 @@ class InventoryEntry:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_entries_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=153 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1402,61 +1735,55 @@ class InventoryEntry:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_inventory_id(self) -> int:
-        """Get the value of inventory_id."""
         return self._data.get('inventory_id')
 
     def get_item_id(self) -> int:
-        """Get the value of item_id."""
         return self._data.get('item_id')
 
     def get_quantity(self) -> float:
-        """Get the value of quantity."""
         return self._data.get('quantity')
 
     def get_is_max_stacked(self) -> Optional[int]:
-        """Get the value of is_max_stacked."""
         return self._data.get('is_max_stacked')
 
     def get_mobile_item_id(self) -> Optional[int]:
-        """Get the value of mobile_item_id."""
         return self._data.get('mobile_item_id')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_inventory_id(self, value: int) -> None:
-        """Set the value of inventory_id."""
+    def set_inventory_id(self, value: int) -> 'self.__class__':
         self._data['inventory_id'] = value
         self._dirty = True
+        return self
 
-    def set_item_id(self, value: int) -> None:
-        """Set the value of item_id."""
+    def set_item_id(self, value: int) -> 'self.__class__':
         self._data['item_id'] = value
         self._dirty = True
+        return self
 
-    def set_quantity(self, value: float) -> None:
-        """Set the value of quantity."""
+    def set_quantity(self, value: float) -> 'self.__class__':
         self._data['quantity'] = value
         self._dirty = True
+        return self
 
-    def set_is_max_stacked(self, value: Optional[int]) -> None:
-        """Set the value of is_max_stacked."""
+    def set_is_max_stacked(self, value: Optional[int]) -> 'self.__class__':
         self._data['is_max_stacked'] = value
         self._dirty = True
+        return self
 
-    def set_mobile_item_id(self, value: Optional[int]) -> None:
-        """Set the value of mobile_item_id."""
+    def set_mobile_item_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['mobile_item_id'] = value
         self._dirty = True
+        return self
 
 
-    def get_inventory(self, strict: bool = False) -> 'Inventory':
+    def get_inventory(self, strict: bool = False) -> Optional['Inventory']:
         """
         Get the associated Inventory for this inventory relationship.
         Uses lazy loading with caching.
@@ -1485,13 +1812,16 @@ class InventoryEntry:
         setattr(self, cache_key, related)
         return related
 
-    def set_inventory(self, model: 'Inventory') -> None:
+    def set_inventory(self, model: 'Inventory') -> 'self.__class__':
         """
         Set the associated Inventory for this inventory relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Inventory instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_inventory_cache'
@@ -1502,8 +1832,9 @@ class InventoryEntry:
             self.set_inventory_id(None)
         else:
             self.set_inventory_id(model.get_id())
+        return self
 
-    def get_item(self, strict: bool = False) -> 'Item':
+    def get_item(self, strict: bool = False) -> Optional['Item']:
         """
         Get the associated Item for this item relationship.
         Uses lazy loading with caching.
@@ -1532,13 +1863,16 @@ class InventoryEntry:
         setattr(self, cache_key, related)
         return related
 
-    def set_item(self, model: 'Item') -> None:
+    def set_item(self, model: 'Item') -> 'self.__class__':
         """
         Set the associated Item for this item relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Item instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_item_cache'
@@ -1549,6 +1883,7 @@ class InventoryEntry:
             self.set_item_id(None)
         else:
             self.set_item_id(model.get_id())
+        return self
 
     def get_mobile_item(self, strict: bool = False) -> Optional['MobileItem']:
         """
@@ -1579,13 +1914,16 @@ class InventoryEntry:
         setattr(self, cache_key, related)
         return related
 
-    def set_mobile_item(self, model: Optional['MobileItem']) -> None:
+    def set_mobile_item(self, model: Optional['MobileItem']) -> 'self.__class__':
         """
         Set the associated MobileItem for this mobile_item relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The MobileItem instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_mobile_item_cache'
@@ -1596,19 +1934,20 @@ class InventoryEntry:
             self.set_mobile_item_id(None)
         else:
             self.set_mobile_item_id(model.get_id())
+        return self
 
 
 
 
-    def from_thrift(self, thrift_obj: 'InventoryEntry') -> 'InventoryEntry':
+    def from_thrift(self, thrift_obj: 'ThriftInventoryEntry') -> 'InventoryEntry':
         """
-        Populate this Model instance from a Thrift InventoryEntry object.
+        Populate this Model instance from a Thrift ThriftInventoryEntry object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift InventoryEntry instance
+            thrift_obj: Thrift ThriftInventoryEntry instance
 
         Returns:
             self for method chaining
@@ -1631,14 +1970,14 @@ class InventoryEntry:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[GameResult], Optional['InventoryEntry']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftInventoryEntry']]:
         """
-        Convert this Model instance to a Thrift InventoryEntry object.
+        Convert this Model instance to a Thrift ThriftInventoryEntry object.
 
         Loads all relationships recursively and converts them to Thrift.
 
         Returns:
-            Tuple of (list[GameResult], Optional[Thrift object])
+            Tuple of (list[ThriftGameResult], Optional[Thrift object])
         """
         results = []
 
@@ -1681,10 +2020,10 @@ class InventoryEntry:
                     results.extend(mobile_item_results)
 
             # Create Thrift object
-            thrift_obj = InventoryEntry(**thrift_params)
+            thrift_obj = ThriftInventoryEntry(**thrift_params)
 
-            results.append(GameResult(
-                status=StatusType.SUCCESS,
+            results.append(ThriftGameResult(
+                status=ThriftStatusType.SUCCESS,
                 message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
             ))
 
@@ -1692,10 +2031,10 @@ class InventoryEntry:
 
         except Exception as e:
             return (
-                [GameResult(
-                    status=StatusType.FAILURE,
+                [ThriftGameResult(
+                    status=ThriftStatusType.FAILURE,
                     message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
-                    error_code=GameError.DB_QUERY_FAILED,
+                    error_code=ThriftGameError.DB_QUERY_FAILED,
                 )],
                 None,
             )
@@ -1711,10 +2050,6 @@ class InventoryEntry:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
-
         # Determine if we own the connection
         owns_connection = connection is None
         if owns_connection:
@@ -1725,7 +2060,7 @@ class InventoryEntry:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
+            # Cascade save belongs-to relationships first (even if parent not dirty)
             if cascade:
                 # Save inventory if cached and dirty
                 cache_key = '_inventory_cache'
@@ -1752,33 +2087,81 @@ class InventoryEntry:
                         # Update foreign key with saved ID
                         self._data['mobile_item_id'] = related.get_id()
 
-            cursor = connection.cursor()
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
 
-                query = f"UPDATE `inventory_entries` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
+                    query = f"UPDATE `inventory_entries` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
 
-                query = f"INSERT INTO `inventory_entries` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
+                    query = f"INSERT INTO `inventory_entries` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
 
-            # Mark as clean after successful save
-            self._dirty = False
+                # Mark as clean after successful save
+                self._dirty = False
 
-            # Cascade save has-many relationships
+            # Cascade save has-many relationships (even if parent not dirty)
             if cascade:
                 pass  # No has-many relationships
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
+
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            cursor = connection.cursor()
+
+            # Cascade destroy children and clean up associations first
+            if cascade:
+                pass  # No cascade destroys needed
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `inventory_entries` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
 
             # Only commit if we own the connection
             if owns_connection:
@@ -1808,6 +2191,39 @@ class InventoryEntry:
                 instance._data = row
                 return instance
             return None
+        finally:
+            cursor.close()
+
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `inventory_entries` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
         finally:
             cursor.close()
 
@@ -1894,7 +2310,7 @@ class InventoryOwner:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_owners_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=341 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=499 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1928,58 +2344,52 @@ class InventoryOwner:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_inventory_id(self) -> int:
-        """Get the value of inventory_id."""
         return self._data.get('inventory_id')
 
     def get_mobile_id(self) -> Optional[int]:
-        """Get the value of mobile_id."""
         return self._data.get('mobile_id')
 
     def get_item_id(self) -> Optional[int]:
-        """Get the value of item_id."""
         return self._data.get('item_id')
 
     def get_asset_id(self) -> Optional[int]:
-        """Get the value of asset_id."""
         return self._data.get('asset_id')
 
     def get_player_id(self) -> Optional[int]:
-        """Get the value of player_id."""
         return self._data.get('player_id')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_inventory_id(self, value: int) -> None:
-        """Set the value of inventory_id."""
+    def set_inventory_id(self, value: int) -> 'self.__class__':
         self._data['inventory_id'] = value
         self._dirty = True
+        return self
 
-    def set_mobile_id(self, value: Optional[int]) -> None:
-        """Set the value of mobile_id."""
+    def set_mobile_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['mobile_id'] = value
         self._dirty = True
+        return self
 
-    def set_item_id(self, value: Optional[int]) -> None:
-        """Set the value of item_id."""
+    def set_item_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['item_id'] = value
         self._dirty = True
+        return self
 
-    def set_asset_id(self, value: Optional[int]) -> None:
-        """Set the value of asset_id."""
+    def set_asset_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['asset_id'] = value
         self._dirty = True
+        return self
 
-    def set_player_id(self, value: Optional[int]) -> None:
-        """Set the value of player_id."""
+    def set_player_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['player_id'] = value
         self._dirty = True
+        return self
 
     def is_mobile(self) -> bool:
         """Check if this pivot record belongs to a mobile."""
@@ -2001,7 +2411,7 @@ class InventoryOwner:
         return self.get_player_id() is not None
 
 
-    def get_inventory(self, strict: bool = False) -> 'Inventory':
+    def get_inventory(self, strict: bool = False) -> Optional['Inventory']:
         """
         Get the associated Inventory for this inventory relationship.
         Uses lazy loading with caching.
@@ -2030,13 +2440,16 @@ class InventoryOwner:
         setattr(self, cache_key, related)
         return related
 
-    def set_inventory(self, model: 'Inventory') -> None:
+    def set_inventory(self, model: 'Inventory') -> 'self.__class__':
         """
         Set the associated Inventory for this inventory relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Inventory instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_inventory_cache'
@@ -2047,6 +2460,7 @@ class InventoryOwner:
             self.set_inventory_id(None)
         else:
             self.set_inventory_id(model.get_id())
+        return self
 
     def get_mobile(self, strict: bool = False) -> Optional['Mobile']:
         """
@@ -2077,13 +2491,16 @@ class InventoryOwner:
         setattr(self, cache_key, related)
         return related
 
-    def set_mobile(self, model: Optional['Mobile']) -> None:
+    def set_mobile(self, model: Optional['Mobile']) -> 'self.__class__':
         """
         Set the associated Mobile for this mobile relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Mobile instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_mobile_cache'
@@ -2094,6 +2511,7 @@ class InventoryOwner:
             self.set_mobile_id(None)
         else:
             self.set_mobile_id(model.get_id())
+        return self
 
     def get_item(self, strict: bool = False) -> Optional['Item']:
         """
@@ -2124,13 +2542,16 @@ class InventoryOwner:
         setattr(self, cache_key, related)
         return related
 
-    def set_item(self, model: Optional['Item']) -> None:
+    def set_item(self, model: Optional['Item']) -> 'self.__class__':
         """
         Set the associated Item for this item relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Item instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_item_cache'
@@ -2141,6 +2562,7 @@ class InventoryOwner:
             self.set_item_id(None)
         else:
             self.set_item_id(model.get_id())
+        return self
 
     def get_player(self, strict: bool = False) -> Optional['Player']:
         """
@@ -2171,13 +2593,16 @@ class InventoryOwner:
         setattr(self, cache_key, related)
         return related
 
-    def set_player(self, model: Optional['Player']) -> None:
+    def set_player(self, model: Optional['Player']) -> 'self.__class__':
         """
         Set the associated Player for this player relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Player instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_player_cache'
@@ -2188,6 +2613,7 @@ class InventoryOwner:
             self.set_player_id(None)
         else:
             self.set_player_id(model.get_id())
+        return self
 
 
 
@@ -2203,10 +2629,6 @@ class InventoryOwner:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
-
         # Determine if we own the connection
         owns_connection = connection is None
         if owns_connection:
@@ -2217,7 +2639,7 @@ class InventoryOwner:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
+            # Cascade save belongs-to relationships first (even if parent not dirty)
             if cascade:
                 # Save inventory if cached and dirty
                 cache_key = '_inventory_cache'
@@ -2252,33 +2674,81 @@ class InventoryOwner:
                         # Update foreign key with saved ID
                         self._data['player_id'] = related.get_id()
 
-            cursor = connection.cursor()
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
 
-                query = f"UPDATE `inventory_owners` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
+                    query = f"UPDATE `inventory_owners` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
 
-                query = f"INSERT INTO `inventory_owners` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
+                    query = f"INSERT INTO `inventory_owners` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
 
-            # Mark as clean after successful save
-            self._dirty = False
+                # Mark as clean after successful save
+                self._dirty = False
 
-            # Cascade save has-many relationships
+            # Cascade save has-many relationships (even if parent not dirty)
             if cascade:
                 pass  # No has-many relationships
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
+
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            cursor = connection.cursor()
+
+            # Cascade destroy children and clean up associations first
+            if cascade:
+                pass  # No cascade destroys needed
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `inventory_owners` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
 
             # Only commit if we own the connection
             if owns_connection:
@@ -2308,6 +2778,39 @@ class InventoryOwner:
                 instance._data = row
                 return instance
             return None
+        finally:
+            cursor.close()
+
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `inventory_owners` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
         finally:
             cursor.close()
 
@@ -2434,7 +2937,7 @@ class ItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=56 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=136 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2468,43 +2971,39 @@ class ItemBlueprintComponent:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_item_blueprint_id(self) -> int:
-        """Get the value of item_blueprint_id."""
         return self._data.get('item_blueprint_id')
 
     def get_component_item_id(self) -> int:
-        """Get the value of component_item_id."""
         return self._data.get('component_item_id')
 
     def get_ratio(self) -> float:
-        """Get the value of ratio."""
         return self._data.get('ratio')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_item_blueprint_id(self, value: int) -> None:
-        """Set the value of item_blueprint_id."""
+    def set_item_blueprint_id(self, value: int) -> 'self.__class__':
         self._data['item_blueprint_id'] = value
         self._dirty = True
+        return self
 
-    def set_component_item_id(self, value: int) -> None:
-        """Set the value of component_item_id."""
+    def set_component_item_id(self, value: int) -> 'self.__class__':
         self._data['component_item_id'] = value
         self._dirty = True
+        return self
 
-    def set_ratio(self, value: float) -> None:
-        """Set the value of ratio."""
+    def set_ratio(self, value: float) -> 'self.__class__':
         self._data['ratio'] = value
         self._dirty = True
+        return self
 
 
-    def get_item_blueprint(self, strict: bool = False) -> 'ItemBlueprint':
+    def get_item_blueprint(self, strict: bool = False) -> Optional['ItemBlueprint']:
         """
         Get the associated ItemBlueprint for this item_blueprint relationship.
         Uses lazy loading with caching.
@@ -2533,13 +3032,16 @@ class ItemBlueprintComponent:
         setattr(self, cache_key, related)
         return related
 
-    def set_item_blueprint(self, model: 'ItemBlueprint') -> None:
+    def set_item_blueprint(self, model: 'ItemBlueprint') -> 'self.__class__':
         """
         Set the associated ItemBlueprint for this item_blueprint relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The ItemBlueprint instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_item_blueprint_cache'
@@ -2550,19 +3052,20 @@ class ItemBlueprintComponent:
             self.set_item_blueprint_id(None)
         else:
             self.set_item_blueprint_id(model.get_id())
+        return self
 
 
 
 
-    def from_thrift(self, thrift_obj: 'ItemBlueprintComponent') -> 'ItemBlueprintComponent':
+    def from_thrift(self, thrift_obj: 'ThriftItemBlueprintComponent') -> 'ItemBlueprintComponent':
         """
-        Populate this Model instance from a Thrift ItemBlueprintComponent object.
+        Populate this Model instance from a Thrift ThriftItemBlueprintComponent object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift ItemBlueprintComponent instance
+            thrift_obj: Thrift ThriftItemBlueprintComponent instance
 
         Returns:
             self for method chaining
@@ -2581,14 +3084,14 @@ class ItemBlueprintComponent:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[GameResult], Optional['ItemBlueprintComponent']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftItemBlueprintComponent']]:
         """
-        Convert this Model instance to a Thrift ItemBlueprintComponent object.
+        Convert this Model instance to a Thrift ThriftItemBlueprintComponent object.
 
         Loads all relationships recursively and converts them to Thrift.
 
         Returns:
-            Tuple of (list[GameResult], Optional[Thrift object])
+            Tuple of (list[ThriftGameResult], Optional[Thrift object])
         """
         results = []
 
@@ -2611,10 +3114,10 @@ class ItemBlueprintComponent:
                     results.extend(item_blueprint_results)
 
             # Create Thrift object
-            thrift_obj = ItemBlueprintComponent(**thrift_params)
+            thrift_obj = ThriftItemBlueprintComponent(**thrift_params)
 
-            results.append(GameResult(
-                status=StatusType.SUCCESS,
+            results.append(ThriftGameResult(
+                status=ThriftStatusType.SUCCESS,
                 message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
             ))
 
@@ -2622,10 +3125,10 @@ class ItemBlueprintComponent:
 
         except Exception as e:
             return (
-                [GameResult(
-                    status=StatusType.FAILURE,
+                [ThriftGameResult(
+                    status=ThriftStatusType.FAILURE,
                     message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
-                    error_code=GameError.DB_QUERY_FAILED,
+                    error_code=ThriftGameError.DB_QUERY_FAILED,
                 )],
                 None,
             )
@@ -2641,9 +3144,80 @@ class ItemBlueprintComponent:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            # Cascade save belongs-to relationships first (even if parent not dirty)
+            if cascade:
+                # Save item_blueprint if cached and dirty
+                cache_key = '_item_blueprint_cache'
+                if hasattr(self, cache_key):
+                    related = getattr(self, cache_key)
+                    if related is not None and hasattr(related, '_dirty') and related._dirty:
+                        related.save(connection=connection, cascade=cascade)
+                        # Update foreign key with saved ID
+                        self._data['item_blueprint_id'] = related.get_id()
+
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
+
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
+
+                    query = f"UPDATE `item_blueprint_components` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
+
+                    query = f"INSERT INTO `item_blueprint_components` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
+
+                # Mark as clean after successful save
+                self._dirty = False
+
+            # Cascade save has-many relationships (even if parent not dirty)
+            if cascade:
+                pass  # No has-many relationships
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
 
         # Determine if we own the connection
         owns_connection = connection is None
@@ -2655,44 +3229,17 @@ class ItemBlueprintComponent:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
-            if cascade:
-                # Save item_blueprint if cached and dirty
-                cache_key = '_item_blueprint_cache'
-                if hasattr(self, cache_key):
-                    related = getattr(self, cache_key)
-                    if related is not None and hasattr(related, '_dirty') and related._dirty:
-                        related.save(connection=connection, cascade=cascade)
-                        # Update foreign key with saved ID
-                        self._data['item_blueprint_id'] = related.get_id()
-
             cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
-
-                query = f"UPDATE `item_blueprint_components` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
-
-                query = f"INSERT INTO `item_blueprint_components` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
-
-            # Mark as clean after successful save
-            self._dirty = False
-
-            # Cascade save has-many relationships
+            # Cascade destroy children and clean up associations first
             if cascade:
-                pass  # No has-many relationships
+                pass  # No cascade destroys needed
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `item_blueprint_components` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
 
             # Only commit if we own the connection
             if owns_connection:
@@ -2722,6 +3269,39 @@ class ItemBlueprintComponent:
                 instance._data = row
                 return instance
             return None
+        finally:
+            cursor.close()
+
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `item_blueprint_components` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
         finally:
             cursor.close()
 
@@ -2781,7 +3361,7 @@ class ItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=261 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=361 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2815,22 +3395,20 @@ class ItemBlueprint:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_bake_time_ms(self) -> int:
-        """Get the value of bake_time_ms."""
         return self._data.get('bake_time_ms')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_bake_time_ms(self, value: int) -> None:
-        """Set the value of bake_time_ms."""
+    def set_bake_time_ms(self, value: int) -> 'self.__class__':
         self._data['bake_time_ms'] = value
         self._dirty = True
+        return self
 
 
 
@@ -2870,15 +3448,15 @@ class ItemBlueprint:
         return iter(results) if lazy else results
 
 
-    def from_thrift(self, thrift_obj: 'ItemBlueprint') -> 'ItemBlueprint':
+    def from_thrift(self, thrift_obj: 'ThriftItemBlueprint') -> 'ItemBlueprint':
         """
-        Populate this Model instance from a Thrift ItemBlueprint object.
+        Populate this Model instance from a Thrift ThriftItemBlueprint object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift ItemBlueprint instance
+            thrift_obj: Thrift ThriftItemBlueprint instance
 
         Returns:
             self for method chaining
@@ -2893,14 +3471,14 @@ class ItemBlueprint:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[GameResult], Optional['ItemBlueprint']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftItemBlueprint']]:
         """
-        Convert this Model instance to a Thrift ItemBlueprint object.
+        Convert this Model instance to a Thrift ThriftItemBlueprint object.
 
         Loads all relationships recursively and converts them to Thrift.
 
         Returns:
-            Tuple of (list[GameResult], Optional[Thrift object])
+            Tuple of (list[ThriftGameResult], Optional[Thrift object])
         """
         results = []
 
@@ -2912,10 +3490,10 @@ class ItemBlueprint:
             thrift_params['bake_time_ms'] = self._data.get('bake_time_ms')
 
             # Create Thrift object
-            thrift_obj = ItemBlueprint(**thrift_params)
+            thrift_obj = ThriftItemBlueprint(**thrift_params)
 
-            results.append(GameResult(
-                status=StatusType.SUCCESS,
+            results.append(ThriftGameResult(
+                status=ThriftStatusType.SUCCESS,
                 message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
             ))
 
@@ -2923,10 +3501,10 @@ class ItemBlueprint:
 
         except Exception as e:
             return (
-                [GameResult(
-                    status=StatusType.FAILURE,
+                [ThriftGameResult(
+                    status=ThriftStatusType.FAILURE,
                     message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
-                    error_code=GameError.DB_QUERY_FAILED,
+                    error_code=ThriftGameError.DB_QUERY_FAILED,
                 )],
                 None,
             )
@@ -2942,9 +3520,80 @@ class ItemBlueprint:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            # Cascade save belongs-to relationships first (even if parent not dirty)
+            if cascade:
+                pass  # No belongs-to relationships
+
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
+
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
+
+                    query = f"UPDATE `item_blueprints` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
+
+                    query = f"INSERT INTO `item_blueprints` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
+
+                # Mark as clean after successful save
+                self._dirty = False
+
+            # Cascade save has-many relationships (even if parent not dirty)
+            if cascade:
+                # Save item_blueprint_components if cached
+                cache_key = '_item_blueprint_components_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, '_dirty') and related._dirty:
+                                related.save(connection=connection, cascade=cascade)
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
 
         # Determine if we own the connection
         owns_connection = connection is None
@@ -2956,44 +3605,34 @@ class ItemBlueprint:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
-            if cascade:
-                pass  # No belongs-to relationships
-
             cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
-
-                query = f"UPDATE `item_blueprints` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
-
-                query = f"INSERT INTO `item_blueprints` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
-
-            # Mark as clean after successful save
-            self._dirty = False
-
-            # Cascade save has-many relationships
+            # Cascade destroy children and clean up associations first
             if cascade:
-                # Save item_blueprint_components if cached
+                # Cascade destroy item_blueprint_components children
                 cache_key = '_item_blueprint_components_cache'
                 if hasattr(self, cache_key):
                     related_list = getattr(self, cache_key)
                     if related_list is not None:
                         for related in related_list:
-                            if hasattr(related, '_dirty') and related._dirty:
-                                related.save(connection=connection, cascade=cascade)
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_item_blueprint_components(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `item_blueprints` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
 
             # Only commit if we own the connection
             if owns_connection:
@@ -3026,6 +3665,39 @@ class ItemBlueprint:
         finally:
             cursor.close()
 
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `item_blueprints` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
+        finally:
+            cursor.close()
+
     # No find_by methods (no columns ending with _id)
 
 
@@ -3045,7 +3717,7 @@ class Item:
           `item_type` varchar(50) NOT NULL,
           `blueprint_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1803 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=2166 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3079,49 +3751,93 @@ class Item:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_internal_name(self) -> str:
-        """Get the value of internal_name."""
         return self._data.get('internal_name')
 
     def get_max_stack_size(self) -> Optional[int]:
-        """Get the value of max_stack_size."""
         return self._data.get('max_stack_size')
 
-    def get_item_type(self) -> str:
-        """Get the value of item_type."""
-        return self._data.get('item_type')
+    def get_item_type(self) -> ThriftItemType:
+        value = self._data.get('item_type')
+        return ThriftItemType[value] if value is not None else None
 
     def get_blueprint_id(self) -> Optional[int]:
-        """Get the value of blueprint_id."""
         return self._data.get('blueprint_id')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_internal_name(self, value: str) -> None:
-        """Set the value of internal_name."""
+    def set_internal_name(self, value: str) -> 'self.__class__':
         self._data['internal_name'] = value
         self._dirty = True
+        return self
 
-    def set_max_stack_size(self, value: Optional[int]) -> None:
-        """Set the value of max_stack_size."""
+    def set_max_stack_size(self, value: Optional[int]) -> 'self.__class__':
         self._data['max_stack_size'] = value
         self._dirty = True
+        return self
 
-    def set_item_type(self, value: str) -> None:
-        """Set the value of item_type."""
-        self._data['item_type'] = value
+    def set_item_type(self, value: int) -> 'self.__class__':
+        """
+        Set the item_type field value.
+
+        Python Thrift Enum Implementation Note:
+        ----------------------------------------
+        In Python, Thrift enums are implemented as integer constants on a class, not
+        as a separate enum type. For example:
+            - ThriftAttributeType.STRENGTH is just an int (e.g., 0)
+            - ThriftAttributeType.DEXTERITY is just an int (e.g., 1)
+
+        This is different from languages like Java or C++ where enums are distinct types.
+        Python Thrift enums are essentially namespaced integer constants.
+
+        Why this method accepts int:
+        - Thrift enums in Python ARE ints, not a distinct type
+        - Using isinstance(value, ThriftAttributeType) would fail (it's not a class you can instantiate)
+        - Type checkers understand this: passing ThriftAttributeType.STRENGTH satisfies int type hint
+        - This validates the value is a legitimate enum constant, rejecting invalid integers
+
+        The method validates the integer is a valid enum value by reverse-lookup against
+        the Thrift enum class constants, then stores the enum name as a string in the database.
+
+        Args:
+            value: Integer value of a ThriftItemType enum constant (e.g., ThriftItemType.STRENGTH)
+
+        Returns:
+            self for method chaining
+
+        Raises:
+            TypeError: If value is not an integer
+            ValueError: If value is not a valid ThriftItemType enum constant
+        """
+        if value is not None and not isinstance(value, int):
+            raise TypeError(f"{value} must be an integer (Thrift enum), got {type(value).__name__}")
+        # Convert enum integer to string name for storage
+        if value is not None:
+            # Reverse lookup: find the name for this enum value
+            enum_name = None
+            for attr_name in dir(ThriftItemType):
+                if not attr_name.startswith('_'):
+                    attr_val = getattr(ThriftItemType, attr_name)
+                    if isinstance(attr_val, int) and attr_val == value:
+                        enum_name = attr_name
+                        break
+            if enum_name is None:
+                raise ValueError(f"{value} is not a valid ThriftItemType enum value")
+            self._data['item_type'] = enum_name
+        else:
+            self._data['item_type'] = None
         self._dirty = True
+        return self
 
-    def set_blueprint_id(self, value: Optional[int]) -> None:
-        """Set the value of blueprint_id."""
+    def set_blueprint_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['blueprint_id'] = value
         self._dirty = True
+        return self
 
 
 
@@ -3712,15 +4428,15 @@ class Item:
             raise
 
 
-    def from_thrift(self, thrift_obj: 'Item') -> 'Item':
+    def from_thrift(self, thrift_obj: 'ThriftItem') -> 'Item':
         """
-        Populate this Model instance from a Thrift Item object.
+        Populate this Model instance from a Thrift ThriftItem object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift Item instance
+            thrift_obj: Thrift ThriftItem instance
 
         Returns:
             self for method chaining
@@ -3733,7 +4449,7 @@ class Item:
         if hasattr(thrift_obj, 'max_stack_size'):
             self._data['max_stack_size'] = thrift_obj.max_stack_size
         if hasattr(thrift_obj, 'item_type'):
-            self._data['item_type'] = thrift_obj.item_type
+            self._data['item_type'] = thrift_obj.item_type.name if thrift_obj.item_type is not None else None
         if hasattr(thrift_obj, 'blueprint_id'):
             self._data['blueprint_id'] = thrift_obj.blueprint_id
 
@@ -3752,14 +4468,14 @@ class Item:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[GameResult], Optional['Item']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftItem']]:
         """
-        Convert this Model instance to a Thrift Item object.
+        Convert this Model instance to a Thrift ThriftItem object.
 
         Loads all relationships recursively and converts them to Thrift.
 
         Returns:
-            Tuple of (list[GameResult], Optional[Thrift object])
+            Tuple of (list[ThriftGameResult], Optional[Thrift object])
         """
         results = []
 
@@ -3770,7 +4486,7 @@ class Item:
             thrift_params['id'] = self._data.get('id')
             thrift_params['internal_name'] = self._data.get('internal_name')
             thrift_params['max_stack_size'] = self._data.get('max_stack_size')
-            thrift_params['item_type'] = self._data.get('item_type')
+            thrift_params['item_type'] = ThriftItemType[self._data.get('item_type')] if self._data.get('item_type') is not None else None
             thrift_params['blueprint_id'] = self._data.get('blueprint_id')
 
             # Load attributes via pivot table and convert to map<AttributeType, Attribute>
@@ -3787,10 +4503,10 @@ class Item:
             thrift_params['attributes'] = attributes_map
 
             # Create Thrift object
-            thrift_obj = Item(**thrift_params)
+            thrift_obj = ThriftItem(**thrift_params)
 
-            results.append(GameResult(
-                status=StatusType.SUCCESS,
+            results.append(ThriftGameResult(
+                status=ThriftStatusType.SUCCESS,
                 message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
             ))
 
@@ -3798,10 +4514,10 @@ class Item:
 
         except Exception as e:
             return (
-                [GameResult(
-                    status=StatusType.FAILURE,
+                [ThriftGameResult(
+                    status=ThriftStatusType.FAILURE,
                     message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
-                    error_code=GameError.DB_QUERY_FAILED,
+                    error_code=ThriftGameError.DB_QUERY_FAILED,
                 )],
                 None,
             )
@@ -3817,10 +4533,6 @@ class Item:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
-
         # Determine if we own the connection
         owns_connection = connection is None
         if owns_connection:
@@ -3831,35 +4543,37 @@ class Item:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
+            # Cascade save belongs-to relationships first (even if parent not dirty)
             if cascade:
                 pass  # No belongs-to relationships
 
-            cursor = connection.cursor()
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
 
-                query = f"UPDATE `items` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
+                    query = f"UPDATE `items` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
 
-                query = f"INSERT INTO `items` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
+                    query = f"INSERT INTO `items` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
 
-            # Mark as clean after successful save
-            self._dirty = False
+                # Mark as clean after successful save
+                self._dirty = False
 
-            # Cascade save has-many relationships
+            # Cascade save has-many relationships (even if parent not dirty)
             if cascade:
                 # Save attribute_owners if cached
                 cache_key = '_attribute_owners_cache'
@@ -3914,6 +4628,173 @@ class Item:
             if cursor:
                 cursor.close()
 
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
+
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            cursor = connection.cursor()
+
+            # Cascade destroy children and clean up associations first
+            if cascade:
+                # Cascade destroy attribute_owners children
+                cache_key = '_attribute_owners_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_attribute_owners(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Cascade destroy inventory_entries children
+                cache_key = '_inventory_entries_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_inventory_entries(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Cascade destroy inventory_owners children
+                cache_key = '_inventory_owners_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_inventory_owners(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Cascade destroy mobile_items children
+                cache_key = '_mobile_items_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_mobile_items(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Cascade destroy mobiles children
+                cache_key = '_mobiles_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_mobiles(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Clean up attribute_owners associations and cascade delete attributes
+                if self.get_id() is not None:
+                    # First, cascade delete the related objects
+                    try:
+                        related_objects = self.get_attributes(reload=True)
+                        for obj in related_objects:
+                            if hasattr(obj, 'destroy'):
+                                obj.destroy(connection=connection, cascade=cascade)
+                    except:
+                        pass  # Method may not exist
+
+                    # Then delete the pivot table associations
+                    cursor.execute(
+                        "DELETE FROM `attribute_owners` WHERE `item_id` = %s",
+                        (self.get_id(),),
+                    )
+# Clean up inventory_owners associations and cascade delete inventories
+                if self.get_id() is not None:
+                    # First, cascade delete the related objects
+                    try:
+                        related_objects = self.get_inventories(reload=True)
+                        for obj in related_objects:
+                            if hasattr(obj, 'destroy'):
+                                obj.destroy(connection=connection, cascade=cascade)
+                    except:
+                        pass  # Method may not exist
+
+                    # Then delete the pivot table associations
+                    cursor.execute(
+                        "DELETE FROM `inventory_owners` WHERE `item_id` = %s",
+                        (self.get_id(),),
+                    )
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `items` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
     @staticmethod
     def find(id: int) -> Optional['Item']:
         """
@@ -3930,6 +4811,39 @@ class Item:
                 instance._data = row
                 return instance
             return None
+        finally:
+            cursor.close()
+
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `items` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
         finally:
             cursor.close()
 
@@ -3979,7 +4893,7 @@ class MobileItemAttribute:
           PRIMARY KEY (`id`),
           KEY `mobile_item_id` (`mobile_item_id`),
           CONSTRAINT `mobile_item_attributes_ibfk_1` FOREIGN KEY (`mobile_item_id`) REFERENCES `mobile_items` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=83 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -4013,106 +4927,95 @@ class MobileItemAttribute:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_mobile_item_id(self) -> int:
-        """Get the value of mobile_item_id."""
         return self._data.get('mobile_item_id')
 
     def get_internal_name(self) -> str:
-        """Get the value of internal_name."""
         return self._data.get('internal_name')
 
     def get_visible(self) -> int:
-        """Get the value of visible."""
         return self._data.get('visible')
 
     def get_attribute_type(self) -> str:
-        """Get the value of attribute_type."""
         return self._data.get('attribute_type')
 
     def get_bool_value(self) -> Optional[int]:
-        """Get the value of bool_value."""
         return self._data.get('bool_value')
 
     def get_double_value(self) -> Optional[float]:
-        """Get the value of double_value."""
         return self._data.get('double_value')
 
     def get_vector3_x(self) -> Optional[float]:
-        """Get the value of vector3_x."""
         return self._data.get('vector3_x')
 
     def get_vector3_y(self) -> Optional[float]:
-        """Get the value of vector3_y."""
         return self._data.get('vector3_y')
 
     def get_vector3_z(self) -> Optional[float]:
-        """Get the value of vector3_z."""
         return self._data.get('vector3_z')
 
     def get_asset_id(self) -> Optional[int]:
-        """Get the value of asset_id."""
         return self._data.get('asset_id')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_mobile_item_id(self, value: int) -> None:
-        """Set the value of mobile_item_id."""
+    def set_mobile_item_id(self, value: int) -> 'self.__class__':
         self._data['mobile_item_id'] = value
         self._dirty = True
+        return self
 
-    def set_internal_name(self, value: str) -> None:
-        """Set the value of internal_name."""
+    def set_internal_name(self, value: str) -> 'self.__class__':
         self._data['internal_name'] = value
         self._dirty = True
+        return self
 
-    def set_visible(self, value: int) -> None:
-        """Set the value of visible."""
+    def set_visible(self, value: int) -> 'self.__class__':
         self._data['visible'] = value
         self._dirty = True
+        return self
 
-    def set_attribute_type(self, value: str) -> None:
-        """Set the value of attribute_type."""
+    def set_attribute_type(self, value: str) -> 'self.__class__':
         self._data['attribute_type'] = value
         self._dirty = True
+        return self
 
-    def set_bool_value(self, value: Optional[int]) -> None:
-        """Set the value of bool_value."""
+    def set_bool_value(self, value: Optional[int]) -> 'self.__class__':
         self._data['bool_value'] = value
         self._dirty = True
+        return self
 
-    def set_double_value(self, value: Optional[float]) -> None:
-        """Set the value of double_value."""
+    def set_double_value(self, value: Optional[float]) -> 'self.__class__':
         self._data['double_value'] = value
         self._dirty = True
+        return self
 
-    def set_vector3_x(self, value: Optional[float]) -> None:
-        """Set the value of vector3_x."""
+    def set_vector3_x(self, value: Optional[float]) -> 'self.__class__':
         self._data['vector3_x'] = value
         self._dirty = True
+        return self
 
-    def set_vector3_y(self, value: Optional[float]) -> None:
-        """Set the value of vector3_y."""
+    def set_vector3_y(self, value: Optional[float]) -> 'self.__class__':
         self._data['vector3_y'] = value
         self._dirty = True
+        return self
 
-    def set_vector3_z(self, value: Optional[float]) -> None:
-        """Set the value of vector3_z."""
+    def set_vector3_z(self, value: Optional[float]) -> 'self.__class__':
         self._data['vector3_z'] = value
         self._dirty = True
+        return self
 
-    def set_asset_id(self, value: Optional[int]) -> None:
-        """Set the value of asset_id."""
+    def set_asset_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['asset_id'] = value
         self._dirty = True
+        return self
 
 
-    def get_mobile_item(self, strict: bool = False) -> 'MobileItem':
+    def get_mobile_item(self, strict: bool = False) -> Optional['MobileItem']:
         """
         Get the associated MobileItem for this mobile_item relationship.
         Uses lazy loading with caching.
@@ -4141,13 +5044,16 @@ class MobileItemAttribute:
         setattr(self, cache_key, related)
         return related
 
-    def set_mobile_item(self, model: 'MobileItem') -> None:
+    def set_mobile_item(self, model: 'MobileItem') -> 'self.__class__':
         """
         Set the associated MobileItem for this mobile_item relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The MobileItem instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_mobile_item_cache'
@@ -4158,6 +5064,7 @@ class MobileItemAttribute:
             self.set_mobile_item_id(None)
         else:
             self.set_mobile_item_id(model.get_id())
+        return self
 
 
 
@@ -4173,9 +5080,80 @@ class MobileItemAttribute:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            # Cascade save belongs-to relationships first (even if parent not dirty)
+            if cascade:
+                # Save mobile_item if cached and dirty
+                cache_key = '_mobile_item_cache'
+                if hasattr(self, cache_key):
+                    related = getattr(self, cache_key)
+                    if related is not None and hasattr(related, '_dirty') and related._dirty:
+                        related.save(connection=connection, cascade=cascade)
+                        # Update foreign key with saved ID
+                        self._data['mobile_item_id'] = related.get_id()
+
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
+
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
+
+                    query = f"UPDATE `mobile_item_attributes` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
+
+                    query = f"INSERT INTO `mobile_item_attributes` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
+
+                # Mark as clean after successful save
+                self._dirty = False
+
+            # Cascade save has-many relationships (even if parent not dirty)
+            if cascade:
+                pass  # No has-many relationships
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
 
         # Determine if we own the connection
         owns_connection = connection is None
@@ -4187,44 +5165,17 @@ class MobileItemAttribute:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
-            if cascade:
-                # Save mobile_item if cached and dirty
-                cache_key = '_mobile_item_cache'
-                if hasattr(self, cache_key):
-                    related = getattr(self, cache_key)
-                    if related is not None and hasattr(related, '_dirty') and related._dirty:
-                        related.save(connection=connection, cascade=cascade)
-                        # Update foreign key with saved ID
-                        self._data['mobile_item_id'] = related.get_id()
-
             cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
-
-                query = f"UPDATE `mobile_item_attributes` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
-
-                query = f"INSERT INTO `mobile_item_attributes` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
-
-            # Mark as clean after successful save
-            self._dirty = False
-
-            # Cascade save has-many relationships
+            # Cascade destroy children and clean up associations first
             if cascade:
-                pass  # No has-many relationships
+                pass  # No cascade destroys needed
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `mobile_item_attributes` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
 
             # Only commit if we own the connection
             if owns_connection:
@@ -4254,6 +5205,39 @@ class MobileItemAttribute:
                 instance._data = row
                 return instance
             return None
+        finally:
+            cursor.close()
+
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `mobile_item_attributes` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
         finally:
             cursor.close()
 
@@ -4317,7 +5301,7 @@ class MobileItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `mobile_item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `mobile_item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=108 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -4351,43 +5335,39 @@ class MobileItemBlueprintComponent:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_item_blueprint_id(self) -> int:
-        """Get the value of item_blueprint_id."""
         return self._data.get('item_blueprint_id')
 
     def get_component_item_id(self) -> int:
-        """Get the value of component_item_id."""
         return self._data.get('component_item_id')
 
     def get_ratio(self) -> float:
-        """Get the value of ratio."""
         return self._data.get('ratio')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_item_blueprint_id(self, value: int) -> None:
-        """Set the value of item_blueprint_id."""
+    def set_item_blueprint_id(self, value: int) -> 'self.__class__':
         self._data['item_blueprint_id'] = value
         self._dirty = True
+        return self
 
-    def set_component_item_id(self, value: int) -> None:
-        """Set the value of component_item_id."""
+    def set_component_item_id(self, value: int) -> 'self.__class__':
         self._data['component_item_id'] = value
         self._dirty = True
+        return self
 
-    def set_ratio(self, value: float) -> None:
-        """Set the value of ratio."""
+    def set_ratio(self, value: float) -> 'self.__class__':
         self._data['ratio'] = value
         self._dirty = True
+        return self
 
 
-    def get_item_blueprint(self, strict: bool = False) -> 'MobileItemBlueprint':
+    def get_item_blueprint(self, strict: bool = False) -> Optional['MobileItemBlueprint']:
         """
         Get the associated MobileItemBlueprint for this item_blueprint relationship.
         Uses lazy loading with caching.
@@ -4416,13 +5396,16 @@ class MobileItemBlueprintComponent:
         setattr(self, cache_key, related)
         return related
 
-    def set_item_blueprint(self, model: 'MobileItemBlueprint') -> None:
+    def set_item_blueprint(self, model: 'MobileItemBlueprint') -> 'self.__class__':
         """
         Set the associated MobileItemBlueprint for this item_blueprint relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The MobileItemBlueprint instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_item_blueprint_cache'
@@ -4433,9 +5416,86 @@ class MobileItemBlueprintComponent:
             self.set_item_blueprint_id(None)
         else:
             self.set_item_blueprint_id(model.get_id())
+        return self
 
 
 
+
+    def from_thrift(self, thrift_obj: 'ThriftItemBlueprintComponent') -> 'MobileItemBlueprintComponent':
+        """
+        Populate this Model instance from a Thrift ThriftItemBlueprintComponent object.
+
+        This method performs pure data conversion without database queries.
+        Call save() after this to persist to the database.
+
+        Args:
+            thrift_obj: Thrift ThriftItemBlueprintComponent instance
+
+        Returns:
+            self for method chaining
+        """
+        # Map simple fields from Thrift to Model
+        if hasattr(thrift_obj, 'id'):
+            self._data['id'] = thrift_obj.id
+        if hasattr(thrift_obj, 'item_blueprint_id'):
+            self._data['item_blueprint_id'] = thrift_obj.item_blueprint_id
+        if hasattr(thrift_obj, 'component_item_id'):
+            self._data['component_item_id'] = thrift_obj.component_item_id
+        if hasattr(thrift_obj, 'ratio'):
+            self._data['ratio'] = thrift_obj.ratio
+
+        self._dirty = True
+        return self
+
+
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftItemBlueprintComponent']]:
+        """
+        Convert this Model instance to a Thrift ThriftItemBlueprintComponent object.
+
+        Loads all relationships recursively and converts them to Thrift.
+
+        Returns:
+            Tuple of (list[ThriftGameResult], Optional[Thrift object])
+        """
+        results = []
+
+        try:
+            # Build parameters for Thrift object constructor
+            thrift_params = {}
+
+            thrift_params['id'] = self._data.get('id')
+            thrift_params['item_blueprint_id'] = self._data.get('item_blueprint_id')
+            thrift_params['component_item_id'] = self._data.get('component_item_id')
+            thrift_params['ratio'] = self._data.get('ratio')
+
+            # Load item_blueprint relationship
+            item_blueprint_model = self.get_item_blueprint()
+            if item_blueprint_model is not None:
+                item_blueprint_results, item_blueprint_thrift = item_blueprint_model.into_thrift()
+                if item_blueprint_thrift is not None:
+                    thrift_params['item_blueprint'] = item_blueprint_thrift
+                else:
+                    results.extend(item_blueprint_results)
+
+            # Create Thrift object
+            thrift_obj = ThriftItemBlueprintComponent(**thrift_params)
+
+            results.append(ThriftGameResult(
+                status=ThriftStatusType.SUCCESS,
+                message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
+            ))
+
+            return (results, thrift_obj)
+
+        except Exception as e:
+            return (
+                [ThriftGameResult(
+                    status=ThriftStatusType.FAILURE,
+                    message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
+                    error_code=ThriftGameError.DB_QUERY_FAILED,
+                )],
+                None,
+            )
 
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
@@ -4448,9 +5508,80 @@ class MobileItemBlueprintComponent:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            # Cascade save belongs-to relationships first (even if parent not dirty)
+            if cascade:
+                # Save item_blueprint if cached and dirty
+                cache_key = '_item_blueprint_cache'
+                if hasattr(self, cache_key):
+                    related = getattr(self, cache_key)
+                    if related is not None and hasattr(related, '_dirty') and related._dirty:
+                        related.save(connection=connection, cascade=cascade)
+                        # Update foreign key with saved ID
+                        self._data['item_blueprint_id'] = related.get_id()
+
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
+
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
+
+                    query = f"UPDATE `mobile_item_blueprint_components` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
+
+                    query = f"INSERT INTO `mobile_item_blueprint_components` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
+
+                # Mark as clean after successful save
+                self._dirty = False
+
+            # Cascade save has-many relationships (even if parent not dirty)
+            if cascade:
+                pass  # No has-many relationships
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
 
         # Determine if we own the connection
         owns_connection = connection is None
@@ -4462,44 +5593,17 @@ class MobileItemBlueprintComponent:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
-            if cascade:
-                # Save item_blueprint if cached and dirty
-                cache_key = '_item_blueprint_cache'
-                if hasattr(self, cache_key):
-                    related = getattr(self, cache_key)
-                    if related is not None and hasattr(related, '_dirty') and related._dirty:
-                        related.save(connection=connection, cascade=cascade)
-                        # Update foreign key with saved ID
-                        self._data['item_blueprint_id'] = related.get_id()
-
             cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
-
-                query = f"UPDATE `mobile_item_blueprint_components` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
-
-                query = f"INSERT INTO `mobile_item_blueprint_components` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
-
-            # Mark as clean after successful save
-            self._dirty = False
-
-            # Cascade save has-many relationships
+            # Cascade destroy children and clean up associations first
             if cascade:
-                pass  # No has-many relationships
+                pass  # No cascade destroys needed
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `mobile_item_blueprint_components` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
 
             # Only commit if we own the connection
             if owns_connection:
@@ -4529,6 +5633,39 @@ class MobileItemBlueprintComponent:
                 instance._data = row
                 return instance
             return None
+        finally:
+            cursor.close()
+
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `mobile_item_blueprint_components` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
         finally:
             cursor.close()
 
@@ -4588,7 +5725,7 @@ class MobileItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=245 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=325 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -4622,22 +5759,20 @@ class MobileItemBlueprint:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_bake_time_ms(self) -> int:
-        """Get the value of bake_time_ms."""
         return self._data.get('bake_time_ms')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_bake_time_ms(self, value: int) -> None:
-        """Set the value of bake_time_ms."""
+    def set_bake_time_ms(self, value: int) -> 'self.__class__':
         self._data['bake_time_ms'] = value
         self._dirty = True
+        return self
 
 
 
@@ -4677,6 +5812,67 @@ class MobileItemBlueprint:
         return iter(results) if lazy else results
 
 
+    def from_thrift(self, thrift_obj: 'ThriftItemBlueprint') -> 'MobileItemBlueprint':
+        """
+        Populate this Model instance from a Thrift ThriftItemBlueprint object.
+
+        This method performs pure data conversion without database queries.
+        Call save() after this to persist to the database.
+
+        Args:
+            thrift_obj: Thrift ThriftItemBlueprint instance
+
+        Returns:
+            self for method chaining
+        """
+        # Map simple fields from Thrift to Model
+        if hasattr(thrift_obj, 'id'):
+            self._data['id'] = thrift_obj.id
+        if hasattr(thrift_obj, 'bake_time_ms'):
+            self._data['bake_time_ms'] = thrift_obj.bake_time_ms
+
+        self._dirty = True
+        return self
+
+
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftItemBlueprint']]:
+        """
+        Convert this Model instance to a Thrift ThriftItemBlueprint object.
+
+        Loads all relationships recursively and converts them to Thrift.
+
+        Returns:
+            Tuple of (list[ThriftGameResult], Optional[Thrift object])
+        """
+        results = []
+
+        try:
+            # Build parameters for Thrift object constructor
+            thrift_params = {}
+
+            thrift_params['id'] = self._data.get('id')
+            thrift_params['bake_time_ms'] = self._data.get('bake_time_ms')
+
+            # Create Thrift object
+            thrift_obj = ThriftItemBlueprint(**thrift_params)
+
+            results.append(ThriftGameResult(
+                status=ThriftStatusType.SUCCESS,
+                message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
+            ))
+
+            return (results, thrift_obj)
+
+        except Exception as e:
+            return (
+                [ThriftGameResult(
+                    status=ThriftStatusType.FAILURE,
+                    message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
+                    error_code=ThriftGameError.DB_QUERY_FAILED,
+                )],
+                None,
+            )
+
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
@@ -4688,9 +5884,80 @@ class MobileItemBlueprint:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            # Cascade save belongs-to relationships first (even if parent not dirty)
+            if cascade:
+                pass  # No belongs-to relationships
+
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
+
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
+
+                    query = f"UPDATE `mobile_item_blueprints` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
+
+                    query = f"INSERT INTO `mobile_item_blueprints` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
+
+                # Mark as clean after successful save
+                self._dirty = False
+
+            # Cascade save has-many relationships (even if parent not dirty)
+            if cascade:
+                # Save mobile_item_blueprint_components if cached
+                cache_key = '_mobile_item_blueprint_components_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, '_dirty') and related._dirty:
+                                related.save(connection=connection, cascade=cascade)
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
 
         # Determine if we own the connection
         owns_connection = connection is None
@@ -4702,44 +5969,34 @@ class MobileItemBlueprint:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
-            if cascade:
-                pass  # No belongs-to relationships
-
             cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
-
-                query = f"UPDATE `mobile_item_blueprints` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
-
-                query = f"INSERT INTO `mobile_item_blueprints` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
-
-            # Mark as clean after successful save
-            self._dirty = False
-
-            # Cascade save has-many relationships
+            # Cascade destroy children and clean up associations first
             if cascade:
-                # Save mobile_item_blueprint_components if cached
+                # Cascade destroy mobile_item_blueprint_components children
                 cache_key = '_mobile_item_blueprint_components_cache'
                 if hasattr(self, cache_key):
                     related_list = getattr(self, cache_key)
                     if related_list is not None:
                         for related in related_list:
-                            if hasattr(related, '_dirty') and related._dirty:
-                                related.save(connection=connection, cascade=cascade)
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_mobile_item_blueprint_components(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `mobile_item_blueprints` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
 
             # Only commit if we own the connection
             if owns_connection:
@@ -4772,6 +6029,39 @@ class MobileItemBlueprint:
         finally:
             cursor.close()
 
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `mobile_item_blueprints` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
+        finally:
+            cursor.close()
+
     # No find_by methods (no columns ending with _id)
 
 
@@ -4793,7 +6083,7 @@ class MobileItem:
           `blueprint_id` bigint DEFAULT NULL,
           `item_id` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=193 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=340 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -4827,70 +6117,112 @@ class MobileItem:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_mobile_id(self) -> int:
-        """Get the value of mobile_id."""
         return self._data.get('mobile_id')
 
     def get_internal_name(self) -> str:
-        """Get the value of internal_name."""
         return self._data.get('internal_name')
 
     def get_max_stack_size(self) -> Optional[int]:
-        """Get the value of max_stack_size."""
         return self._data.get('max_stack_size')
 
-    def get_item_type(self) -> str:
-        """Get the value of item_type."""
-        return self._data.get('item_type')
+    def get_item_type(self) -> ThriftItemType:
+        value = self._data.get('item_type')
+        return ThriftItemType[value] if value is not None else None
 
     def get_blueprint_id(self) -> Optional[int]:
-        """Get the value of blueprint_id."""
         return self._data.get('blueprint_id')
 
     def get_item_id(self) -> int:
-        """Get the value of item_id."""
         return self._data.get('item_id')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_mobile_id(self, value: int) -> None:
-        """Set the value of mobile_id."""
+    def set_mobile_id(self, value: int) -> 'self.__class__':
         self._data['mobile_id'] = value
         self._dirty = True
+        return self
 
-    def set_internal_name(self, value: str) -> None:
-        """Set the value of internal_name."""
+    def set_internal_name(self, value: str) -> 'self.__class__':
         self._data['internal_name'] = value
         self._dirty = True
+        return self
 
-    def set_max_stack_size(self, value: Optional[int]) -> None:
-        """Set the value of max_stack_size."""
+    def set_max_stack_size(self, value: Optional[int]) -> 'self.__class__':
         self._data['max_stack_size'] = value
         self._dirty = True
+        return self
 
-    def set_item_type(self, value: str) -> None:
-        """Set the value of item_type."""
-        self._data['item_type'] = value
+    def set_item_type(self, value: int) -> 'self.__class__':
+        """
+        Set the item_type field value.
+
+        Python Thrift Enum Implementation Note:
+        ----------------------------------------
+        In Python, Thrift enums are implemented as integer constants on a class, not
+        as a separate enum type. For example:
+            - ThriftAttributeType.STRENGTH is just an int (e.g., 0)
+            - ThriftAttributeType.DEXTERITY is just an int (e.g., 1)
+
+        This is different from languages like Java or C++ where enums are distinct types.
+        Python Thrift enums are essentially namespaced integer constants.
+
+        Why this method accepts int:
+        - Thrift enums in Python ARE ints, not a distinct type
+        - Using isinstance(value, ThriftAttributeType) would fail (it's not a class you can instantiate)
+        - Type checkers understand this: passing ThriftAttributeType.STRENGTH satisfies int type hint
+        - This validates the value is a legitimate enum constant, rejecting invalid integers
+
+        The method validates the integer is a valid enum value by reverse-lookup against
+        the Thrift enum class constants, then stores the enum name as a string in the database.
+
+        Args:
+            value: Integer value of a ThriftItemType enum constant (e.g., ThriftItemType.STRENGTH)
+
+        Returns:
+            self for method chaining
+
+        Raises:
+            TypeError: If value is not an integer
+            ValueError: If value is not a valid ThriftItemType enum constant
+        """
+        if value is not None and not isinstance(value, int):
+            raise TypeError(f"{value} must be an integer (Thrift enum), got {type(value).__name__}")
+        # Convert enum integer to string name for storage
+        if value is not None:
+            # Reverse lookup: find the name for this enum value
+            enum_name = None
+            for attr_name in dir(ThriftItemType):
+                if not attr_name.startswith('_'):
+                    attr_val = getattr(ThriftItemType, attr_name)
+                    if isinstance(attr_val, int) and attr_val == value:
+                        enum_name = attr_name
+                        break
+            if enum_name is None:
+                raise ValueError(f"{value} is not a valid ThriftItemType enum value")
+            self._data['item_type'] = enum_name
+        else:
+            self._data['item_type'] = None
         self._dirty = True
+        return self
 
-    def set_blueprint_id(self, value: Optional[int]) -> None:
-        """Set the value of blueprint_id."""
+    def set_blueprint_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['blueprint_id'] = value
         self._dirty = True
+        return self
 
-    def set_item_id(self, value: int) -> None:
-        """Set the value of item_id."""
+    def set_item_id(self, value: int) -> 'self.__class__':
         self._data['item_id'] = value
         self._dirty = True
+        return self
 
 
-    def get_mobile(self, strict: bool = False) -> 'Mobile':
+    def get_mobile(self, strict: bool = False) -> Optional['Mobile']:
         """
         Get the associated Mobile for this mobile relationship.
         Uses lazy loading with caching.
@@ -4919,13 +6251,16 @@ class MobileItem:
         setattr(self, cache_key, related)
         return related
 
-    def set_mobile(self, model: 'Mobile') -> None:
+    def set_mobile(self, model: 'Mobile') -> 'self.__class__':
         """
         Set the associated Mobile for this mobile relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Mobile instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_mobile_cache'
@@ -4936,8 +6271,9 @@ class MobileItem:
             self.set_mobile_id(None)
         else:
             self.set_mobile_id(model.get_id())
+        return self
 
-    def get_item(self, strict: bool = False) -> 'Item':
+    def get_item(self, strict: bool = False) -> Optional['Item']:
         """
         Get the associated Item for this item relationship.
         Uses lazy loading with caching.
@@ -4966,13 +6302,16 @@ class MobileItem:
         setattr(self, cache_key, related)
         return related
 
-    def set_item(self, model: 'Item') -> None:
+    def set_item(self, model: 'Item') -> 'self.__class__':
         """
         Set the associated Item for this item relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Item instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_item_cache'
@@ -4983,6 +6322,7 @@ class MobileItem:
             self.set_item_id(None)
         else:
             self.set_item_id(model.get_id())
+        return self
 
     def get_inventory_entries(self, reload: bool = False, lazy: bool = False):
         """
@@ -5053,15 +6393,15 @@ class MobileItem:
         return iter(results) if lazy else results
 
 
-    def from_thrift(self, thrift_obj: 'MobileItem') -> 'MobileItem':
+    def from_thrift(self, thrift_obj: 'ThriftMobileItem') -> 'MobileItem':
         """
-        Populate this Model instance from a Thrift MobileItem object.
+        Populate this Model instance from a Thrift ThriftMobileItem object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift MobileItem instance
+            thrift_obj: Thrift ThriftMobileItem instance
 
         Returns:
             self for method chaining
@@ -5076,7 +6416,7 @@ class MobileItem:
         if hasattr(thrift_obj, 'max_stack_size'):
             self._data['max_stack_size'] = thrift_obj.max_stack_size
         if hasattr(thrift_obj, 'item_type'):
-            self._data['item_type'] = thrift_obj.item_type
+            self._data['item_type'] = thrift_obj.item_type.name if thrift_obj.item_type is not None else None
         if hasattr(thrift_obj, 'blueprint_id'):
             self._data['blueprint_id'] = thrift_obj.blueprint_id
         if hasattr(thrift_obj, 'item_id'):
@@ -5097,14 +6437,14 @@ class MobileItem:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[GameResult], Optional['MobileItem']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftMobileItem']]:
         """
-        Convert this Model instance to a Thrift MobileItem object.
+        Convert this Model instance to a Thrift ThriftMobileItem object.
 
         Loads all relationships recursively and converts them to Thrift.
 
         Returns:
-            Tuple of (list[GameResult], Optional[Thrift object])
+            Tuple of (list[ThriftGameResult], Optional[Thrift object])
         """
         results = []
 
@@ -5116,7 +6456,7 @@ class MobileItem:
             thrift_params['mobile_id'] = self._data.get('mobile_id')
             thrift_params['internal_name'] = self._data.get('internal_name')
             thrift_params['max_stack_size'] = self._data.get('max_stack_size')
-            thrift_params['item_type'] = self._data.get('item_type')
+            thrift_params['item_type'] = ThriftItemType[self._data.get('item_type')] if self._data.get('item_type') is not None else None
             thrift_params['blueprint_id'] = self._data.get('blueprint_id')
             thrift_params['item_id'] = self._data.get('item_id')
 
@@ -5152,10 +6492,10 @@ class MobileItem:
                     results.extend(item_results)
 
             # Create Thrift object
-            thrift_obj = MobileItem(**thrift_params)
+            thrift_obj = ThriftMobileItem(**thrift_params)
 
-            results.append(GameResult(
-                status=StatusType.SUCCESS,
+            results.append(ThriftGameResult(
+                status=ThriftStatusType.SUCCESS,
                 message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
             ))
 
@@ -5163,10 +6503,10 @@ class MobileItem:
 
         except Exception as e:
             return (
-                [GameResult(
-                    status=StatusType.FAILURE,
+                [ThriftGameResult(
+                    status=ThriftStatusType.FAILURE,
                     message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
-                    error_code=GameError.DB_QUERY_FAILED,
+                    error_code=ThriftGameError.DB_QUERY_FAILED,
                 )],
                 None,
             )
@@ -5182,10 +6522,6 @@ class MobileItem:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
-
         # Determine if we own the connection
         owns_connection = connection is None
         if owns_connection:
@@ -5196,7 +6532,7 @@ class MobileItem:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
+            # Cascade save belongs-to relationships first (even if parent not dirty)
             if cascade:
                 # Save mobile if cached and dirty
                 cache_key = '_mobile_cache'
@@ -5215,31 +6551,33 @@ class MobileItem:
                         # Update foreign key with saved ID
                         self._data['item_id'] = related.get_id()
 
-            cursor = connection.cursor()
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
 
-                query = f"UPDATE `mobile_items` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
+                    query = f"UPDATE `mobile_items` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
 
-                query = f"INSERT INTO `mobile_items` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
+                    query = f"INSERT INTO `mobile_items` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
 
-            # Mark as clean after successful save
-            self._dirty = False
+                # Mark as clean after successful save
+                self._dirty = False
 
-            # Cascade save has-many relationships
+            # Cascade save has-many relationships (even if parent not dirty)
             if cascade:
                 # Save inventory_entries if cached
                 cache_key = '_inventory_entries_cache'
@@ -5270,6 +6608,87 @@ class MobileItem:
             if cursor:
                 cursor.close()
 
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
+
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            cursor = connection.cursor()
+
+            # Cascade destroy children and clean up associations first
+            if cascade:
+                # Cascade destroy inventory_entries children
+                cache_key = '_inventory_entries_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_inventory_entries(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Cascade destroy mobile_item_attributes children
+                cache_key = '_mobile_item_attributes_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_mobile_item_attributes(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `mobile_items` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
     @staticmethod
     def find(id: int) -> Optional['MobileItem']:
         """
@@ -5286,6 +6705,39 @@ class MobileItem:
                 instance._data = row
                 return instance
             return None
+        finally:
+            cursor.close()
+
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `mobile_items` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
         finally:
             cursor.close()
 
@@ -5371,7 +6823,7 @@ class Mobile:
           `owner_player_id` bigint DEFAULT NULL,
           `what_we_call_you` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=975 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1378 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5405,83 +6857,72 @@ class Mobile:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_mobile_type(self) -> str:
-        """Get the value of mobile_type."""
         return self._data.get('mobile_type')
 
     def get_owner_mobile_id(self) -> Optional[int]:
-        """Get the value of owner_mobile_id."""
         return self._data.get('owner_mobile_id')
 
     def get_owner_item_id(self) -> Optional[int]:
-        """Get the value of owner_item_id."""
         return self._data.get('owner_item_id')
 
     def get_owner_asset_id(self) -> Optional[int]:
-        """Get the value of owner_asset_id."""
         return self._data.get('owner_asset_id')
 
     def get_owner_player_id(self) -> Optional[int]:
-        """Get the value of owner_player_id."""
         return self._data.get('owner_player_id')
 
     def get_what_we_call_you(self) -> str:
-        """Get the value of what_we_call_you."""
         return self._data.get('what_we_call_you')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_mobile_type(self, value: str) -> None:
-        """Set the value of mobile_type."""
+    def set_mobile_type(self, value: str) -> 'self.__class__':
         self._data['mobile_type'] = value
         self._dirty = True
+        return self
 
-    def set_owner_mobile_id(self, value: Optional[int]) -> None:
-        """Set the value of owner_mobile_id and clear other owner FKs."""
+    def set_owner_mobile_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['owner_mobile_id'] = value
-        # Clear other owner FKs to enforce exactly-one constraint
         self._data['owner_player_id'] = None
         self._data['owner_item_id'] = None
         self._data['owner_asset_id'] = None
         self._dirty = True
+        return self
 
-    def set_owner_item_id(self, value: Optional[int]) -> None:
-        """Set the value of owner_item_id and clear other owner FKs."""
+    def set_owner_item_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['owner_item_id'] = value
-        # Clear other owner FKs to enforce exactly-one constraint
         self._data['owner_player_id'] = None
         self._data['owner_mobile_id'] = None
         self._data['owner_asset_id'] = None
         self._dirty = True
+        return self
 
-    def set_owner_asset_id(self, value: Optional[int]) -> None:
-        """Set the value of owner_asset_id and clear other owner FKs."""
+    def set_owner_asset_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['owner_asset_id'] = value
-        # Clear other owner FKs to enforce exactly-one constraint
         self._data['owner_player_id'] = None
         self._data['owner_mobile_id'] = None
         self._data['owner_item_id'] = None
         self._dirty = True
+        return self
 
-    def set_owner_player_id(self, value: Optional[int]) -> None:
-        """Set the value of owner_player_id and clear other owner FKs."""
+    def set_owner_player_id(self, value: Optional[int]) -> 'self.__class__':
         self._data['owner_player_id'] = value
-        # Clear other owner FKs to enforce exactly-one constraint
         self._data['owner_mobile_id'] = None
         self._data['owner_item_id'] = None
         self._data['owner_asset_id'] = None
         self._dirty = True
+        return self
 
-    def set_what_we_call_you(self, value: str) -> None:
-        """Set the value of what_we_call_you."""
+    def set_what_we_call_you(self, value: str) -> 'self.__class__':
         self._data['what_we_call_you'] = value
         self._dirty = True
+        return self
 
 
     def validate_owner(self) -> None:
@@ -5541,13 +6982,16 @@ class Mobile:
         setattr(self, cache_key, related)
         return related
 
-    def set_owner_mobile(self, model: Optional['Mobile']) -> None:
+    def set_owner_mobile(self, model: Optional['Mobile']) -> 'self.__class__':
         """
         Set the associated Mobile for this owner_mobile relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Mobile instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_owner_mobile_cache'
@@ -5558,6 +7002,7 @@ class Mobile:
             self.set_owner_mobile_id(None)
         else:
             self.set_owner_mobile_id(model.get_id())
+        return self
 
     def get_owner_item(self, strict: bool = False) -> Optional['Item']:
         """
@@ -5588,13 +7033,16 @@ class Mobile:
         setattr(self, cache_key, related)
         return related
 
-    def set_owner_item(self, model: Optional['Item']) -> None:
+    def set_owner_item(self, model: Optional['Item']) -> 'self.__class__':
         """
         Set the associated Item for this owner_item relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Item instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_owner_item_cache'
@@ -5605,6 +7053,7 @@ class Mobile:
             self.set_owner_item_id(None)
         else:
             self.set_owner_item_id(model.get_id())
+        return self
 
     def get_owner_player(self, strict: bool = False) -> Optional['Player']:
         """
@@ -5635,13 +7084,16 @@ class Mobile:
         setattr(self, cache_key, related)
         return related
 
-    def set_owner_player(self, model: Optional['Player']) -> None:
+    def set_owner_player(self, model: Optional['Player']) -> 'self.__class__':
         """
         Set the associated Player for this owner_player relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The Player instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         """
         # Update cache
         cache_key = '_owner_player_cache'
@@ -5652,6 +7104,7 @@ class Mobile:
             self.set_owner_player_id(None)
         else:
             self.set_owner_player_id(model.get_id())
+        return self
 
     def get_attribute_owners(self, reload: bool = False, lazy: bool = False):
         """
@@ -6171,15 +7624,15 @@ class Mobile:
             raise
 
 
-    def from_thrift(self, thrift_obj: 'Mobile') -> 'Mobile':
+    def from_thrift(self, thrift_obj: 'ThriftMobile') -> 'Mobile':
         """
-        Populate this Model instance from a Thrift Mobile object.
+        Populate this Model instance from a Thrift ThriftMobile object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift Mobile instance
+            thrift_obj: Thrift ThriftMobile instance
 
         Returns:
             self for method chaining
@@ -6192,7 +7645,7 @@ class Mobile:
         if hasattr(thrift_obj, 'what_we_call_you'):
             self._data['what_we_call_you'] = thrift_obj.what_we_call_you
 
-        # Convert Owner union to database owner_* columns
+        # Convert ThriftOwner union to database owner_* columns
         if hasattr(thrift_obj, 'owner') and thrift_obj.owner is not None:
             owner = thrift_obj.owner
             # Reset all owner fields to None first
@@ -6226,14 +7679,14 @@ class Mobile:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[GameResult], Optional['Mobile']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftMobile']]:
         """
-        Convert this Model instance to a Thrift Mobile object.
+        Convert this Model instance to a Thrift ThriftMobile object.
 
         Loads all relationships recursively and converts them to Thrift.
 
         Returns:
-            Tuple of (list[GameResult], Optional[Thrift object])
+            Tuple of (list[ThriftGameResult], Optional[Thrift object])
         """
         results = []
 
@@ -6245,16 +7698,16 @@ class Mobile:
             thrift_params['mobile_type'] = self._data.get('mobile_type')
             thrift_params['what_we_call_you'] = self._data.get('what_we_call_you')
 
-            # Convert database owner_* columns to Owner union
+            # Convert database owner_* columns to ThriftOwner union
             owner = None
             if self._data.get('owner_player_id') is not None:
-                owner = Owner(player_id=self._data['owner_player_id'])
+                owner = ThriftOwner(player_id=self._data['owner_player_id'])
             elif self._data.get('owner_mobile_id') is not None:
-                owner = Owner(mobile_id=self._data['owner_mobile_id'])
+                owner = ThriftOwner(mobile_id=self._data['owner_mobile_id'])
             elif self._data.get('owner_item_id') is not None:
-                owner = Owner(item_id=self._data['owner_item_id'])
+                owner = ThriftOwner(item_id=self._data['owner_item_id'])
             elif self._data.get('owner_asset_id') is not None:
-                owner = Owner(asset_id=self._data['owner_asset_id'])
+                owner = ThriftOwner(asset_id=self._data['owner_asset_id'])
             thrift_params['owner'] = owner
 
             # Load attributes via pivot table and convert to map<AttributeType, Attribute>
@@ -6271,10 +7724,10 @@ class Mobile:
             thrift_params['attributes'] = attributes_map
 
             # Create Thrift object
-            thrift_obj = Mobile(**thrift_params)
+            thrift_obj = ThriftMobile(**thrift_params)
 
-            results.append(GameResult(
-                status=StatusType.SUCCESS,
+            results.append(ThriftGameResult(
+                status=ThriftStatusType.SUCCESS,
                 message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
             ))
 
@@ -6282,10 +7735,10 @@ class Mobile:
 
         except Exception as e:
             return (
-                [GameResult(
-                    status=StatusType.FAILURE,
+                [ThriftGameResult(
+                    status=ThriftStatusType.FAILURE,
                     message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
-                    error_code=GameError.DB_QUERY_FAILED,
+                    error_code=ThriftGameError.DB_QUERY_FAILED,
                 )],
                 None,
             )
@@ -6301,10 +7754,6 @@ class Mobile:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
-
         # Determine if we own the connection
         owns_connection = connection is None
         if owns_connection:
@@ -6315,7 +7764,7 @@ class Mobile:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
+            # Cascade save belongs-to relationships first (even if parent not dirty)
             if cascade:
                 # Save owner_mobile if cached and dirty
                 cache_key = '_owner_mobile_cache'
@@ -6342,31 +7791,33 @@ class Mobile:
                         # Update foreign key with saved ID
                         self._data['owner_player_id'] = related.get_id()
 
-            cursor = connection.cursor()
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
 
-                query = f"UPDATE `mobiles` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
+                    query = f"UPDATE `mobiles` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
 
-                query = f"INSERT INTO `mobiles` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
+                    query = f"INSERT INTO `mobiles` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
 
-            # Mark as clean after successful save
-            self._dirty = False
+                # Mark as clean after successful save
+                self._dirty = False
 
-            # Cascade save has-many relationships
+            # Cascade save has-many relationships (even if parent not dirty)
             if cascade:
                 # Save attribute_owners if cached
                 cache_key = '_attribute_owners_cache'
@@ -6405,6 +7856,137 @@ class Mobile:
             if cursor:
                 cursor.close()
 
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
+
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            cursor = connection.cursor()
+
+            # Cascade destroy children and clean up associations first
+            if cascade:
+                # Cascade destroy attribute_owners children
+                cache_key = '_attribute_owners_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_attribute_owners(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Cascade destroy inventory_owners children
+                cache_key = '_inventory_owners_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_inventory_owners(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Cascade destroy mobile_items children
+                cache_key = '_mobile_items_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_mobile_items(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Clean up attribute_owners associations and cascade delete attributes
+                if self.get_id() is not None:
+                    # First, cascade delete the related objects
+                    try:
+                        related_objects = self.get_attributes(reload=True)
+                        for obj in related_objects:
+                            if hasattr(obj, 'destroy'):
+                                obj.destroy(connection=connection, cascade=cascade)
+                    except:
+                        pass  # Method may not exist
+
+                    # Then delete the pivot table associations
+                    cursor.execute(
+                        "DELETE FROM `attribute_owners` WHERE `mobile_id` = %s",
+                        (self.get_id(),),
+                    )
+# Clean up inventory_owners associations and cascade delete inventories
+                if self.get_id() is not None:
+                    # First, cascade delete the related objects
+                    try:
+                        related_objects = self.get_inventories(reload=True)
+                        for obj in related_objects:
+                            if hasattr(obj, 'destroy'):
+                                obj.destroy(connection=connection, cascade=cascade)
+                    except:
+                        pass  # Method may not exist
+
+                    # Then delete the pivot table associations
+                    cursor.execute(
+                        "DELETE FROM `inventory_owners` WHERE `mobile_id` = %s",
+                        (self.get_id(),),
+                    )
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `mobiles` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
     @staticmethod
     def find(id: int) -> Optional['Mobile']:
         """
@@ -6421,6 +8003,39 @@ class Mobile:
                 instance._data = row
                 return instance
             return None
+        finally:
+            cursor.close()
+
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `mobiles` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
         finally:
             cursor.close()
 
@@ -6527,7 +8142,7 @@ class Player:
           `year_of_birth` bigint NOT NULL,
           `email` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=468 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=608 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -6561,67 +8176,60 @@ class Player:
             self._connection = None
 
     def get_id(self) -> int:
-        """Get the value of id."""
         return self._data.get('id')
 
     def get_full_name(self) -> str:
-        """Get the value of full_name."""
         return self._data.get('full_name')
 
     def get_what_we_call_you(self) -> str:
-        """Get the value of what_we_call_you."""
         return self._data.get('what_we_call_you')
 
     def get_security_token(self) -> str:
-        """Get the value of security_token."""
         return self._data.get('security_token')
 
     def get_over_13(self) -> int:
-        """Get the value of over_13."""
         return self._data.get('over_13')
 
     def get_year_of_birth(self) -> int:
-        """Get the value of year_of_birth."""
         return self._data.get('year_of_birth')
 
     def get_email(self) -> str:
-        """Get the value of email."""
         return self._data.get('email')
 
-    def set_id(self, value: int) -> None:
-        """Set the value of id."""
+    def _set_id(self, value: int) -> 'self.__class__':
         self._data['id'] = value
         self._dirty = True
+        return self
 
-    def set_full_name(self, value: str) -> None:
-        """Set the value of full_name."""
+    def set_full_name(self, value: str) -> 'self.__class__':
         self._data['full_name'] = value
         self._dirty = True
+        return self
 
-    def set_what_we_call_you(self, value: str) -> None:
-        """Set the value of what_we_call_you."""
+    def set_what_we_call_you(self, value: str) -> 'self.__class__':
         self._data['what_we_call_you'] = value
         self._dirty = True
+        return self
 
-    def set_security_token(self, value: str) -> None:
-        """Set the value of security_token."""
+    def set_security_token(self, value: str) -> 'self.__class__':
         self._data['security_token'] = value
         self._dirty = True
+        return self
 
-    def set_over_13(self, value: int) -> None:
-        """Set the value of over_13."""
+    def set_over_13(self, value: int) -> 'self.__class__':
         self._data['over_13'] = value
         self._dirty = True
+        return self
 
-    def set_year_of_birth(self, value: int) -> None:
-        """Set the value of year_of_birth."""
+    def set_year_of_birth(self, value: int) -> 'self.__class__':
         self._data['year_of_birth'] = value
         self._dirty = True
+        return self
 
-    def set_email(self, value: str) -> None:
-        """Set the value of email."""
+    def set_email(self, value: str) -> 'self.__class__':
         self._data['email'] = value
         self._dirty = True
+        return self
 
 
 
@@ -7141,15 +8749,15 @@ class Player:
             raise
 
 
-    def from_thrift(self, thrift_obj: 'Player') -> 'Player':
+    def from_thrift(self, thrift_obj: 'ThriftPlayer') -> 'Player':
         """
-        Populate this Model instance from a Thrift Player object.
+        Populate this Model instance from a Thrift ThriftPlayer object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift Player instance
+            thrift_obj: Thrift ThriftPlayer instance
 
         Returns:
             self for method chaining
@@ -7183,14 +8791,14 @@ class Player:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[GameResult], Optional['Player']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftPlayer']]:
         """
-        Convert this Model instance to a Thrift Player object.
+        Convert this Model instance to a Thrift ThriftPlayer object.
 
         Loads all relationships recursively and converts them to Thrift.
 
         Returns:
-            Tuple of (list[GameResult], Optional[Thrift object])
+            Tuple of (list[ThriftGameResult], Optional[Thrift object])
         """
         results = []
 
@@ -7216,10 +8824,10 @@ class Player:
                     results.extend(mobile_results)
 
             # Create Thrift object
-            thrift_obj = Player(**thrift_params)
+            thrift_obj = ThriftPlayer(**thrift_params)
 
-            results.append(GameResult(
-                status=StatusType.SUCCESS,
+            results.append(ThriftGameResult(
+                status=ThriftStatusType.SUCCESS,
                 message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
             ))
 
@@ -7227,10 +8835,10 @@ class Player:
 
         except Exception as e:
             return (
-                [GameResult(
-                    status=StatusType.FAILURE,
+                [ThriftGameResult(
+                    status=ThriftStatusType.FAILURE,
                     message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
-                    error_code=GameError.DB_QUERY_FAILED,
+                    error_code=ThriftGameError.DB_QUERY_FAILED,
                 )],
                 None,
             )
@@ -7246,10 +8854,6 @@ class Player:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
-
         # Determine if we own the connection
         owns_connection = connection is None
         if owns_connection:
@@ -7260,35 +8864,37 @@ class Player:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
+            # Cascade save belongs-to relationships first (even if parent not dirty)
             if cascade:
                 pass  # No belongs-to relationships
 
-            cursor = connection.cursor()
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{col}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
 
-                query = f"UPDATE `players` SET {set_clause} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{col}`" for col in columns])
-                values = [self._data[col] for col in columns]
+                    query = f"UPDATE `players` SET {set_clause} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{col}`" for col in columns])
+                    values = [self._data[col] for col in columns]
 
-                query = f"INSERT INTO `players` ({column_names}) VALUES ({placeholders})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
+                    query = f"INSERT INTO `players` ({column_names}) VALUES ({placeholders})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
 
-            # Mark as clean after successful save
-            self._dirty = False
+                # Mark as clean after successful save
+                self._dirty = False
 
-            # Cascade save has-many relationships
+            # Cascade save has-many relationships (even if parent not dirty)
             if cascade:
                 # Save attribute_owners if cached
                 cache_key = '_attribute_owners_cache'
@@ -7327,6 +8933,137 @@ class Player:
             if cursor:
                 cursor.close()
 
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
+
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            cursor = connection.cursor()
+
+            # Cascade destroy children and clean up associations first
+            if cascade:
+                # Cascade destroy attribute_owners children
+                cache_key = '_attribute_owners_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_attribute_owners(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Cascade destroy inventory_owners children
+                cache_key = '_inventory_owners_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_inventory_owners(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Cascade destroy mobiles children
+                cache_key = '_mobiles_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_mobiles(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Clean up attribute_owners associations and cascade delete attributes
+                if self.get_id() is not None:
+                    # First, cascade delete the related objects
+                    try:
+                        related_objects = self.get_attributes(reload=True)
+                        for obj in related_objects:
+                            if hasattr(obj, 'destroy'):
+                                obj.destroy(connection=connection, cascade=cascade)
+                    except:
+                        pass  # Method may not exist
+
+                    # Then delete the pivot table associations
+                    cursor.execute(
+                        "DELETE FROM `attribute_owners` WHERE `player_id` = %s",
+                        (self.get_id(),),
+                    )
+# Clean up inventory_owners associations and cascade delete inventories
+                if self.get_id() is not None:
+                    # First, cascade delete the related objects
+                    try:
+                        related_objects = self.get_inventories(reload=True)
+                        for obj in related_objects:
+                            if hasattr(obj, 'destroy'):
+                                obj.destroy(connection=connection, cascade=cascade)
+                    except:
+                        pass  # Method may not exist
+
+                    # Then delete the pivot table associations
+                    cursor.execute(
+                        "DELETE FROM `inventory_owners` WHERE `player_id` = %s",
+                        (self.get_id(),),
+                    )
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `players` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
     @staticmethod
     def find(id: int) -> Optional['Player']:
         """
@@ -7343,6 +9080,39 @@ class Player:
                 instance._data = row
                 return instance
             return None
+        finally:
+            cursor.close()
+
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `players` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={self.get_id()} not found in database")
         finally:
             cursor.close()
 

@@ -64,11 +64,9 @@ This section describes the game domain model that drives the database design and
 
 **Player** is a user account record. To appear in the game world, a player must "own" a **Mobile** (their avatar).
 
-**Critical constraint:** Player→Mobile is strictly **1-to-1**. A player can own exactly one mobile at any time. This mobile is the player's avatar in the game world.
+**Critical constraint:** Player→Mobile is strictly **1-to-1** for network efficiency - the mobile is embedded inline in Player Thrift objects to avoid a second round-trip. Thrift definition has `Player.mobile` (singular, optional).
 
-**Why 1-to-1:** Network efficiency. When serializing a Player Thrift object for transmission, the mobile is embedded inline to avoid a second round-trip. The Thrift definition has `Player.mobile` (singular, optional).
-
-**Current code issue:** Generated code creates `player.get_mobiles()` (plural, returns list) instead of `player.get_mobile()` (singular, returns one Mobile). This needs to be fixed.
+**Current code issue:** Generated code creates `player.get_mobiles()` (plural) instead of `player.get_mobile()` (singular).
 
 **Thrift conversion behavior:**
 - `Player.from_thrift(thrift_obj)`: If thrift_obj has a mobile, update the existing mobile (if player already owns one) or create new mobile
@@ -111,11 +109,7 @@ InventoryEntry
 
 If `mobile_item_id IS NOT NULL`, use that (personalized). Otherwise use `item_id` (world/template item).
 
-**Examples:**
-- Treasure chest inventory: InventoryEntry references Item (shared template)
-- Player picks up sword from chest: System creates MobileItem copy, updates InventoryEntry to reference MobileItem
-- Player enchants sword (+2 strength): Changes only affect MobileItem, not Item template
-- Another player finds same chest: Gets Item template (unenchanted)
+**Example:** Treasure chest has Item template. When player picks up sword, system creates MobileItem copy. Player enchants it (+2 strength) - changes only affect their MobileItem. Other players still get unenchanted Item template.
 
 ### Inventories and Ownership
 
@@ -221,18 +215,12 @@ Links inventories to owners (player, mobile, item, or asset via Owner union).
 The main entry point that orchestrates the entire generation process. Connects to MySQL using credentials from .env file, introspects all tables in the database, analyzes foreign key and unique constraints to build relationship metadata, and generates a single models.py file containing all model classes plus a tests.py file with comprehensive relationship tests.
 
 Key functions:
-- `main()` - Entry point that orchestrates database connection, introspection, and code generation
-- `generate_model()` - Generates a complete model class from table metadata using the template
-- `generate_tests()` - Generates comprehensive unittest test cases for all models
-- `generate_from_thrift_method()` - Creates method to populate model from Thrift object
-- `generate_into_thrift_method()` - Creates method to convert model to Thrift object
-- `generate_belongs_to_methods()` - Creates getter/setter methods for belongs-to relationships
-- `generate_has_many_methods()` - Creates methods to query related records
-- `generate_pivot_helper_methods()` - Creates add/remove/set methods for pivot table relationships
-- `generate_owner_union_to_db_code()` - Converts Thrift Owner union to flattened owner_*_id columns
-- `generate_db_to_owner_union_code()` - Converts flattened owner_*_id columns back to Thrift Owner union
-- `generate_attribute_value_to_db_code()` - Converts Thrift AttributeValue union to flattened attribute columns
-- `generate_db_to_attribute_value_code()` - Converts flattened attribute columns back to Thrift AttributeValue union
+- `main()` - Orchestrates database connection, introspection, and code generation
+- `generate_model()` / `generate_tests()` - Creates model classes and test suites from table metadata
+- `generate_from_thrift_method()` / `generate_into_thrift_method()` - Bidirectional Thrift conversion
+- `generate_belongs_to_methods()` / `generate_has_many_methods()` / `generate_pivot_helper_methods()` - Relationship methods
+- `generate_owner_union_to_db_code()` / `generate_db_to_owner_union_code()` - Owner union conversion
+- `generate_attribute_value_to_db_code()` / `generate_db_to_attribute_value_code()` - AttributeValue union conversion
 
 ## Database Introspection (generator/database.py)
 
@@ -559,55 +547,49 @@ This section documents key design decisions that affect code generation and usag
 
 **Decision:** Avoid using MySQL foreign key constraints. Express constraints in application code instead.
 
-**Rationale:**
-- FK constraints are "futzy" during development
-- Constraints can change frequently while evolving the schema
-- Easier to temporarily relax constraints for testing/debugging
-- More explicit control over cascade behavior
-- Previous developer added FK constraints, but they're not essential
+**Rationale:** FK constraints change frequently during development and add complexity without essential benefits. Easier to express and control constraints in code. Generator uses `SET FOREIGN_KEY_CHECKS=0` or creates tables in dependency order.
 
-**Implementation:** Generator should either create tables in dependency order or wrap CREATE TABLE in `SET FOREIGN_KEY_CHECKS=0`.
+### Thrift Type Import Aliasing: Avoiding Name Collisions
+
+**Decision:** Always alias Thrift imports with a `Thrift` prefix when importing into models.py.
+
+**Problem:** Multiple naming conflicts exist between Thrift struct names and generated Model class names:
+- `Item` - Both a Thrift struct (`game.ttypes.Item`) and a generated Model class (`Item`)
+- `Attribute` - Both a Thrift struct and Model class
+- `Mobile` - Both a Thrift struct and Model class
+- `Player` - Both a Thrift struct and Model class
+- etc.
+
+When Python imports `from game.ttypes import Item`, and then defines `class Item:`, the class definition shadows the imported Thrift type. Later code that references `ItemType` or other Thrift enums fails with `NameError: name 'ItemType' is not defined` because the import namespace is polluted.
+
+**Solution:** Import ALL Thrift types with explicit `Thrift` prefix aliases:
+```python
+from game.ttypes import (
+    Item as ThriftItem,
+    Attribute as ThriftAttribute,
+    AttributeType as ThriftAttributeType,
+    AttributeValue as ThriftAttributeValue,
+    ItemType as ThriftItemType,
+    Owner as ThriftOwner,
+    # ... etc
+)
+```
+
+**Implementation:** Affects imports, type hints, method signatures, union types, and test generation throughout generated code. All Thrift types use the `Thrift` prefix (e.g., `ThriftAttributeType` instead of `AttributeType`).
+
+**Rationale:** Eliminates name collisions, makes code explicit and readable, prevents subtle bugs from shadowed imports.
 
 ### Test Generation: Code-Level Constraints, Not SQL FK Constraints
 
-**CRITICAL INSIGHT (2025-11-27):** SQL FK constraints are incomplete and unreliable for test generation. The database schema only declares SOME foreign keys as SQL constraints, but there are many more code-level FK relationships.
+**CRITICAL INSIGHT (2025-11-27):** SQL FK constraints are incomplete for test generation. The real source of truth: ANY `NOT NULL` column ending with `_id` is a foreign key relationship, regardless of MySQL FK constraint declarations.
 
-**The Real Source of Truth:** ANY `NOT NULL` column ending with `_id` is a foreign key relationship, regardless of whether MySQL has a FK constraint declared.
+**Problem:** Originally used `get_foreign_key_constraints()` to determine which fields needed prerequisites, causing tests to fail with "Field doesn't have a default value" errors for `_id` columns without SQL FK constraints.
 
-**Examples from schema:**
-- `inventory_entries.item_id` - NOT NULL, ends with `_id`, but NO SQL FK constraint → Code-level FK
-- `inventory_entries.inventory_id` - NOT NULL, ends with `_id`, HAS SQL FK constraint → Both SQL and code-level FK
-- `mobile_items.mobile_id` - NOT NULL, ends with `_id`, but NO SQL FK constraint → Code-level FK
-- `mobile_items.item_id` - NOT NULL, ends with `_id`, but NO SQL FK constraint → Code-level FK
+**Solution:** Ignore SQL FK constraints entirely. For each NOT NULL column: if it ends with `_id`, create prerequisite object; otherwise set type-based default (float: 1.0, int: 1, str: 'test_value', bool: True).
 
-**Problem with SQL FK constraints:** Originally test generation used `get_foreign_key_constraints()` to determine which fields needed prerequisites. This caused tests to fail because:
-1. SQL only knows about SOME FKs (incomplete information)
-2. Test generation would skip "non-FK" `_id` columns
-3. Database would reject INSERTs with "Field 'item_id' doesn't have a default value"
+**Implementation:** Created `set_required_fields_for_model()` helper that systematically sets ALL NOT NULL fields. Result: All 129 tests pass.
 
-**The Solution:** Completely ignore SQL FK constraints for test generation. Use this logic instead:
-
-```python
-for each NOT NULL column in the model:
-    if column ends with '_id':
-        # It's a FK - create prerequisite object or set to 1
-    else:
-        # Regular required field - set based on type:
-        # - float: 1.0
-        # - int: 1
-        # - str: 'test_value'
-        # - bool: True
-```
-
-**Implementation:** Created `set_required_fields_for_model()` helper function that systematically sets ALL NOT NULL fields for any model being created in tests. This ensures:
-- ALL FK columns get valid values (via prerequisite creation)
-- ALL regular required fields get valid values (via type-based defaults)
-- No required fields are ever missed
-- Tests are resilient to schema changes
-
-**Result:** All 129 generated tests pass. Test generation now works correctly regardless of whether SQL FK constraints are declared or not.
-
-**Key Takeaway:** For this codebase, **code-level constraints are the complete set**. SQL FK constraints are just a subset (and often incomplete). Always trust code-level constraints (NOT NULL + `_id` suffix) over SQL FK constraints.
+**Key Takeaway:** Code-level constraints (NOT NULL + `_id` suffix) are the complete set. SQL FK constraints are incomplete. Always trust code-level constraints.
 
 ### ID-Based Save Logic: Trust the Caller
 
@@ -649,21 +631,7 @@ for each NOT NULL column in the model:
 - Explicit documentation in Thrift definition
 - Generator auto-discovers mappings
 
-**Example:**
-```thrift
-//@mysql_table(players)
-struct Player {
-    1: optional i64 id,
-    2: optional string name,
-    3: optional Mobile mobile,
-}
-
-// No annotation = no DB mapping (network-only struct)
-struct NetworkMessage {
-    1: string type,
-    2: binary payload,
-}
-```
+**Example:** `//@mysql_table(players)` annotation on Player struct enables DB mapping. Structs without annotation remain network-only.
 
 ### Caching: Premature Optimization
 
@@ -705,160 +673,75 @@ struct NetworkMessage {
 
 ## Known Issues / Technical Debt
 
-### RESOLVED: Test Generation Now Works (2025-11-27)
-
-**Issue:** Test generation was using SQL FK constraints to determine which fields needed prerequisites. This caused tests to fail because SQL FK constraints are incomplete - many NOT NULL `_id` columns exist without SQL FK constraints.
-
-**Resolution:** Test generation now ignores SQL FK constraints entirely and uses code-level constraint detection: ANY NOT NULL column ending with `_id` is treated as a FK. Created `set_required_fields_for_model()` helper that systematically sets ALL NOT NULL fields.
-
-**Result:** All 129 tests pass. See "Test Generation: Code-Level Constraints, Not SQL FK Constraints" in Design Decisions section for details.
-
 ### LOW: Import Path Requires PYTHONPATH Configuration
 
-**Issue:** Generated models.py imports `from game.ttypes import ...` but Python path doesn't include `/vagrant/gamedb/thrift/gen-py` by default.
+**Issue:** Tests require `PYTHONPATH="/vagrant/gamedb/thrift/gen-py:$PYTHONPATH" python3 tests.py`
 
-**Impact:** Tests require PYTHONPATH configuration to run.
-
-**Workaround:** `PYTHONPATH="/vagrant/gamedb/thrift/gen-py:$PYTHONPATH" python3 tests.py`
-
-**Fixes to consider:**
-1. Set PYTHONPATH in test runner or documentation
-2. Modify generated imports to use relative path
-3. Add path manipulation in generated code header
-4. Create __init__.py with path setup
-
-**Note:** This is low priority since the workaround is simple and tests pass reliably.
+**Fixes:** Set PYTHONPATH in runner/docs, use relative imports, or add path manipulation in generated code header. Low priority - workaround is simple.
 
 ### CRITICAL: Player-Mobile Relationship Generates Wrong Method Name
 
-**Issue:** Thrift defines `Player.mobile` (singular, optional) for 1-to-1 relationship, but generator creates `player.get_mobiles()` (plural, returns list) treating it as 1-to-many.
+**Issue:** Generator creates `player.get_mobiles()` (plural, list) instead of `player.get_mobile()` (singular) for 1-to-1 relationship.
 
-**Impact:**
-- API doesn't reflect intended 1-to-1 relationship
-- Confusing method name (sounds like player owns multiple mobiles)
-- No enforcement of singular mobile per player
-- `from_thrift()` doesn't update existing mobile, may create duplicates
-- `into_thrift()` doesn't embed mobile in Player object
+**Impact:** Wrong API, may create duplicates, doesn't embed mobile in Player Thrift object.
 
-**Design intent:** Player should have exactly one active mobile for network serialization efficiency. When Player Thrift object is sent over network, mobile is embedded inline to avoid second round-trip.
-
-**Fix needed:**
-1. Generate `player.get_mobile()` (singular) instead of `player.get_mobiles()`
-2. Modify `from_thrift()` to update existing mobile or create new (not create duplicates)
-3. Modify `into_thrift()` to load mobile and embed in Player Thrift object
-4. Consider adding validation to prevent multiple mobiles per player
+**Fix needed:** Generate singular method, update `from_thrift()` to update/create (not duplicate), modify `into_thrift()` to embed mobile.
 
 ### HIGH: Owner Union Validation Missing
 
-**Issue:** Owner union pattern uses four nullable FKs (owner_player_id, owner_mobile_id, owner_item_id, owner_asset_id) but no validation ensures exactly one is set or that only valid types are used.
+**Issue:** Four nullable owner FKs with no validation ensuring exactly one is set or only valid types are used.
 
-**Impact:**
-- Could set multiple owner FKs simultaneously (data corruption)
-- Could set zero owner FKs (orphaned records)
-- Could set invalid owner types (e.g., item_id on mobiles table)
-- No database constraints enforce single-owner rule
-- No validation of domain-specific constraints
+**Impact:** Could set multiple/zero owner FKs (data corruption/orphans), or invalid types (e.g., item_id on mobiles).
 
-**Fix needed:**
-1. Add validation in `set_owner_*()` methods to clear other owner FKs
-2. Add validation in `from_thrift()` method to ensure exactly one owner
-3. Add per-table validation of valid owner types (e.g., mobiles only allow player/mobile)
-4. Consider CHECK constraint: `(owner_player_id IS NOT NULL)::int + (owner_mobile_id IS NOT NULL)::int + ... = 1`
+**Fix needed:** Add validation in setters and `from_thrift()` to enforce exactly one owner and per-table valid types.
 
 ### HIGH: Thrift Struct Mapping Hardcoded
 
-**Issue:** Table-to-Thrift mappings are hardcoded in `generator/config.py`. Must manually update when adding new tables.
+**Issue:** Mappings hardcoded in `generator/config.py`, requiring manual updates when adding tables.
 
-**Impact:**
-- Manual synchronization between game.thrift and config.py
-- Easy to forget updating config when adding tables
-- Thrift definition is not single source of truth
-
-**Fix needed:** Implement annotation parsing from game.thrift (`//@mysql_table(table_name)`) to auto-discover mappings.
+**Fix needed:** Parse annotations from game.thrift (`//@mysql_table(table_name)`) to auto-discover mappings.
 
 ### MEDIUM: Thrift Conversion Not Tested
 
-**Issue:** Generated `from_thrift()` and `into_thrift()` methods exist but have no test coverage.
+**Issue:** `from_thrift()` and `into_thrift()` methods have no test coverage.
 
-**Impact:** Unknown if conversions work correctly. Owner union and AttributeValue union conversions particularly complex and error-prone.
-
-**Fix needed:** Generate test cases that round-trip objects through Thrift conversion, including:
-- Owner union variants
-- AttributeValue union variants
-- Attribute maps
-- Embedded relationships (Player.mobile)
-- Null handling
+**Fix needed:** Generate round-trip tests for Owner/AttributeValue unions, attribute maps, embedded relationships, and null handling.
 
 ### MEDIUM: Attribute Map Conversion Incomplete
 
-**Issue:** Code exists to convert pivot table attributes to `map<AttributeType, Attribute>` but unclear if fully implemented and working, especially the delete-then-recreate logic.
+**Issue:** Delete-then-recreate logic for attribute maps unclear if fully implemented.
 
-**Impact:** May not be able to serialize Item/Mobile attributes correctly to Thrift. Orphaned attributes may accumulate.
-
-**Fix needed:**
-1. Implement delete-all-then-recreate in `from_thrift()` or `save()`
-2. Test attribute map conversion in both directions
-3. Verify duplicate AttributeType handling (last-write-wins in into_thrift)
+**Fix needed:** Implement and test delete-all-then-recreate in `from_thrift()`/`save()`, verify last-write-wins for duplicates.
 
 ### MEDIUM: Caching Adds Complexity Without Clear Benefit
 
-**Issue:** Relationship methods cache loaded objects, requiring `reload=True` parameter and cache invalidation logic.
+**Issue:** Relationship caching creates stale data risk and complexity without proven benefit.
 
-**Impact:**
-- Stale data if database updated elsewhere
-- Added complexity in generated code
-- No evidence caching provides meaningful performance benefit
-- Encourages anti-pattern of holding models too long
+**Fix needed:** Remove caching. Simplify code. Add back only if profiling shows necessity.
 
-**Fix needed:** Remove caching entirely. Simplify generated code. Add back only if profiling shows it's needed.
+### LOW: Other Issues
 
-### LOW: inventory_owners Pivot Table Superfluous
+**inventory_owners Pivot Table:** Legacy overly-generic design. Direct FK columns would be clearer. Refactor when time permits.
 
-**Issue:** `inventory_owners` uses pivot table for inventory ownership, but inventories should be owned by exactly one entity (not many-to-many).
+**Cascade Delete Behavior:** `remove_<relation>()` performs cascade delete (deletes related record, not just pivot entry). May be surprising. Needs per-table review.
 
-**Impact:** Overcomplicated schema. Direct FK columns would be clearer.
-
-**Design decision:** Legacy from previous developer who didn't understand the domain. Works but suboptimal.
-
-**Fix:** Refactor to direct FK columns when time permits. Not urgent.
-
-### LOW: Cascade Delete Behavior May Be Surprising
-
-**Issue:** `remove_<relation>()` methods on pivot tables perform cascade delete of related records (e.g., `player.remove_inventory(inv)` deletes the Inventory record itself, not just the pivot entry).
-
-**Impact:** Potentially surprising behavior. May not want to delete Inventory just because removing from player.
-
-**Design decision needed:** Document whether pivot remove should cascade delete or just remove association. Current behavior may be correct for some tables (attributes) but wrong for others (inventories).
-
-### LOW: Pass-Through Relationships Not Generated
-
-**Issue:** Generator doesn't create methods to traverse multi-hop relationships. Example: Player owns Mobile, Mobile owns Inventories, but no `player.get_inventories()` helper.
-
-**Impact:** Must manually traverse relationships in application code. No convenience methods for common patterns.
-
-**Design decision:** Nice-to-have for admin functions, not critical path. Admin tools can manually traverse. Don't add complexity to generator until proven needed.
-
-**Fix if needed:** Generator should detect transitive relationships and create helper methods like `player.get_all_inventories(include_mobile_inventories=True)`.
+**Pass-Through Relationships:** No multi-hop helpers (e.g., `player.get_inventories()`). Manual traversal required. Nice-to-have, not critical.
 
 ## Questions & Assumptions
 
 ### Assumptions Made During Exploration
 
-1. **One mobile per player intended:** Assumed Thrift's singular `Player.mobile` means one-to-one relationship, not one-to-many. ✓ Confirmed correct.
+**Confirmed:**
+- One mobile per player (1-to-1 relationship)
+- Import path is configuration issue (simple workaround)
+- FK constraints not essential (code-level preferred)
+- Caching is premature optimization (should be removed)
+- ID-based save sufficient for now (validation is future work)
+- Hard deletes correct (no soft delete pattern)
 
-2. **Import path issue is configuration:** Assumed tests are meant to run but PYTHONPATH needs configuration, not a fundamental design flaw. ✓ Correct - just needs workaround or documentation.
-
-3. **Pivot cascade delete intentional:** Assumed `remove_<relation>()` cascade delete is intended behavior, not a bug. ⚠️ Needs case-by-case review.
-
-4. **AttributeValue conversion complete:** Assumed attribute value union conversion is fully implemented. ⚠️ Needs testing to verify, especially delete-then-recreate logic.
-
-5. **No soft deletes:** Assumed hard deletes are correct approach. No deleted_at timestamp or soft delete pattern. ✓ Correct for now.
-
-6. **FK constraints not essential:** Assumed foreign key constraints can be avoided/disabled without issue. ✓ Confirmed - design decision to use code-level constraints.
-
-7. **Caching is premature:** Assumed caching adds complexity without proven benefit. ✓ Confirmed - should be removed.
-
-8. **ID-based save is sufficient:** Assumed trusting IDs from Thrift objects is acceptable for now. ✓ Confirmed - sanitization is future work.
+**Needs verification:**
+- Pivot cascade delete intentional (needs case-by-case review)
+- AttributeValue conversion complete (needs testing, especially delete-then-recreate)
 
 ### Unclear Areas Requiring Future Clarification
 
@@ -901,8 +784,3 @@ Brief coverage of utility functions in the generator:
 - `needs_attribute_value_conversion()` - Checks if table has attribute value union columns
 - `has_thrift_mapping()` - Checks if table has corresponding Thrift struct
 - `get_thrift_struct_name()` - Returns Thrift struct name for table (from config)
-
-### Template Helpers
-
-- `format_sql()` - Indents and escapes SQL for embedding in Python strings
-- `escape_quotes()` - Escapes triple quotes in SQL statements for Python multi-line strings

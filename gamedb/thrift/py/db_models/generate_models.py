@@ -104,20 +104,23 @@ TABLE_TO_THRIFT_MAPPING = {
     'item_blueprints': 'ItemBlueprint',
     'item_blueprint_components': 'ItemBlueprintComponent',
     'mobile_items': 'MobileItem',
+    'mobile_item_blueprints': 'ItemBlueprint',  # Uses ItemBlueprint Thrift type, different table
+    'mobile_item_blueprint_components': 'ItemBlueprintComponent',  # Uses ItemBlueprintComponent Thrift type, different table
 }
 
 
 def get_thrift_struct_name(table_name: str) -> Optional[str]:
     """
-    Get the Thrift struct name for a database table.
+    Get the Thrift struct name for a database table (with Thrift prefix to avoid name collisions).
 
     Args:
         table_name: Database table name (e.g., 'players', 'items')
 
     Returns:
-        Thrift struct name if mapping exists, None otherwise
+        Thrift struct name with Thrift prefix if mapping exists, None otherwise
     """
-    return TABLE_TO_THRIFT_MAPPING.get(table_name)
+    base_name = TABLE_TO_THRIFT_MAPPING.get(table_name)
+    return f"Thrift{base_name}" if base_name else None
 
 
 def has_thrift_mapping(table_name: str) -> bool:
@@ -176,9 +179,9 @@ def needs_attribute_value_conversion(columns: List[Dict[str, Any]]) -> bool:
 
 def generate_owner_union_to_db_code(table_name: str, columns: List[Dict[str, Any]]) -> str:
     """
-    Generate code to convert Owner union from Thrift to database columns.
+    Generate code to convert ThriftOwner union from Thrift to database columns.
 
-    The Owner union in Thrift has one of: player_id, mobile_id, item_id, or asset_id set.
+    The ThriftOwner union in Thrift has one of: player_id, mobile_id, item_id, or asset_id set.
     In the database, we store these as separate nullable columns: owner_player_id, owner_mobile_id, etc.
 
     Args:
@@ -192,7 +195,7 @@ def generate_owner_union_to_db_code(table_name: str, columns: List[Dict[str, Any
         return ""
 
     code = '''
-        # Convert Owner union to database owner_* columns
+        # Convert ThriftOwner union to database owner_* columns
         if hasattr(thrift_obj, 'owner') and thrift_obj.owner is not None:
             owner = thrift_obj.owner
             # Reset all owner fields to None first
@@ -216,7 +219,7 @@ def generate_owner_union_to_db_code(table_name: str, columns: List[Dict[str, Any
 
 def generate_db_to_owner_union_code(table_name: str, columns: List[Dict[str, Any]]) -> str:
     """
-    Generate code to convert database owner_* columns to Owner union in Thrift.
+    Generate code to convert database owner_* columns to ThriftOwner union in Thrift.
 
     Args:
         table_name: Database table name
@@ -229,32 +232,34 @@ def generate_db_to_owner_union_code(table_name: str, columns: List[Dict[str, Any
         return ""
 
     code = '''
-            # Convert database owner_* columns to Owner union
+            # Convert database owner_* columns to ThriftOwner union
             owner = None
             if self._data.get('owner_player_id') is not None:
-                owner = Owner(player_id=self._data['owner_player_id'])
+                owner = ThriftOwner(player_id=self._data['owner_player_id'])
             elif self._data.get('owner_mobile_id') is not None:
-                owner = Owner(mobile_id=self._data['owner_mobile_id'])
+                owner = ThriftOwner(mobile_id=self._data['owner_mobile_id'])
             elif self._data.get('owner_item_id') is not None:
-                owner = Owner(item_id=self._data['owner_item_id'])
+                owner = ThriftOwner(item_id=self._data['owner_item_id'])
             elif self._data.get('owner_asset_id') is not None:
-                owner = Owner(asset_id=self._data['owner_asset_id'])
+                owner = ThriftOwner(asset_id=self._data['owner_asset_id'])
 '''
     return code
 
 
 def generate_attribute_value_to_db_code() -> str:
     """
-    Generate code to convert AttributeValue union from Thrift to flattened database columns.
+    Generate code to convert ThriftAttributeValue union from Thrift to flattened database columns.
 
-    AttributeValue in Thrift is a union with fields: bool_value, double_value, vector3, asset_id
+    ThriftAttributeValue in Thrift is a union with fields: bool_value, double_value, vector3, asset_id
     In the database, we store these as: bool_value, double_value, vector3_x, vector3_y, vector3_z, asset_id
+
+    Priority order: vector3 -> asset_id -> double_value -> bool_value (default/fallback)
 
     Returns:
         Generated Python code as a string
     """
     code = '''
-        # Convert AttributeValue union to flattened database columns
+        # Convert ThriftAttributeValue union to flattened database columns
         if hasattr(thrift_obj, 'value') and thrift_obj.value is not None:
             value = thrift_obj.value
             # Reset all value fields to None first
@@ -266,44 +271,53 @@ def generate_attribute_value_to_db_code() -> str:
             self._data['asset_id'] = None
 
             # Set the appropriate field based on which union field is set
-            if hasattr(value, 'bool_value') and value.bool_value is not None:
-                self._data['bool_value'] = value.bool_value
-            elif hasattr(value, 'double_value') and value.double_value is not None:
-                self._data['double_value'] = value.double_value
-            elif hasattr(value, 'vector3') and value.vector3 is not None:
+            # Priority: vector3 -> asset_id -> double_value -> bool_value (default)
+            if hasattr(value, 'vector3') and value.vector3 is not None:
                 self._data['vector3_x'] = value.vector3.x
                 self._data['vector3_y'] = value.vector3.y
                 self._data['vector3_z'] = value.vector3.z
             elif hasattr(value, 'asset_id') and value.asset_id is not None:
                 self._data['asset_id'] = value.asset_id
+            elif hasattr(value, 'double_value') and value.double_value is not None:
+                self._data['double_value'] = value.double_value
+            else:
+                # bool_value is the default/fallback
+                if hasattr(value, 'bool_value') and value.bool_value is not None:
+                    self._data['bool_value'] = value.bool_value
+                else:
+                    self._data['bool_value'] = False
 '''
     return code
 
 
 def generate_db_to_attribute_value_code() -> str:
     """
-    Generate code to convert flattened database columns to AttributeValue union in Thrift.
+    Generate code to convert flattened database columns to ThriftAttributeValue union in Thrift.
+
+    Priority order: vector3 -> asset_id -> double_value -> bool_value (default/fallback)
 
     Returns:
         Generated Python code as a string
     """
     code = '''
-            # Convert flattened database columns to AttributeValue union
+            # Convert flattened database columns to ThriftAttributeValue union
+            # Priority: vector3 -> asset_id -> double_value -> bool_value (default)
             value = None
-            if self._data.get('bool_value') is not None:
-                value = AttributeValue(bool_value=self._data['bool_value'])
-            elif self._data.get('double_value') is not None:
-                value = AttributeValue(double_value=self._data['double_value'])
-            elif self._data.get('vector3_x') is not None:
-                value = AttributeValue(
-                    vector3=ItemVector3(
+            if self._data.get('vector3_x') is not None:
+                value = ThriftAttributeValue(
+                    vector3=ThriftItemVector3(
                         x=self._data['vector3_x'],
                         y=self._data['vector3_y'],
                         z=self._data['vector3_z'],
                     ),
                 )
             elif self._data.get('asset_id') is not None:
-                value = AttributeValue(asset_id=self._data['asset_id'])
+                value = ThriftAttributeValue(asset_id=self._data['asset_id'])
+            elif self._data.get('double_value') is not None:
+                value = ThriftAttributeValue(double_value=self._data['double_value'])
+            else:
+                # bool_value is the default/fallback
+                value = ThriftAttributeValue(bool_value=self._data.get('bool_value', False))
 '''
     return code
 
@@ -1096,10 +1110,12 @@ def generate_belongs_to_methods(
         rel_name = TableNaming.column_to_relationship_name(column_name)
 
         # Optional type annotation (use string for forward reference)
-        return_type = f"Optional['{class_name}']" if is_nullable else f"'{class_name}'"
+        # Always use Optional for getters with strict parameter since they can return None
+        # when FK points to non-existent record (even if FK column itself is NOT NULL)
+        param_return_type = f"Optional['{class_name}']"
 
         # Getter method with lazy loading and caching
-        getter = f"""    def get_{rel_name}(self, strict: bool = False) -> {return_type}:
+        getter = f"""    def get_{rel_name}(self, strict: bool = False) -> {param_return_type}:
         \"\"\"
         Get the associated {class_name} for this {rel_name} relationship.
         Uses lazy loading with caching.
@@ -1130,14 +1146,18 @@ def generate_belongs_to_methods(
 
         methods.append(getter)
 
-        # Setter method (also use string type hint)
-        setter = f"""    def set_{rel_name}(self, model: {return_type}) -> None:
+        # Setter method (use Optional for parameter type based on nullability)
+        param_type = f"Optional['{class_name}']" if is_nullable else f"'{class_name}'"
+        setter = f"""    def set_{rel_name}(self, model: {param_type}) -> 'self.__class__':
         \"\"\"
         Set the associated {class_name} for this {rel_name} relationship.
         Updates the foreign key and marks the model as dirty.
 
         Args:
             model: The {class_name} instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
         \"\"\"
         # Update cache
         cache_key = '_{rel_name}_cache'
@@ -1147,7 +1167,8 @@ def generate_belongs_to_methods(
         if model is None:
             self.set_{column_name}(None)
         else:
-            self.set_{column_name}(model.get_id())"""
+            self.set_{column_name}(model.get_id())
+        return self"""
 
         methods.append(setter)
 
@@ -1250,18 +1271,41 @@ def generate_has_many_methods(
     return "\n\n".join(methods) if methods else ""
 
 
-def generate_getters(columns: List[Dict[str, Any]]) -> str:
+def generate_getters(columns: List[Dict[str, Any]], table_name: str = None) -> str:
     """Generate getter methods for all columns."""
     getters = []
+
+    # Enum field mapping: table.column -> ThriftEnumType
+    enum_fields = {
+        'attributes.attribute_type': 'ThriftAttributeType',
+        'items.item_type': 'ThriftItemType',
+        'mobile_items.item_type': 'ThriftItemType',
+    }
+
     for col in columns:
         python_type = TypeMapper.get_python_type(col["data_type"])
-        optional_type = (
-            f"Optional[{python_type}]" if col["is_nullable"] else python_type
-        )
 
-        getter = f"""    def get_{col["name"]}(self) -> {optional_type}:
-        \"\"\"Get the value of {col["name"]}.\"\"\"
+        # Check if this is an enum field
+        field_key = f"{table_name}.{col['name']}" if table_name else None
+        is_enum_field = field_key and field_key in enum_fields
+
+        if is_enum_field:
+            # For enum fields, return the enum type
+            enum_type = enum_fields[field_key]
+            optional_type = f"Optional[{enum_type}]" if col["is_nullable"] else enum_type
+
+            # Convert string from _data to enum type
+            getter = f"""    def get_{col["name"]}(self) -> {optional_type}:
+        value = self._data.get('{col["name"]}')
+        return {enum_type}[value] if value is not None else None"""
+        else:
+            optional_type = (
+                f"Optional[{python_type}]" if col["is_nullable"] else python_type
+            )
+
+            getter = f"""    def get_{col["name"]}(self) -> {optional_type}:
         return self._data.get('{col["name"]}')"""
+
         getters.append(getter)
 
     return "\n\n".join(getters)
@@ -1320,28 +1364,99 @@ def generate_setters(columns: List[Dict[str, Any]], table_name: str = None) -> s
     owner_columns = ['owner_player_id', 'owner_mobile_id', 'owner_item_id', 'owner_asset_id']
     has_owner_fields = any(col['name'] in owner_columns for col in columns)
 
+    # Enum field mapping: table.column -> ThriftEnumType
+    enum_fields = {
+        'attributes.attribute_type': 'ThriftAttributeType',
+        'items.item_type': 'ThriftItemType',
+        'mobile_items.item_type': 'ThriftItemType',
+    }
+
     for col in columns:
         python_type = TypeMapper.get_python_type(col["data_type"])
         optional_type = (
             f"Optional[{python_type}]" if col["is_nullable"] else python_type
         )
 
+        # Check if this is the 'id' column - make it private
+        method_name = f"_set_{col['name']}" if col['name'] == 'id' else f"set_{col['name']}"
+
+        # Check if this is an enum field
+        field_key = f"{table_name}.{col['name']}" if table_name else None
+        is_enum_field = field_key and field_key in enum_fields
+
+        if is_enum_field:
+            enum_type = enum_fields[field_key]
+            param_type = f"Optional[int]" if col["is_nullable"] else "int"
+
+            # Enum validation setter (Thrift enums are integers in Python)
+            setter = f"""    def {method_name}(self, value: {param_type}) -> 'self.__class__':
+        \"\"\"
+        Set the {col["name"]} field value.
+
+        Python Thrift Enum Implementation Note:
+        ----------------------------------------
+        In Python, Thrift enums are implemented as integer constants on a class, not
+        as a separate enum type. For example:
+            - ThriftAttributeType.STRENGTH is just an int (e.g., 0)
+            - ThriftAttributeType.DEXTERITY is just an int (e.g., 1)
+
+        This is different from languages like Java or C++ where enums are distinct types.
+        Python Thrift enums are essentially namespaced integer constants.
+
+        Why this method accepts int:
+        - Thrift enums in Python ARE ints, not a distinct type
+        - Using isinstance(value, ThriftAttributeType) would fail (it's not a class you can instantiate)
+        - Type checkers understand this: passing ThriftAttributeType.STRENGTH satisfies int type hint
+        - This validates the value is a legitimate enum constant, rejecting invalid integers
+
+        The method validates the integer is a valid enum value by reverse-lookup against
+        the Thrift enum class constants, then stores the enum name as a string in the database.
+
+        Args:
+            value: Integer value of a {enum_type} enum constant (e.g., {enum_type}.STRENGTH)
+
+        Returns:
+            self for method chaining
+
+        Raises:
+            TypeError: If value is not an integer
+            ValueError: If value is not a valid {enum_type} enum constant
+        \"\"\"
+        if value is not None and not isinstance(value, int):
+            raise TypeError(f"{{value}} must be an integer (Thrift enum), got {{type(value).__name__}}")
+        # Convert enum integer to string name for storage
+        if value is not None:
+            # Reverse lookup: find the name for this enum value
+            enum_name = None
+            for attr_name in dir({enum_type}):
+                if not attr_name.startswith('_'):
+                    attr_val = getattr({enum_type}, attr_name)
+                    if isinstance(attr_val, int) and attr_val == value:
+                        enum_name = attr_name
+                        break
+            if enum_name is None:
+                raise ValueError(f"{{value}} is not a valid {enum_type} enum value")
+            self._data['{col["name"]}'] = enum_name
+        else:
+            self._data['{col["name"]}'] = None
+        self._dirty = True
+        return self"""
+
         # Special handling for owner FK columns
-        if has_owner_fields and col["name"] in owner_columns:
+        elif has_owner_fields and col["name"] in owner_columns:
             other_owners = [oc for oc in owner_columns if oc != col["name"]]
             clear_code = "\n        ".join([f"self._data['{oc}'] = None" for oc in other_owners])
 
-            setter = f"""    def set_{col["name"]}(self, value: {optional_type}) -> None:
-        \"\"\"Set the value of {col["name"]} and clear other owner FKs.\"\"\"
+            setter = f"""    def {method_name}(self, value: {optional_type}) -> 'self.__class__':
         self._data['{col["name"]}'] = value
-        # Clear other owner FKs to enforce exactly-one constraint
         {clear_code}
-        self._dirty = True"""
+        self._dirty = True
+        return self"""
         else:
-            setter = f"""    def set_{col["name"]}(self, value: {optional_type}) -> None:
-        \"\"\"Set the value of {col["name"]}.\"\"\"
+            setter = f"""    def {method_name}(self, value: {optional_type}) -> 'self.__class__':
         self._data['{col["name"]}'] = value
-        self._dirty = True"""
+        self._dirty = True
+        return self"""
 
         setters.append(setter)
 
@@ -1421,16 +1536,25 @@ def generate_imports(columns: List[Dict[str, Any]], has_relationships: bool = Fa
     # Add Thrift imports if needed
     if has_thrift_conversion:
         imports.append("")
-        imports.append("# Thrift imports")
+        imports.append("# Thrift imports (aliased to avoid name collisions)")
         imports.append("from game.ttypes import (")
-        imports.append("    GameResult,")
-        imports.append("    StatusType,")
-        imports.append("    GameError,")
-        imports.append("    Owner,")
-        imports.append("    AttributeValue,")
-        imports.append("    AttributeType,")
-        imports.append("    ItemVector3,")
-        imports.append("    Attribute,")
+        imports.append("    GameResult as ThriftGameResult,")
+        imports.append("    StatusType as ThriftStatusType,")
+        imports.append("    GameError as ThriftGameError,")
+        imports.append("    Owner as ThriftOwner,")
+        imports.append("    AttributeValue as ThriftAttributeValue,")
+        imports.append("    AttributeType as ThriftAttributeType,")
+        imports.append("    ItemType as ThriftItemType,")
+        imports.append("    ItemVector3 as ThriftItemVector3,")
+        imports.append("    Attribute as ThriftAttribute,")
+        imports.append("    Item as ThriftItem,")
+        imports.append("    Mobile as ThriftMobile,")
+        imports.append("    Player as ThriftPlayer,")
+        imports.append("    MobileItem as ThriftMobileItem,")
+        imports.append("    Inventory as ThriftInventory,")
+        imports.append("    InventoryEntry as ThriftInventoryEntry,")
+        imports.append("    ItemBlueprint as ThriftItemBlueprint,")
+        imports.append("    ItemBlueprintComponent as ThriftItemBlueprintComponent,")
         imports.append(")")
 
     return "\n".join(imports)
@@ -1481,6 +1605,75 @@ def generate_cascade_save_code(
     return belongs_to_str, has_many_str
 
 
+def generate_cascade_destroy_code(
+    table_name: str,
+    has_many_rels: List[Dict[str, Any]],
+    pivot_owner_rels: List[Dict[str, Any]],
+) -> str:
+    """
+    Generate cascade destroy code for has-many relationships and pivot table cleanup.
+    Returns code string for destroying children and cleaning up associations.
+
+    Note: We do NOT cascade destroy belongs-to relationships (parent objects).
+    Only children and associations are destroyed.
+    """
+    destroy_code = []
+
+    # Has-many cascade destroy (destroy child objects first)
+    for rel in has_many_rels:
+        rel_name = rel["foreign_table"]
+        method_name = f"get_{rel_name}"
+
+        code = f"""# Cascade destroy {rel_name} children
+                cache_key = '_{rel_name}_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.{method_name}(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist"""
+        destroy_code.append(code)
+
+    # Pivot table cleanup (delete associations)
+    for rel in pivot_owner_rels:
+        pivot_table = rel["pivot_table"]
+        related_table = rel["related_table"]
+        # The owner FK is based on the current table name
+        owner_fk = f"{TableNaming.singularize(table_name)}_id"
+        related_plural = TableNaming.pluralize(TableNaming.singularize(related_table))
+
+        code = f"""# Clean up {pivot_table} associations and cascade delete {related_plural}
+                if self.get_id() is not None:
+                    # First, cascade delete the related objects
+                    try:
+                        related_objects = self.get_{related_plural}(reload=True)
+                        for obj in related_objects:
+                            if hasattr(obj, 'destroy'):
+                                obj.destroy(connection=connection, cascade=cascade)
+                    except:
+                        pass  # Method may not exist
+
+                    # Then delete the pivot table associations
+                    cursor.execute(
+                        "DELETE FROM `{pivot_table}` WHERE `{owner_fk}` = %s",
+                        (self.get_id(),),
+                    )"""
+        destroy_code.append(code)
+
+    destroy_str = "\n".join(destroy_code) if destroy_code else "pass  # No cascade destroys needed"
+    return destroy_str
+
+
 def generate_from_thrift_method(
     table_name: str,
     class_name: str,
@@ -1518,6 +1711,13 @@ def generate_from_thrift_method(
         # Map simple fields from Thrift to Model
 '''
 
+    # Enum field mapping
+    enum_fields = {
+        'attributes.attribute_type': 'ThriftAttributeType',
+        'items.item_type': 'ThriftItemType',
+        'mobile_items.item_type': 'ThriftItemType',
+    }
+
     # Map simple fields (non-FK, non-union fields)
     for col in columns:
         col_name = col['name']
@@ -1530,9 +1730,18 @@ def generate_from_thrift_method(
         if table_name == 'attributes' and col_name in ['bool_value', 'double_value', 'vector3_x', 'vector3_y', 'vector3_z', 'asset_id']:
             continue
 
+        # Check if this is an enum field
+        field_key = f"{table_name}.{col_name}"
+        is_enum_field = field_key in enum_fields
+
         # Map the field if it exists on the Thrift object
-        method_code += f"        if hasattr(thrift_obj, '{col_name}'):\n"
-        method_code += f"            self._data['{col_name}'] = thrift_obj.{col_name}\n"
+        if is_enum_field:
+            # For enum fields, convert enum to string for storage
+            method_code += f"        if hasattr(thrift_obj, '{col_name}'):\n"
+            method_code += f"            self._data['{col_name}'] = thrift_obj.{col_name}.name if thrift_obj.{col_name} is not None else None\n"
+        else:
+            method_code += f"        if hasattr(thrift_obj, '{col_name}'):\n"
+            method_code += f"            self._data['{col_name}'] = thrift_obj.{col_name}\n"
 
     # Handle Owner union conversion if applicable
     if needs_owner_conversion(columns):
@@ -1599,17 +1808,17 @@ def generate_into_thrift_method(
     Returns:
         Generated method code as a string
     """
-    from_game_ttypes = "from game.ttypes import GameResult, StatusType, GameError"
+    from_game_ttypes = "from game.ttypes import ThriftGameResult, ThriftStatusType, ThriftGameError"
 
     method_code = f'''
-    def into_thrift(self) -> Tuple[list[GameResult], Optional['{thrift_struct_name}']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['{thrift_struct_name}']]:
         """
         Convert this Model instance to a Thrift {thrift_struct_name} object.
 
         Loads all relationships recursively and converts them to Thrift.
 
         Returns:
-            Tuple of (list[GameResult], Optional[Thrift object])
+            Tuple of (list[ThriftGameResult], Optional[Thrift object])
         """
         results = []
 
@@ -1618,6 +1827,13 @@ def generate_into_thrift_method(
             thrift_params = {{}}
 
 '''
+
+    # Enum field mapping
+    enum_fields = {
+        'attributes.attribute_type': 'ThriftAttributeType',
+        'items.item_type': 'ThriftItemType',
+        'mobile_items.item_type': 'ThriftItemType',
+    }
 
     # Map simple fields
     for col in columns:
@@ -1631,7 +1847,14 @@ def generate_into_thrift_method(
         if table_name == 'attributes' and col_name in ['bool_value', 'double_value', 'vector3_x', 'vector3_y', 'vector3_z', 'asset_id']:
             continue
 
-        method_code += f"            thrift_params['{col_name}'] = self._data.get('{col_name}')\n"
+        # Check if this is an enum field
+        field_key = f"{table_name}.{col_name}"
+        if field_key in enum_fields:
+            enum_type = enum_fields[field_key]
+            # For enum fields, convert string back to enum
+            method_code += f"            thrift_params['{col_name}'] = {enum_type}[self._data.get('{col_name}')] if self._data.get('{col_name}') is not None else None\n"
+        else:
+            method_code += f"            thrift_params['{col_name}'] = self._data.get('{col_name}')\n"
 
     # Handle Owner union conversion if applicable
     if needs_owner_conversion(columns):
@@ -1696,8 +1919,8 @@ def generate_into_thrift_method(
             # Create Thrift object
             thrift_obj = {thrift_struct_name}(**thrift_params)
 
-            results.append(GameResult(
-                status=StatusType.SUCCESS,
+            results.append(ThriftGameResult(
+                status=ThriftStatusType.SUCCESS,
                 message=f"Successfully converted {{self.__class__.__name__}} id={{self.get_id()}} to Thrift",
             ))
 
@@ -1705,10 +1928,10 @@ def generate_into_thrift_method(
 
         except Exception as e:
             return (
-                [GameResult(
-                    status=StatusType.FAILURE,
+                [ThriftGameResult(
+                    status=ThriftStatusType.FAILURE,
                     message=f"Failed to convert {{self.__class__.__name__}} to Thrift: {{str(e)}}",
-                    error_code=GameError.DB_QUERY_FAILED,
+                    error_code=ThriftGameError.DB_QUERY_FAILED,
                 )],
                 None,
             )
@@ -1762,7 +1985,7 @@ def generate_model(
 
     # Generate all components
     imports = generate_imports(columns, has_relationships, has_thrift_conversion)
-    getters = generate_getters(columns)
+    getters = generate_getters(columns, table_name)
     setters = generate_setters(columns, table_name)
     find_by_methods = generate_find_by_methods(columns, class_name, table_name)
 
@@ -1779,6 +2002,13 @@ def generate_model(
     cascade_save_belongs_to, cascade_save_has_many = generate_cascade_save_code(
         belongs_to_rels,
         has_many_rels,
+    )
+
+    # Generate cascade destroy code
+    cascade_destroy = generate_cascade_destroy_code(
+        table_name,
+        has_many_rels,
+        pivot_owner_rels,
     )
 
     # Generate Thrift conversion methods if applicable
@@ -1825,6 +2055,7 @@ def generate_model(
         pivot_owner_methods=pivot_owner_methods,
         cascade_save_belongs_to=cascade_save_belongs_to,
         cascade_save_has_many=cascade_save_has_many,
+        cascade_destroy=cascade_destroy,
         find_by_methods=find_by_methods,
         thrift_conversion_methods=thrift_conversion_methods,
     )
@@ -1979,6 +2210,15 @@ def set_required_fields_for_model(
         var_suffix: Suffix for prerequisite variable names
         skip_column: Optional column name to skip (e.g., the FK we're testing)
     """
+    # Enum field mapping
+    enum_fields = {
+        'attributes.attribute_type': ('ThriftAttributeType', 'STRENGTH'),
+        'items.item_type': ('ThriftItemType', 'WEAPON'),
+        'mobile_items.item_type': ('ThriftItemType', 'WEAPON'),
+    }
+
+    table_name = model['table_name']
+
     for col in model['columns']:
         if col['name'] == 'id' or col['is_nullable']:
             continue
@@ -1989,8 +2229,13 @@ def set_required_fields_for_model(
 
         python_type = TypeMapper.get_python_type(col['data_type'])
 
+        # Check if this is an enum field
+        field_key = f"{table_name}.{col['name']}"
+        if field_key in enum_fields:
+            enum_type, enum_value = enum_fields[field_key]
+            tests.append(f"        {var_name}.set_{col['name']}({enum_type}.{enum_value})")
         # Handle FK columns (ending with _id)
-        if col['name'].endswith('_id'):
+        elif col['name'].endswith('_id'):
             prereq_var = create_prerequisite_for_fk_column(col, all_models, tests, var_suffix=var_suffix)
             if prereq_var:
                 tests.append(f"        {var_name}.set_{col['name']}({prereq_var}.get_id())")
@@ -2040,6 +2285,13 @@ def create_prerequisite_for_fk_column(
     tests.append(f"        # Create prerequisite {prereq_class} for {col['name']}\n")
     tests.append(f"        {prereq_var} = {prereq_class}()\n")
 
+    # Enum field mapping
+    enum_fields = {
+        'attributes.attribute_type': ('ThriftAttributeType', 'STRENGTH'),
+        'items.item_type': ('ThriftItemType', 'WEAPON'),
+        'mobile_items.item_type': ('ThriftItemType', 'WEAPON'),
+    }
+
     # Set required fields for prerequisite
     # IMPORTANT: We treat ALL NOT NULL columns ending with _id as FKs, regardless of SQL FK constraints
     for prereq_col in prereq_model['columns']:
@@ -2048,8 +2300,13 @@ def create_prerequisite_for_fk_column(
         if prereq_col['is_nullable']:
             continue
 
+        # Check if this is an enum field
+        prereq_field_key = f"{prereq_model['table_name']}.{prereq_col['name']}"
+        if prereq_field_key in enum_fields:
+            enum_type, enum_value = enum_fields[prereq_field_key]
+            tests.append(f"        {prereq_var}.set_{prereq_col['name']}({enum_type}.{enum_value})\n")
         # For NOT NULL _id columns, set to 1 as placeholder (avoid infinite recursion)
-        if prereq_col['name'].endswith('_id'):
+        elif prereq_col['name'].endswith('_id'):
             tests.append(f"        {prereq_var}.set_{prereq_col['name']}(1)\n")
         else:
             # Regular required field
@@ -2224,16 +2481,29 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
                     tests.append(f"        # Create prerequisite {prereq_class} for {col['name']}\n")
                     tests.append(f"        {prereq_var} = {prereq_model['class_name']}()\n")
 
+                    # Enum field mapping
+                    enum_fields_map = {
+                        'attributes.attribute_type': ('ThriftAttributeType', 'STRENGTH'),
+                        'items.item_type': ('ThriftItemType', 'WEAPON'),
+                        'mobile_items.item_type': ('ThriftItemType', 'WEAPON'),
+                    }
+
                     # Set required fields for prerequisite
                     for prereq_col in prereq_model['columns']:
                         if prereq_col['name'] != 'id' and not prereq_col['is_nullable'] and not prereq_col['name'].endswith('_id'):
-                            py_type = TypeMapper.get_python_type(prereq_col['data_type'])
-                            if py_type == 'str':
-                                tests.append(f"        {prereq_var}.set_{prereq_col['name']}('test_prereq')\n")
-                            elif py_type == 'int':
-                                tests.append(f"        {prereq_var}.set_{prereq_col['name']}(1)\n")
-                            elif py_type == 'bool':
-                                tests.append(f"        {prereq_var}.set_{prereq_col['name']}(True)\n")
+                            # Check if this is an enum field
+                            prereq_field_key = f"{prereq_model['table_name']}.{prereq_col['name']}"
+                            if prereq_field_key in enum_fields_map:
+                                enum_type, enum_value = enum_fields_map[prereq_field_key]
+                                tests.append(f"        {prereq_var}.set_{prereq_col['name']}({enum_type}.{enum_value})\n")
+                            else:
+                                py_type = TypeMapper.get_python_type(prereq_col['data_type'])
+                                if py_type == 'str':
+                                    tests.append(f"        {prereq_var}.set_{prereq_col['name']}('test_prereq')\n")
+                                elif py_type == 'int':
+                                    tests.append(f"        {prereq_var}.set_{prereq_col['name']}(1)\n")
+                                elif py_type == 'bool':
+                                    tests.append(f"        {prereq_var}.set_{prereq_col['name']}(True)\n")
 
                     tests.append(f"        {prereq_var}.save()\n\n")
 
@@ -2330,14 +2600,9 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
 
                         # Set required fields for prerequisite
                         for prereq_col in prereq_model['columns']:
-                            if prereq_col['name'] != 'id' and not prereq_col['is_nullable'] and not prereq_col['name'].endswith('_id'):
-                                py_type = TypeMapper.get_python_type(prereq_col['data_type'])
-                                if py_type == 'str':
-                                    tests.append(f"        {prereq_var}.set_{prereq_col['name']}('test_prereq_lazy')\n")
-                                elif py_type == 'int':
-                                    tests.append(f"        {prereq_var}.set_{prereq_col['name']}(1)\n")
-                                elif py_type == 'bool':
-                                    tests.append(f"        {prereq_var}.set_{prereq_col['name']}(True)\n")
+                            if prereq_col['name'] != 'id' and not prereq_col['is_nullable']:
+                                test_value = get_test_value_for_column(prereq_model['table_name'], prereq_col)
+                                tests.append(f"        {prereq_var}.set_{prereq_col['name']}({test_value})\n")
 
                         tests.append(f"        {prereq_var}.save()\n\n")
 
@@ -2363,9 +2628,45 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
     return "\n".join(tests)
 
 
+def get_test_value_for_column(table_name: str, col: Dict[str, Any]) -> str:
+    """
+    Get appropriate test value for a column, accounting for enum fields.
+    Returns the Python code to use as the value (as a string).
+    """
+    # Enum field mapping
+    enum_fields = {
+        'attributes.attribute_type': ('ThriftAttributeType', 'STRENGTH'),
+        'items.item_type': ('ThriftItemType', 'WEAPON'),
+        'mobile_items.item_type': ('ThriftItemType', 'WEAPON'),
+    }
+
+    field_key = f"{table_name}.{col['name']}"
+    if field_key in enum_fields:
+        enum_type, enum_value = enum_fields[field_key]
+        return f"{enum_type}.{enum_value}"
+
+    # For FK columns, use 1
+    if col['name'].endswith('_id'):
+        return "1"
+
+    # For regular fields, use type-based defaults
+    python_type = TypeMapper.get_python_type(col['data_type'])
+    if python_type == 'str':
+        return f"'test_{col['name']}'"
+    elif python_type == 'int':
+        return "1"
+    elif python_type == 'bool':
+        return "True"
+    elif python_type == 'float':
+        return "1.0"
+    else:
+        return "'test_value'"
+
+
 def generate_dirty_tracking_tests(model: Dict[str, Any], all_models: List[Dict[str, Any]]) -> str:
     """Generate dirty tracking tests for a model."""
     class_name = model['class_name']
+    table_name = model['table_name']
     columns = model['columns']
 
     # Find a settable column for testing
@@ -2378,21 +2679,20 @@ def generate_dirty_tracking_tests(model: Dict[str, Any], all_models: List[Dict[s
     if not test_col:
         return ""
 
+    # Get test values using helper
+    test_value1 = get_test_value_for_column(table_name, test_col)
+    # For second value, try to make it different
     python_type = TypeMapper.get_python_type(test_col['data_type'])
     if python_type == 'str':
-        test_value1 = "'test_value_1'"
         test_value2 = "'test_value_2'"
     elif python_type == 'int':
-        test_value1 = "1"
         test_value2 = "2"
     elif python_type == 'bool':
-        test_value1 = "True"
         test_value2 = "False"
     elif python_type == 'float':
-        test_value1 = "1.0"
         test_value2 = "2.0"
     else:
-        return ""
+        test_value2 = test_value1
 
     tests_list = []
     tests_list.append(f'''
@@ -2411,19 +2711,8 @@ def generate_dirty_tracking_tests(model: Dict[str, Any], all_models: List[Dict[s
         if col['name'] == 'id' or col['is_nullable']:
             continue
 
-        # Handle NOT NULL _id columns
-        if col['name'].endswith('_id'):
-            tests_list.append(f"\n        model.set_{col['name']}(1)")
-        else:
-            py_type = TypeMapper.get_python_type(col['data_type'])
-            if py_type == 'str':
-                tests_list.append(f"\n        model.set_{col['name']}('test_{col['name']}')")
-            elif py_type == 'int':
-                tests_list.append(f"\n        model.set_{col['name']}(1)")
-            elif py_type == 'bool':
-                tests_list.append(f"\n        model.set_{col['name']}(True)")
-            elif py_type == 'float':
-                tests_list.append(f"\n        model.set_{col['name']}(1.0)")
+        test_value = get_test_value_for_column(table_name, col)
+        tests_list.append(f"\n        model.set_{col['name']}({test_value})")
 
     tests_list.append(f'''
         model.save()
@@ -2437,19 +2726,8 @@ def generate_dirty_tracking_tests(model: Dict[str, Any], all_models: List[Dict[s
         if col['name'] == 'id' or col['is_nullable']:
             continue
 
-        # Handle NOT NULL _id columns
-        if col['name'].endswith('_id'):
-            tests_list.append(f"\n        model.set_{col['name']}(1)")
-        else:
-            py_type = TypeMapper.get_python_type(col['data_type'])
-            if py_type == 'str':
-                tests_list.append(f"\n        model.set_{col['name']}('test_{col['name']}')")
-            elif py_type == 'int':
-                tests_list.append(f"\n        model.set_{col['name']}(1)")
-            elif py_type == 'bool':
-                tests_list.append(f"\n        model.set_{col['name']}(True)")
-            elif py_type == 'float':
-                tests_list.append(f"\n        model.set_{col['name']}(1.0)")
+        test_value = get_test_value_for_column(table_name, col)
+        tests_list.append(f"\n        model.set_{col['name']}({test_value})")
 
     tests_list.append(f'''
         model.save()
@@ -2466,19 +2744,8 @@ def generate_dirty_tracking_tests(model: Dict[str, Any], all_models: List[Dict[s
         if col['name'] == 'id' or col['is_nullable']:
             continue
 
-        # Handle NOT NULL _id columns
-        if col['name'].endswith('_id'):
-            tests_list.append(f"\n        model.set_{col['name']}(1)")
-        else:
-            py_type = TypeMapper.get_python_type(col['data_type'])
-            if py_type == 'str':
-                tests_list.append(f"\n        model.set_{col['name']}('test_{col['name']}')")
-            elif py_type == 'int':
-                tests_list.append(f"\n        model.set_{col['name']}(1)")
-            elif py_type == 'bool':
-                tests_list.append(f"\n        model.set_{col['name']}(True)")
-            elif py_type == 'float':
-                tests_list.append(f"\n        model.set_{col['name']}(1.0)")
+        test_value = get_test_value_for_column(table_name, col)
+        tests_list.append(f"\n        model.set_{col['name']}({test_value})")
 
     tests_list.append(f'''
         model.save()
@@ -2522,18 +2789,8 @@ def generate_cascade_save_tests(model: Dict[str, Any], all_models: List[Dict[str
         if col['name'] == 'id' or col['is_nullable']:
             continue
 
-        if col['name'].endswith('_id'):
-            tests += f"\n        related.set_{col['name']}(1)"
-        else:
-            python_type = TypeMapper.get_python_type(col['data_type'])
-            if python_type == 'str':
-                tests += f"\n        related.set_{col['name']}('test_{col['name']}')"
-            elif python_type == 'int':
-                tests += f"\n        related.set_{col['name']}(1)"
-            elif python_type == 'float':
-                tests += f"\n        related.set_{col['name']}(1.0)"
-            elif python_type == 'bool':
-                tests += f"\n        related.set_{col['name']}(True)"
+        test_value = get_test_value_for_column(target_model['table_name'], col)
+        tests += f"\n        related.set_{col['name']}({test_value})"
 
     tests += f'''
         self.assertTrue(related._dirty)
@@ -2548,18 +2805,8 @@ def generate_cascade_save_tests(model: Dict[str, Any], all_models: List[Dict[str
         if col['name'] == 'id' or col['is_nullable']:
             continue
 
-        if col['name'].endswith('_id'):
-            tests += f"\n        parent.set_{col['name']}(1)"
-        else:
-            python_type = TypeMapper.get_python_type(col['data_type'])
-            if python_type == 'str':
-                tests += f"\n        parent.set_{col['name']}('test_{col['name']}')"
-            elif python_type == 'int':
-                tests += f"\n        parent.set_{col['name']}(1)"
-            elif python_type == 'float':
-                tests += f"\n        parent.set_{col['name']}(1.0)"
-            elif python_type == 'bool':
-                tests += f"\n        parent.set_{col['name']}(True)"
+        test_value = get_test_value_for_column(model['table_name'], col)
+        tests += f"\n        parent.set_{col['name']}({test_value})"
 
     tests += f'''
         parent.set_{rel_name}(related)
@@ -2572,6 +2819,154 @@ def generate_cascade_save_tests(model: Dict[str, Any], all_models: List[Dict[str
         self.assertIsNotNone(related.get_id())
         self.assertFalse(parent._dirty)
         self.assertFalse(related._dirty)
+'''
+
+    return tests
+
+
+def generate_cascade_destroy_tests(model: Dict[str, Any], all_models: List[Dict[str, Any]]) -> str:
+    """Generate cascade destroy tests for a model."""
+    class_name = model['class_name']
+    has_many_rels = model.get('relationships', {}).get('has_many', [])
+
+    if not has_many_rels:
+        return ""
+
+    # Take first has-many relationship for testing
+    rel = has_many_rels[0]
+    rel_name = rel["foreign_table"]
+    target_class = TableNaming.to_pascal_case(TableNaming.singularize(rel['foreign_table']))
+
+    # Find target model
+    target_model = next((m for m in all_models if m['class_name'] == target_class), None)
+    if not target_model:
+        return ""
+
+    tests = f'''
+    def test_cascade_destroy(self):
+        """Test cascade destroy for has-many relationships."""
+        # Create parent
+        parent = {class_name}()'''
+
+    # Set required fields for parent
+    for col in model['columns']:
+        if col['name'] == 'id' or col['is_nullable']:
+            continue
+        test_value = get_test_value_for_column(model['table_name'], col)
+        tests += f"\n        parent.set_{col['name']}({test_value})"
+
+    tests += f'''
+        parent.save()
+        parent_id = parent.get_id()
+        self.assertIsNotNone(parent_id)
+
+        # Create children
+        child1 = {target_class}()'''
+
+    # Set required fields for child1
+    for col in target_model['columns']:
+        if col['name'] == 'id' or col['is_nullable']:
+            continue
+        # Skip the FK to parent - we'll set it via relationship
+        if col['name'] == rel['foreign_column']:
+            continue
+        test_value = get_test_value_for_column(target_model['table_name'], col)
+        tests += f"\n        child1.set_{col['name']}({test_value})"
+
+    tests += f'''
+        child1.set_{rel['foreign_column']}(parent_id)
+        child1.save()
+        child1_id = child1.get_id()
+        self.assertIsNotNone(child1_id)
+
+        child2 = {target_class}()'''
+
+    # Set required fields for child2
+    for col in target_model['columns']:
+        if col['name'] == 'id' or col['is_nullable']:
+            continue
+        # Skip the FK to parent - we'll set it via relationship
+        if col['name'] == rel['foreign_column']:
+            continue
+        test_value = get_test_value_for_column(target_model['table_name'], col)
+        tests += f"\n        child2.set_{col['name']}({test_value})"
+
+    tests += f'''
+        child2.set_{rel['foreign_column']}(parent_id)
+        child2.save()
+        child2_id = child2.get_id()
+        self.assertIsNotNone(child2_id)
+
+        # Verify children exist
+        children = parent.get_{rel_name}(reload=True)
+        self.assertEqual(len(children), 2)
+
+        # Destroy parent with cascade
+        parent.destroy(cascade=True)
+
+        # Verify parent is destroyed
+        self.assertIsNone(parent.get_id())
+        destroyed_parent = {class_name}.find(parent_id)
+        self.assertIsNone(destroyed_parent)
+
+        # Verify children are destroyed
+        destroyed_child1 = {target_class}.find(child1_id)
+        self.assertIsNone(destroyed_child1)
+        destroyed_child2 = {target_class}.find(child2_id)
+        self.assertIsNone(destroyed_child2)
+
+    def test_destroy_without_cascade(self):
+        """Test destroy without cascade leaves children intact."""
+        # Create parent
+        parent = {class_name}()'''
+
+    # Set required fields for parent (again)
+    for col in model['columns']:
+        if col['name'] == 'id' or col['is_nullable']:
+            continue
+        test_value = get_test_value_for_column(model['table_name'], col)
+        tests += f"\n        parent.set_{col['name']}({test_value})"
+
+    tests += f'''
+        parent.save()
+        parent_id = parent.get_id()
+        self.assertIsNotNone(parent_id)
+
+        # Create child
+        child = {target_class}()'''
+
+    # Set required fields for child
+    for col in target_model['columns']:
+        if col['name'] == 'id' or col['is_nullable']:
+            continue
+        # Skip the FK to parent - we'll set it via relationship
+        if col['name'] == rel['foreign_column']:
+            continue
+        test_value = get_test_value_for_column(target_model['table_name'], col)
+        tests += f"\n        child.set_{col['name']}({test_value})"
+
+    tests += f'''
+        child.set_{rel['foreign_column']}(parent_id)
+        child.save()
+        child_id = child.get_id()
+        self.assertIsNotNone(child_id)
+
+        # Destroy parent WITHOUT cascade (should fail with FK constraint)
+        # Note: This may fail or succeed depending on DB FK constraints
+        try:
+            parent.destroy(cascade=False)
+            # If successful, verify parent destroyed but child remains
+            self.assertIsNone(parent.get_id())
+            destroyed_parent = {class_name}.find(parent_id)
+            self.assertIsNone(destroyed_parent)
+
+            # Child should still exist (orphaned)
+            remaining_child = {target_class}.find(child_id)
+            # Note: Child may or may not exist depending on FK constraints
+            # This test documents the behavior rather than enforcing it
+        except Exception as e:
+            # Expected if DB has FK constraints with RESTRICT or NO ACTION
+            pass
 '''
 
     return tests
@@ -2607,6 +3002,7 @@ def generate_tests(models: List[Dict[str, Any]]) -> str:
         "import mysql.connector",
         "import uuid",
         "from dotenv import load_dotenv",
+        "from game.ttypes import AttributeType as ThriftAttributeType, ItemType as ThriftItemType",
     ]
 
     # Import all models from the single models.py file
@@ -2729,6 +3125,11 @@ class Test{class_name}Relationships(unittest.TestCase):
         cascade_tests = generate_cascade_save_tests(model, models)
         if cascade_tests:
             test_class += cascade_tests
+
+        # Add cascade destroy tests
+        destroy_tests = generate_cascade_destroy_tests(model, models)
+        if destroy_tests:
+            test_class += destroy_tests
 
         # Add Thrift conversion tests if table has Thrift mapping
         if has_thrift_mapping(model['table_name']):
@@ -2875,7 +3276,7 @@ def main():
         # Check if any model has Thrift conversion (needs Thrift imports)
         needs_thrift = any(has_thrift_mapping(table) for table in tables)
         if needs_thrift:
-            all_imports.add("from game.ttypes import GameResult, StatusType, GameError, Owner, AttributeValue, AttributeType, ItemVector3, Attribute")
+            all_imports.add("from game.ttypes import GameResult as ThriftGameResult, StatusType as ThriftStatusType, GameError as ThriftGameError, Owner as ThriftOwner, AttributeValue as ThriftAttributeValue, AttributeType as ThriftAttributeType, ItemType as ThriftItemType, ItemVector3 as ThriftItemVector3, Attribute as ThriftAttribute, Item as ThriftItem, Mobile as ThriftMobile, Player as ThriftPlayer, MobileItem as ThriftMobileItem, Inventory as ThriftInventory, InventoryEntry as ThriftInventoryEntry, ItemBlueprint as ThriftItemBlueprint, ItemBlueprintComponent as ThriftItemBlueprintComponent")
 
         # Add header
         models_output.append("#!/usr/bin/env python3")

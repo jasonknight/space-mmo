@@ -72,9 +72,73 @@ class {class_name}:
                        If provided, uses this connection and doesn't commit (caller manages transaction).
             cascade: If True, cascade save to related models in belongs_to relationships.
         """
-        # Skip save if not dirty
-        if not self._dirty:
-            return
+        # Determine if we own the connection
+        owns_connection = connection is None
+        if owns_connection:
+            self._connect()
+            connection = self._connection
+            # Start transaction
+            connection.start_transaction()
+
+        cursor = None
+        try:
+            # Cascade save belongs-to relationships first (even if parent not dirty)
+            if cascade:
+                {cascade_save_belongs_to}
+
+            # Only execute SQL if this record is dirty
+            if self._dirty:
+                cursor = connection.cursor()
+
+                if 'id' in self._data and self._data['id'] is not None:
+                    # UPDATE existing record
+                    set_clause = ', '.join([f"`{{col}}` = %s" for col in self._data.keys() if col != 'id'])
+                    values = [self._data[col] for col in self._data.keys() if col != 'id']
+                    values.append(self._data['id'])
+
+                    query = f"UPDATE `{table_name}` SET {{set_clause}} WHERE `id` = %s"
+                    cursor.execute(query, tuple(values))
+                else:
+                    # INSERT new record
+                    columns = [col for col in self._data.keys() if col != 'id']
+                    placeholders = ', '.join(['%s'] * len(columns))
+                    column_names = ', '.join([f"`{{col}}`" for col in columns])
+                    values = [self._data[col] for col in columns]
+
+                    query = f"INSERT INTO `{table_name}` ({{column_names}}) VALUES ({{placeholders}})"
+                    cursor.execute(query, tuple(values))
+                    self._data['id'] = cursor.lastrowid
+
+                # Mark as clean after successful save
+                self._dirty = False
+
+            # Cascade save has-many relationships (even if parent not dirty)
+            if cascade:
+                {cascade_save_has_many}
+
+            # Only commit if we own the connection
+            if owns_connection:
+                connection.commit()
+
+        except Exception as e:
+            if owns_connection:
+                connection.rollback()
+            raise
+        finally:
+            if cursor:
+                cursor.close()
+
+    def destroy(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
+        """
+        Delete this record from the database with transaction support and cascading deletes.
+
+        Args:
+            connection: Optional database connection for transaction support.
+                       If provided, uses this connection and doesn't commit (caller manages transaction).
+            cascade: If True, cascade destroy to related models (has-many children and pivot associations).
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot destroy a record without an id")
 
         # Determine if we own the connection
         owns_connection = connection is None
@@ -86,37 +150,17 @@ class {class_name}:
 
         cursor = None
         try:
-            # Cascade save belongs-to relationships first
-            if cascade:
-                {cascade_save_belongs_to}
-
             cursor = connection.cursor()
 
-            if 'id' in self._data and self._data['id'] is not None:
-                # UPDATE existing record
-                set_clause = ', '.join([f"`{{col}}` = %s" for col in self._data.keys() if col != 'id'])
-                values = [self._data[col] for col in self._data.keys() if col != 'id']
-                values.append(self._data['id'])
-
-                query = f"UPDATE `{table_name}` SET {{set_clause}} WHERE `id` = %s"
-                cursor.execute(query, tuple(values))
-            else:
-                # INSERT new record
-                columns = [col for col in self._data.keys() if col != 'id']
-                placeholders = ', '.join(['%s'] * len(columns))
-                column_names = ', '.join([f"`{{col}}`" for col in columns])
-                values = [self._data[col] for col in columns]
-
-                query = f"INSERT INTO `{table_name}` ({{column_names}}) VALUES ({{placeholders}})"
-                cursor.execute(query, tuple(values))
-                self._data['id'] = cursor.lastrowid
-
-            # Mark as clean after successful save
-            self._dirty = False
-
-            # Cascade save has-many relationships
+            # Cascade destroy children and clean up associations first
             if cascade:
-                {cascade_save_has_many}
+                {cascade_destroy}
+
+            # Delete the record itself
+            cursor.execute(f"DELETE FROM `{table_name}` WHERE `id` = %s", (self.get_id(),))
+
+            # Clear the id to mark as deleted
+            self._data['id'] = None
 
             # Only commit if we own the connection
             if owns_connection:
@@ -146,6 +190,39 @@ class {class_name}:
                 instance._data = row
                 return instance
             return None
+        finally:
+            cursor.close()
+
+    def reload(self) -> None:
+        """
+        Reload this record from the database and reload cached relationships.
+        """
+        if self.get_id() is None:
+            raise ValueError("Cannot reload a record without an id")
+
+        self._connect()
+        cursor = self._connection.cursor(dictionary=True)
+        try:
+            cursor.execute(f"SELECT * FROM `{table_name}` WHERE `id` = %s", (self.get_id(),))
+            row = cursor.fetchone()
+            if row:
+                self._data = row
+                self._dirty = False
+
+                # Reload cached relationships by iterating over cache attributes
+                for attr_name in dir(self):
+                    if attr_name.endswith('_cache') and not attr_name.startswith('_'):
+                        cached_value = getattr(self, attr_name, None)
+                        if cached_value is not None:
+                            # Reload cached relationships recursively
+                            if hasattr(cached_value, 'reload'):
+                                cached_value.reload()
+                            elif isinstance(cached_value, list):
+                                for item in cached_value:
+                                    if hasattr(item, 'reload'):
+                                        item.reload()
+            else:
+                raise ValueError(f"Record with id={{self.get_id()}} not found in database")
         finally:
             cursor.close()
 
