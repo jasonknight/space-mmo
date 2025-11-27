@@ -4,11 +4,18 @@ Comprehensive tests for pivot table operations (AttributeOwner and InventoryOwne
 Tests AttributeOwner with Player model and InventoryOwner with Mobile model.
 """
 
+import sys
 import unittest
 import mysql.connector
 import os
 import uuid
 from dotenv import load_dotenv
+
+# Add parent directory to path for models import
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 from models import (
     AttributeOwner,
     Attribute,

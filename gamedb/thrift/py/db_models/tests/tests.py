@@ -7,6 +7,11 @@ Generated from database schema - do not modify manually.
 import sys
 import os
 
+# Add parent directory to path for models import
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 # Add Thrift generated code to path
 thrift_gen_path = '/vagrant/gamedb/thrift/gen-py'
 if thrift_gen_path not in sys.path:
@@ -266,13 +271,27 @@ class TestAttributeOwnerRelationships(unittest.TestCase):
         """Test attribute relationship setter."""
         # Create related models
         related1 = Attribute()
-        related1.set_internal_name('test_internal_name_1')
+        related1.set_internal_name('test_internal_name')
         related1.set_visible(1)
-        related1.set_attribute_type('test_attribute_type_1')
+        related1.set_attribute_type('test_attribute_type')
         related1.save()
 
         # Create parent
         parent = AttributeOwner()
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_setter = Attribute()
+
+        attribute_prereq_setter.set_internal_name('test_prereq_setter')
+
+        attribute_prereq_setter.set_visible(1)
+
+        attribute_prereq_setter.set_attribute_type('test_prereq_setter')
+
+        attribute_prereq_setter.save()
+
+
+        parent.set_attribute_id(attribute_prereq_setter.get_id())
 
         # Use setter
         parent.set_attribute(related1)
@@ -297,6 +316,20 @@ class TestAttributeOwnerRelationships(unittest.TestCase):
 
         # Create parent and set FK
         parent = AttributeOwner()
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_basic = Attribute()
+
+        attribute_prereq_basic.set_internal_name('test_prereq_basic')
+
+        attribute_prereq_basic.set_visible(1)
+
+        attribute_prereq_basic.set_attribute_type('test_prereq_basic')
+
+        attribute_prereq_basic.save()
+
+
+        parent.set_attribute_id(attribute_prereq_basic.get_id())
         parent.set_mobile_id(related.get_id())
         parent.save()
 
@@ -315,12 +348,26 @@ class TestAttributeOwnerRelationships(unittest.TestCase):
         """Test mobile relationship setter."""
         # Create related models
         related1 = Mobile()
-        related1.set_mobile_type('test_mobile_type_1')
-        related1.set_what_we_call_you('test_what_we_call_you_1')
+        related1.set_mobile_type('test_mobile_type')
+        related1.set_what_we_call_you('test_what_we_call_you')
         related1.save()
 
         # Create parent
         parent = AttributeOwner()
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_setter = Attribute()
+
+        attribute_prereq_setter.set_internal_name('test_prereq_setter')
+
+        attribute_prereq_setter.set_visible(1)
+
+        attribute_prereq_setter.set_attribute_type('test_prereq_setter')
+
+        attribute_prereq_setter.save()
+
+
+        parent.set_attribute_id(attribute_prereq_setter.get_id())
 
         # Use setter
         parent.set_mobile(related1)
@@ -345,6 +392,20 @@ class TestAttributeOwnerRelationships(unittest.TestCase):
 
         # Create parent and set FK
         parent = AttributeOwner()
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_basic = Attribute()
+
+        attribute_prereq_basic.set_internal_name('test_prereq_basic')
+
+        attribute_prereq_basic.set_visible(1)
+
+        attribute_prereq_basic.set_attribute_type('test_prereq_basic')
+
+        attribute_prereq_basic.save()
+
+
+        parent.set_attribute_id(attribute_prereq_basic.get_id())
         parent.set_item_id(related.get_id())
         parent.save()
 
@@ -363,12 +424,26 @@ class TestAttributeOwnerRelationships(unittest.TestCase):
         """Test item relationship setter."""
         # Create related models
         related1 = Item()
-        related1.set_internal_name('test_internal_name_1')
-        related1.set_item_type('test_item_type_1')
+        related1.set_internal_name('test_internal_name')
+        related1.set_item_type('test_item_type')
         related1.save()
 
         # Create parent
         parent = AttributeOwner()
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_setter = Attribute()
+
+        attribute_prereq_setter.set_internal_name('test_prereq_setter')
+
+        attribute_prereq_setter.set_visible(1)
+
+        attribute_prereq_setter.set_attribute_type('test_prereq_setter')
+
+        attribute_prereq_setter.save()
+
+
+        parent.set_attribute_id(attribute_prereq_setter.get_id())
 
         # Use setter
         parent.set_item(related1)
@@ -397,6 +472,20 @@ class TestAttributeOwnerRelationships(unittest.TestCase):
 
         # Create parent and set FK
         parent = AttributeOwner()
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_basic = Attribute()
+
+        attribute_prereq_basic.set_internal_name('test_prereq_basic')
+
+        attribute_prereq_basic.set_visible(1)
+
+        attribute_prereq_basic.set_attribute_type('test_prereq_basic')
+
+        attribute_prereq_basic.save()
+
+
+        parent.set_attribute_id(attribute_prereq_basic.get_id())
         parent.set_player_id(related.get_id())
         parent.save()
 
@@ -415,16 +504,30 @@ class TestAttributeOwnerRelationships(unittest.TestCase):
         """Test player relationship setter."""
         # Create related models
         related1 = Player()
-        related1.set_full_name('test_full_name_1')
-        related1.set_what_we_call_you('test_what_we_call_you_1')
-        related1.set_security_token('test_security_token_1')
+        related1.set_full_name('test_full_name')
+        related1.set_what_we_call_you('test_what_we_call_you')
+        related1.set_security_token('test_security_token')
         related1.set_over_13(1)
         related1.set_year_of_birth(1)
-        related1.set_email('test_email_1')
+        related1.set_email('test_email')
         related1.save()
 
         # Create parent
         parent = AttributeOwner()
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_setter = Attribute()
+
+        attribute_prereq_setter.set_internal_name('test_prereq_setter')
+
+        attribute_prereq_setter.set_visible(1)
+
+        attribute_prereq_setter.set_attribute_type('test_prereq_setter')
+
+        attribute_prereq_setter.save()
+
+
+        parent.set_attribute_id(attribute_prereq_setter.get_id())
 
         # Use setter
         parent.set_player(related1)
@@ -450,6 +553,7 @@ class TestAttributeOwnerRelationships(unittest.TestCase):
 
         # Create parent (unsaved)
         parent = AttributeOwner()
+        parent.set_attribute_id(1)
         parent.set_attribute(related)
 
         # Save parent with cascade
@@ -478,6 +582,19 @@ class TestAttributeRelationships(unittest.TestCase):
         parent.set_visible(1)
         parent.set_attribute_type('test_attribute_type')
         parent.save()
+
+
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq = Attribute()
+
+        attribute_prereq.set_internal_name('test_prereq')
+
+        attribute_prereq.set_visible(1)
+
+        attribute_prereq.set_attribute_type('test_prereq')
+
+        attribute_prereq.save()
 
 
         # Create related records
@@ -512,6 +629,19 @@ class TestAttributeRelationships(unittest.TestCase):
         parent.set_visible(1)
         parent.set_attribute_type('test_attribute_type')
         parent.save()
+
+
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_lazy = Attribute()
+
+        attribute_prereq_lazy.set_internal_name('test_prereq_lazy')
+
+        attribute_prereq_lazy.set_visible(1)
+
+        attribute_prereq_lazy.set_attribute_type('test_prereq_lazy')
+
+        attribute_prereq_lazy.save()
 
 
         # Create child
@@ -584,7 +714,9 @@ class TestInventoryRelationships(unittest.TestCase):
         """Test inventory_entries relationship basic getter."""
         # Create parent
         parent = Inventory()
+        parent.set_owner_id(1)
         parent.set_max_entries(1)
+        parent.set_max_volume(1.0)
         parent.save()
 
 
@@ -602,12 +734,36 @@ class TestInventoryRelationships(unittest.TestCase):
         # Create related records
         child1 = InventoryEntry()
         child1.set_inventory_id(parent.get_id())
-        child1.set_item_id(item_prereq.get_id())
+        # Create prerequisite Item for item_id
+
+        item_prereq_child1 = Item()
+
+        item_prereq_child1.set_internal_name('test_prereq_child1')
+
+        item_prereq_child1.set_item_type('test_prereq_child1')
+
+        item_prereq_child1.save()
+
+
+        child1.set_item_id(item_prereq_child1.get_id())
+        child1.set_quantity(1.0)
         child1.save()
 
         child2 = InventoryEntry()
         child2.set_inventory_id(parent.get_id())
-        child2.set_item_id(item_prereq.get_id())
+        # Create prerequisite Item for item_id
+
+        item_prereq_child2 = Item()
+
+        item_prereq_child2.set_internal_name('test_prereq_child2')
+
+        item_prereq_child2.set_item_type('test_prereq_child2')
+
+        item_prereq_child2.save()
+
+
+        child2.set_item_id(item_prereq_child2.get_id())
+        child2.set_quantity(1.0)
         child2.save()
 
         # Test getter (eager mode)
@@ -629,7 +785,9 @@ class TestInventoryRelationships(unittest.TestCase):
         """Test inventory_entries relationship lazy loading."""
         # Create parent with children
         parent = Inventory()
+        parent.set_owner_id(1)
         parent.set_max_entries(1)
+        parent.set_max_volume(1.0)
         parent.save()
 
 
@@ -647,7 +805,19 @@ class TestInventoryRelationships(unittest.TestCase):
         # Create child
         child = InventoryEntry()
         child.set_inventory_id(parent.get_id())
-        child.set_item_id(item_prereq_lazy.get_id())
+        # Create prerequisite Item for item_id
+
+        item_prereq_child_lazy = Item()
+
+        item_prereq_child_lazy.set_internal_name('test_prereq_child_lazy')
+
+        item_prereq_child_lazy.set_item_type('test_prereq_child_lazy')
+
+        item_prereq_child_lazy.save()
+
+
+        child.set_item_id(item_prereq_child_lazy.get_id())
+        child.set_quantity(1.0)
         child.save()
 
         # Test lazy mode
@@ -664,7 +834,9 @@ class TestInventoryRelationships(unittest.TestCase):
         """Test inventory_owners relationship basic getter."""
         # Create parent
         parent = Inventory()
+        parent.set_owner_id(1)
         parent.set_max_entries(1)
+        parent.set_max_volume(1.0)
         parent.save()
 
 
@@ -696,7 +868,9 @@ class TestInventoryRelationships(unittest.TestCase):
         """Test inventory_owners relationship lazy loading."""
         # Create parent with children
         parent = Inventory()
+        parent.set_owner_id(1)
         parent.set_max_entries(1)
+        parent.set_max_volume(1.0)
         parent.save()
 
 
@@ -722,6 +896,7 @@ class TestInventoryRelationships(unittest.TestCase):
     def test_dirty_tracking_saved_model(self):
         """Test that saved models are marked clean."""
         model = Inventory()
+        model.set_owner_id(1)
         model.set_max_entries(1)
         model.set_max_volume(1.0)
         model.save()
@@ -730,6 +905,7 @@ class TestInventoryRelationships(unittest.TestCase):
     def test_dirty_tracking_setter(self):
         """Test that setters mark model dirty."""
         model = Inventory()
+        model.set_owner_id(1)
         model.set_max_entries(1)
         model.set_max_volume(1.0)
         model.save()
@@ -741,6 +917,7 @@ class TestInventoryRelationships(unittest.TestCase):
     def test_dirty_tracking_skip_save(self):
         """Test that clean models skip save operation."""
         model = Inventory()
+        model.set_owner_id(1)
         model.set_max_entries(1)
         model.set_max_volume(1.0)
         model.save()
@@ -767,11 +944,26 @@ class TestInventoryEntryRelationships(unittest.TestCase):
         """Test inventory relationship basic getter."""
         # Create related model
         related = Inventory()
+        related.set_owner_id(1)
         related.set_max_entries(1)
+        related.set_max_volume(1.0)
         related.save()
 
         # Create parent and set FK
         parent = InventoryEntry()
+        # Create prerequisite Item for item_id
+
+        item_prereq_basic = Item()
+
+        item_prereq_basic.set_internal_name('test_prereq_basic')
+
+        item_prereq_basic.set_item_type('test_prereq_basic')
+
+        item_prereq_basic.save()
+
+
+        parent.set_item_id(item_prereq_basic.get_id())
+        parent.set_quantity(1.0)
         parent.set_inventory_id(related.get_id())
         parent.save()
 
@@ -790,11 +982,27 @@ class TestInventoryEntryRelationships(unittest.TestCase):
         """Test inventory relationship setter."""
         # Create related models
         related1 = Inventory()
+        related1.set_owner_id(1)
         related1.set_max_entries(1)
+        related1.set_max_volume(1.0)
         related1.save()
 
         # Create parent
         parent = InventoryEntry()
+        parent.set_inventory_id(1)
+        # Create prerequisite Item for item_id
+
+        item_prereq_setter = Item()
+
+        item_prereq_setter.set_internal_name('test_prereq_setter')
+
+        item_prereq_setter.set_item_type('test_prereq_setter')
+
+        item_prereq_setter.save()
+
+
+        parent.set_item_id(item_prereq_setter.get_id())
+        parent.set_quantity(1.0)
 
         # Use setter
         parent.set_inventory(related1)
@@ -819,6 +1027,8 @@ class TestInventoryEntryRelationships(unittest.TestCase):
 
         # Create parent and set FK
         parent = InventoryEntry()
+        parent.set_inventory_id(1)
+        parent.set_quantity(1.0)
         parent.set_item_id(related.get_id())
         parent.save()
 
@@ -837,12 +1047,26 @@ class TestInventoryEntryRelationships(unittest.TestCase):
         """Test item relationship setter."""
         # Create related models
         related1 = Item()
-        related1.set_internal_name('test_internal_name_1')
-        related1.set_item_type('test_item_type_1')
+        related1.set_internal_name('test_internal_name')
+        related1.set_item_type('test_item_type')
         related1.save()
 
         # Create parent
         parent = InventoryEntry()
+        parent.set_inventory_id(1)
+        # Create prerequisite Item for item_id
+
+        item_prereq_setter = Item()
+
+        item_prereq_setter.set_internal_name('test_prereq_setter')
+
+        item_prereq_setter.set_item_type('test_prereq_setter')
+
+        item_prereq_setter.save()
+
+
+        parent.set_item_id(item_prereq_setter.get_id())
+        parent.set_quantity(1.0)
 
         # Use setter
         parent.set_item(related1)
@@ -861,12 +1085,50 @@ class TestInventoryEntryRelationships(unittest.TestCase):
         """Test mobile_item relationship basic getter."""
         # Create related model
         related = MobileItem()
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_basic = Mobile()
+
+        mobile_prereq_basic.set_mobile_type('test_prereq_basic')
+
+        mobile_prereq_basic.set_what_we_call_you('test_prereq_basic')
+
+        mobile_prereq_basic.save()
+
+
+        related.set_mobile_id(mobile_prereq_basic.get_id())
         related.set_internal_name('test_internal_name')
         related.set_item_type('test_item_type')
+        # Create prerequisite Item for item_id
+
+        item_prereq_basic = Item()
+
+        item_prereq_basic.set_internal_name('test_prereq_basic')
+
+        item_prereq_basic.set_item_type('test_prereq_basic')
+
+        item_prereq_basic.save()
+
+
+        related.set_item_id(item_prereq_basic.get_id())
         related.save()
 
         # Create parent and set FK
         parent = InventoryEntry()
+        parent.set_inventory_id(1)
+        # Create prerequisite Item for item_id
+
+        item_prereq_basic = Item()
+
+        item_prereq_basic.set_internal_name('test_prereq_basic')
+
+        item_prereq_basic.set_item_type('test_prereq_basic')
+
+        item_prereq_basic.save()
+
+
+        parent.set_item_id(item_prereq_basic.get_id())
+        parent.set_quantity(1.0)
         parent.set_mobile_item_id(related.get_id())
         parent.save()
 
@@ -885,12 +1147,50 @@ class TestInventoryEntryRelationships(unittest.TestCase):
         """Test mobile_item relationship setter."""
         # Create related models
         related1 = MobileItem()
-        related1.set_internal_name('test_internal_name_1')
-        related1.set_item_type('test_item_type_1')
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_setter = Mobile()
+
+        mobile_prereq_setter.set_mobile_type('test_prereq_setter')
+
+        mobile_prereq_setter.set_what_we_call_you('test_prereq_setter')
+
+        mobile_prereq_setter.save()
+
+
+        related1.set_mobile_id(mobile_prereq_setter.get_id())
+        related1.set_internal_name('test_internal_name')
+        related1.set_item_type('test_item_type')
+        # Create prerequisite Item for item_id
+
+        item_prereq_setter = Item()
+
+        item_prereq_setter.set_internal_name('test_prereq_setter')
+
+        item_prereq_setter.set_item_type('test_prereq_setter')
+
+        item_prereq_setter.save()
+
+
+        related1.set_item_id(item_prereq_setter.get_id())
         related1.save()
 
         # Create parent
         parent = InventoryEntry()
+        parent.set_inventory_id(1)
+        # Create prerequisite Item for item_id
+
+        item_prereq_setter = Item()
+
+        item_prereq_setter.set_internal_name('test_prereq_setter')
+
+        item_prereq_setter.set_item_type('test_prereq_setter')
+
+        item_prereq_setter.save()
+
+
+        parent.set_item_id(item_prereq_setter.get_id())
+        parent.set_quantity(1.0)
 
         # Use setter
         parent.set_mobile_item(related1)
@@ -912,6 +1212,8 @@ class TestInventoryEntryRelationships(unittest.TestCase):
     def test_dirty_tracking_saved_model(self):
         """Test that saved models are marked clean."""
         model = InventoryEntry()
+        model.set_inventory_id(1)
+        model.set_item_id(1)
         model.set_quantity(1.0)
         model.save()
         self.assertFalse(model._dirty)
@@ -919,6 +1221,8 @@ class TestInventoryEntryRelationships(unittest.TestCase):
     def test_dirty_tracking_setter(self):
         """Test that setters mark model dirty."""
         model = InventoryEntry()
+        model.set_inventory_id(1)
+        model.set_item_id(1)
         model.set_quantity(1.0)
         model.save()
         self.assertFalse(model._dirty)
@@ -929,6 +1233,8 @@ class TestInventoryEntryRelationships(unittest.TestCase):
     def test_dirty_tracking_skip_save(self):
         """Test that clean models skip save operation."""
         model = InventoryEntry()
+        model.set_inventory_id(1)
+        model.set_item_id(1)
         model.set_quantity(1.0)
         model.save()
         self.assertFalse(model._dirty)
@@ -941,12 +1247,17 @@ class TestInventoryEntryRelationships(unittest.TestCase):
         """Test cascade save for belongs-to relationships."""
         # Create related model (unsaved)
         related = Inventory()
+        related.set_owner_id(1)
         related.set_max_entries(1)
+        related.set_max_volume(1.0)
         self.assertTrue(related._dirty)
         self.assertIsNone(related.get_id())
 
         # Create parent (unsaved)
         parent = InventoryEntry()
+        parent.set_inventory_id(1)
+        parent.set_item_id(1)
+        parent.set_quantity(1.0)
         parent.set_inventory(related)
 
         # Save parent with cascade
@@ -975,7 +1286,9 @@ class TestInventoryOwnerRelationships(unittest.TestCase):
         """Test inventory relationship basic getter."""
         # Create related model
         related = Inventory()
+        related.set_owner_id(1)
         related.set_max_entries(1)
+        related.set_max_volume(1.0)
         related.save()
 
         # Create parent and set FK
@@ -998,11 +1311,14 @@ class TestInventoryOwnerRelationships(unittest.TestCase):
         """Test inventory relationship setter."""
         # Create related models
         related1 = Inventory()
+        related1.set_owner_id(1)
         related1.set_max_entries(1)
+        related1.set_max_volume(1.0)
         related1.save()
 
         # Create parent
         parent = InventoryOwner()
+        parent.set_inventory_id(1)
 
         # Use setter
         parent.set_inventory(related1)
@@ -1027,6 +1343,7 @@ class TestInventoryOwnerRelationships(unittest.TestCase):
 
         # Create parent and set FK
         parent = InventoryOwner()
+        parent.set_inventory_id(1)
         parent.set_mobile_id(related.get_id())
         parent.save()
 
@@ -1045,12 +1362,13 @@ class TestInventoryOwnerRelationships(unittest.TestCase):
         """Test mobile relationship setter."""
         # Create related models
         related1 = Mobile()
-        related1.set_mobile_type('test_mobile_type_1')
-        related1.set_what_we_call_you('test_what_we_call_you_1')
+        related1.set_mobile_type('test_mobile_type')
+        related1.set_what_we_call_you('test_what_we_call_you')
         related1.save()
 
         # Create parent
         parent = InventoryOwner()
+        parent.set_inventory_id(1)
 
         # Use setter
         parent.set_mobile(related1)
@@ -1075,6 +1393,7 @@ class TestInventoryOwnerRelationships(unittest.TestCase):
 
         # Create parent and set FK
         parent = InventoryOwner()
+        parent.set_inventory_id(1)
         parent.set_item_id(related.get_id())
         parent.save()
 
@@ -1093,12 +1412,13 @@ class TestInventoryOwnerRelationships(unittest.TestCase):
         """Test item relationship setter."""
         # Create related models
         related1 = Item()
-        related1.set_internal_name('test_internal_name_1')
-        related1.set_item_type('test_item_type_1')
+        related1.set_internal_name('test_internal_name')
+        related1.set_item_type('test_item_type')
         related1.save()
 
         # Create parent
         parent = InventoryOwner()
+        parent.set_inventory_id(1)
 
         # Use setter
         parent.set_item(related1)
@@ -1127,6 +1447,7 @@ class TestInventoryOwnerRelationships(unittest.TestCase):
 
         # Create parent and set FK
         parent = InventoryOwner()
+        parent.set_inventory_id(1)
         parent.set_player_id(related.get_id())
         parent.save()
 
@@ -1145,16 +1466,17 @@ class TestInventoryOwnerRelationships(unittest.TestCase):
         """Test player relationship setter."""
         # Create related models
         related1 = Player()
-        related1.set_full_name('test_full_name_1')
-        related1.set_what_we_call_you('test_what_we_call_you_1')
-        related1.set_security_token('test_security_token_1')
+        related1.set_full_name('test_full_name')
+        related1.set_what_we_call_you('test_what_we_call_you')
+        related1.set_security_token('test_security_token')
         related1.set_over_13(1)
         related1.set_year_of_birth(1)
-        related1.set_email('test_email_1')
+        related1.set_email('test_email')
         related1.save()
 
         # Create parent
         parent = InventoryOwner()
+        parent.set_inventory_id(1)
 
         # Use setter
         parent.set_player(related1)
@@ -1172,12 +1494,15 @@ class TestInventoryOwnerRelationships(unittest.TestCase):
         """Test cascade save for belongs-to relationships."""
         # Create related model (unsaved)
         related = Inventory()
+        related.set_owner_id(1)
         related.set_max_entries(1)
+        related.set_max_volume(1.0)
         self.assertTrue(related._dirty)
         self.assertIsNone(related.get_id())
 
         # Create parent (unsaved)
         parent = InventoryOwner()
+        parent.set_inventory_id(1)
         parent.set_inventory(related)
 
         # Save parent with cascade
@@ -1207,6 +1532,8 @@ class TestItemBlueprintComponentRelationships(unittest.TestCase):
 
         # Create parent and set FK
         parent = ItemBlueprintComponent()
+        parent.set_component_item_id(1)
+        parent.set_ratio(1.0)
         parent.set_item_blueprint_id(related.get_id())
         parent.save()
 
@@ -1230,6 +1557,18 @@ class TestItemBlueprintComponentRelationships(unittest.TestCase):
 
         # Create parent
         parent = ItemBlueprintComponent()
+        # Create prerequisite ItemBlueprint for item_blueprint_id
+
+        item_blueprint_prereq_setter = ItemBlueprint()
+
+        item_blueprint_prereq_setter.set_bake_time_ms(1)
+
+        item_blueprint_prereq_setter.save()
+
+
+        parent.set_item_blueprint_id(item_blueprint_prereq_setter.get_id())
+        parent.set_component_item_id(1)
+        parent.set_ratio(1.0)
 
         # Use setter
         parent.set_item_blueprint(related1)
@@ -1251,6 +1590,8 @@ class TestItemBlueprintComponentRelationships(unittest.TestCase):
     def test_dirty_tracking_saved_model(self):
         """Test that saved models are marked clean."""
         model = ItemBlueprintComponent()
+        model.set_item_blueprint_id(1)
+        model.set_component_item_id(1)
         model.set_ratio(1.0)
         model.save()
         self.assertFalse(model._dirty)
@@ -1258,6 +1599,8 @@ class TestItemBlueprintComponentRelationships(unittest.TestCase):
     def test_dirty_tracking_setter(self):
         """Test that setters mark model dirty."""
         model = ItemBlueprintComponent()
+        model.set_item_blueprint_id(1)
+        model.set_component_item_id(1)
         model.set_ratio(1.0)
         model.save()
         self.assertFalse(model._dirty)
@@ -1268,6 +1611,8 @@ class TestItemBlueprintComponentRelationships(unittest.TestCase):
     def test_dirty_tracking_skip_save(self):
         """Test that clean models skip save operation."""
         model = ItemBlueprintComponent()
+        model.set_item_blueprint_id(1)
+        model.set_component_item_id(1)
         model.set_ratio(1.0)
         model.save()
         self.assertFalse(model._dirty)
@@ -1286,6 +1631,9 @@ class TestItemBlueprintComponentRelationships(unittest.TestCase):
 
         # Create parent (unsaved)
         parent = ItemBlueprintComponent()
+        parent.set_item_blueprint_id(1)
+        parent.set_component_item_id(1)
+        parent.set_ratio(1.0)
         parent.set_item_blueprint(related)
 
         # Save parent with cascade
@@ -1322,11 +1670,13 @@ class TestItemBlueprintRelationships(unittest.TestCase):
         child1 = ItemBlueprintComponent()
         child1.set_item_blueprint_id(parent.get_id())
         child1.set_component_item_id(1)
+        child1.set_ratio(1.0)
         child1.save()
 
         child2 = ItemBlueprintComponent()
         child2.set_item_blueprint_id(parent.get_id())
         child2.set_component_item_id(1)
+        child2.set_ratio(1.0)
         child2.save()
 
         # Test getter (eager mode)
@@ -1356,6 +1706,7 @@ class TestItemBlueprintRelationships(unittest.TestCase):
         child = ItemBlueprintComponent()
         child.set_item_blueprint_id(parent.get_id())
         child.set_component_item_id(1)
+        child.set_ratio(1.0)
         child.save()
 
         # Test lazy mode
@@ -1437,11 +1788,39 @@ class TestItemRelationships(unittest.TestCase):
 
         # Create related records
         child1 = AttributeOwner()
-        child1.set_attribute_id(attribute_prereq.get_id())
+        child1.set_item_id(parent.get_id())
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_child1 = Attribute()
+
+        attribute_prereq_child1.set_internal_name('test_prereq_child1')
+
+        attribute_prereq_child1.set_visible(1)
+
+        attribute_prereq_child1.set_attribute_type('test_prereq_child1')
+
+        attribute_prereq_child1.save()
+
+
+        child1.set_attribute_id(attribute_prereq_child1.get_id())
         child1.save()
 
         child2 = AttributeOwner()
-        child2.set_attribute_id(attribute_prereq.get_id())
+        child2.set_item_id(parent.get_id())
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_child2 = Attribute()
+
+        attribute_prereq_child2.set_internal_name('test_prereq_child2')
+
+        attribute_prereq_child2.set_visible(1)
+
+        attribute_prereq_child2.set_attribute_type('test_prereq_child2')
+
+        attribute_prereq_child2.save()
+
+
+        child2.set_attribute_id(attribute_prereq_child2.get_id())
         child2.save()
 
         # Test getter (eager mode)
@@ -1483,7 +1862,21 @@ class TestItemRelationships(unittest.TestCase):
 
         # Create child
         child = AttributeOwner()
-        child.set_attribute_id(attribute_prereq_lazy.get_id())
+        child.set_item_id(parent.get_id())
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_child_lazy = Attribute()
+
+        attribute_prereq_child_lazy.set_internal_name('test_prereq_child_lazy')
+
+        attribute_prereq_child_lazy.set_visible(1)
+
+        attribute_prereq_child_lazy.set_attribute_type('test_prereq_child_lazy')
+
+        attribute_prereq_child_lazy.save()
+
+
+        child.set_attribute_id(attribute_prereq_child_lazy.get_id())
         child.save()
 
         # Test lazy mode
@@ -1507,13 +1900,15 @@ class TestItemRelationships(unittest.TestCase):
 
         # Create related records
         child1 = InventoryEntry()
-        child1.set_inventory_id(1)
         child1.set_item_id(parent.get_id())
+        child1.set_inventory_id(1)
+        child1.set_quantity(1.0)
         child1.save()
 
         child2 = InventoryEntry()
-        child2.set_inventory_id(1)
         child2.set_item_id(parent.get_id())
+        child2.set_inventory_id(1)
+        child2.set_quantity(1.0)
         child2.save()
 
         # Test getter (eager mode)
@@ -1542,8 +1937,9 @@ class TestItemRelationships(unittest.TestCase):
 
         # Create child
         child = InventoryEntry()
-        child.set_inventory_id(1)
         child.set_item_id(parent.get_id())
+        child.set_inventory_id(1)
+        child.set_quantity(1.0)
         child.save()
 
         # Test lazy mode
@@ -1567,10 +1963,12 @@ class TestItemRelationships(unittest.TestCase):
 
         # Create related records
         child1 = InventoryOwner()
+        child1.set_item_id(parent.get_id())
         child1.set_inventory_id(1)
         child1.save()
 
         child2 = InventoryOwner()
+        child2.set_item_id(parent.get_id())
         child2.set_inventory_id(1)
         child2.save()
 
@@ -1600,6 +1998,7 @@ class TestItemRelationships(unittest.TestCase):
 
         # Create child
         child = InventoryOwner()
+        child.set_item_id(parent.get_id())
         child.set_inventory_id(1)
         child.save()
 
@@ -1635,17 +2034,39 @@ class TestItemRelationships(unittest.TestCase):
 
         # Create related records
         child1 = MobileItem()
-        child1.set_mobile_id(mobile_prereq.get_id())
-        child1.set_internal_name('test_internal_name_1')
-        child1.set_item_type('test_item_type_1')
         child1.set_item_id(parent.get_id())
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_child1 = Mobile()
+
+        mobile_prereq_child1.set_mobile_type('test_prereq_child1')
+
+        mobile_prereq_child1.set_what_we_call_you('test_prereq_child1')
+
+        mobile_prereq_child1.save()
+
+
+        child1.set_mobile_id(mobile_prereq_child1.get_id())
+        child1.set_internal_name('test_internal_name')
+        child1.set_item_type('test_item_type')
         child1.save()
 
         child2 = MobileItem()
-        child2.set_mobile_id(mobile_prereq.get_id())
-        child2.set_internal_name('test_internal_name_2')
-        child2.set_item_type('test_item_type_2')
         child2.set_item_id(parent.get_id())
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_child2 = Mobile()
+
+        mobile_prereq_child2.set_mobile_type('test_prereq_child2')
+
+        mobile_prereq_child2.set_what_we_call_you('test_prereq_child2')
+
+        mobile_prereq_child2.save()
+
+
+        child2.set_mobile_id(mobile_prereq_child2.get_id())
+        child2.set_internal_name('test_internal_name')
+        child2.set_item_type('test_item_type')
         child2.save()
 
         # Test getter (eager mode)
@@ -1685,10 +2106,21 @@ class TestItemRelationships(unittest.TestCase):
 
         # Create child
         child = MobileItem()
-        child.set_mobile_id(mobile_prereq_lazy.get_id())
+        child.set_item_id(parent.get_id())
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_child_lazy = Mobile()
+
+        mobile_prereq_child_lazy.set_mobile_type('test_prereq_child_lazy')
+
+        mobile_prereq_child_lazy.set_what_we_call_you('test_prereq_child_lazy')
+
+        mobile_prereq_child_lazy.save()
+
+
+        child.set_mobile_id(mobile_prereq_child_lazy.get_id())
         child.set_internal_name('test_internal_name')
         child.set_item_type('test_item_type')
-        child.set_item_id(parent.get_id())
         child.save()
 
         # Test lazy mode
@@ -1712,13 +2144,15 @@ class TestItemRelationships(unittest.TestCase):
 
         # Create related records
         child1 = Mobile()
-        child1.set_mobile_type('test_mobile_type_1')
-        child1.set_what_we_call_you('test_what_we_call_you_1')
+        child1.set_owner_item_id(parent.get_id())
+        child1.set_mobile_type('test_mobile_type')
+        child1.set_what_we_call_you('test_what_we_call_you')
         child1.save()
 
         child2 = Mobile()
-        child2.set_mobile_type('test_mobile_type_2')
-        child2.set_what_we_call_you('test_what_we_call_you_2')
+        child2.set_owner_item_id(parent.get_id())
+        child2.set_mobile_type('test_mobile_type')
+        child2.set_what_we_call_you('test_what_we_call_you')
         child2.save()
 
         # Test getter (eager mode)
@@ -1747,6 +2181,7 @@ class TestItemRelationships(unittest.TestCase):
 
         # Create child
         child = Mobile()
+        child.set_owner_item_id(parent.get_id())
         child.set_mobile_type('test_mobile_type')
         child.set_what_we_call_you('test_what_we_call_you')
         child.save()
@@ -1813,8 +2248,32 @@ class TestMobileItemAttributeRelationships(unittest.TestCase):
         """Test mobile_item relationship basic getter."""
         # Create related model
         related = MobileItem()
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_basic = Mobile()
+
+        mobile_prereq_basic.set_mobile_type('test_prereq_basic')
+
+        mobile_prereq_basic.set_what_we_call_you('test_prereq_basic')
+
+        mobile_prereq_basic.save()
+
+
+        related.set_mobile_id(mobile_prereq_basic.get_id())
         related.set_internal_name('test_internal_name')
         related.set_item_type('test_item_type')
+        # Create prerequisite Item for item_id
+
+        item_prereq_basic = Item()
+
+        item_prereq_basic.set_internal_name('test_prereq_basic')
+
+        item_prereq_basic.set_item_type('test_prereq_basic')
+
+        item_prereq_basic.save()
+
+
+        related.set_item_id(item_prereq_basic.get_id())
         related.save()
 
         # Create parent and set FK
@@ -1840,12 +2299,52 @@ class TestMobileItemAttributeRelationships(unittest.TestCase):
         """Test mobile_item relationship setter."""
         # Create related models
         related1 = MobileItem()
-        related1.set_internal_name('test_internal_name_1')
-        related1.set_item_type('test_item_type_1')
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_setter = Mobile()
+
+        mobile_prereq_setter.set_mobile_type('test_prereq_setter')
+
+        mobile_prereq_setter.set_what_we_call_you('test_prereq_setter')
+
+        mobile_prereq_setter.save()
+
+
+        related1.set_mobile_id(mobile_prereq_setter.get_id())
+        related1.set_internal_name('test_internal_name')
+        related1.set_item_type('test_item_type')
+        # Create prerequisite Item for item_id
+
+        item_prereq_setter = Item()
+
+        item_prereq_setter.set_internal_name('test_prereq_setter')
+
+        item_prereq_setter.set_item_type('test_prereq_setter')
+
+        item_prereq_setter.save()
+
+
+        related1.set_item_id(item_prereq_setter.get_id())
         related1.save()
 
         # Create parent
         parent = MobileItemAttribute()
+        # Create prerequisite MobileItem for mobile_item_id
+
+        mobile_item_prereq_setter = MobileItem()
+
+        mobile_item_prereq_setter.set_mobile_id(1)
+
+        mobile_item_prereq_setter.set_internal_name('test_prereq_setter')
+
+        mobile_item_prereq_setter.set_item_type('test_prereq_setter')
+
+        mobile_item_prereq_setter.set_item_id(1)
+
+        mobile_item_prereq_setter.save()
+
+
+        parent.set_mobile_item_id(mobile_item_prereq_setter.get_id())
         parent.set_internal_name('test_internal_name')
         parent.set_visible(1)
         parent.set_attribute_type('test_attribute_type')
@@ -1870,6 +2369,7 @@ class TestMobileItemAttributeRelationships(unittest.TestCase):
     def test_dirty_tracking_saved_model(self):
         """Test that saved models are marked clean."""
         model = MobileItemAttribute()
+        model.set_mobile_item_id(1)
         model.set_internal_name('test_internal_name')
         model.set_visible(1)
         model.set_attribute_type('test_attribute_type')
@@ -1879,6 +2379,7 @@ class TestMobileItemAttributeRelationships(unittest.TestCase):
     def test_dirty_tracking_setter(self):
         """Test that setters mark model dirty."""
         model = MobileItemAttribute()
+        model.set_mobile_item_id(1)
         model.set_internal_name('test_internal_name')
         model.set_visible(1)
         model.set_attribute_type('test_attribute_type')
@@ -1891,6 +2392,7 @@ class TestMobileItemAttributeRelationships(unittest.TestCase):
     def test_dirty_tracking_skip_save(self):
         """Test that clean models skip save operation."""
         model = MobileItemAttribute()
+        model.set_mobile_item_id(1)
         model.set_internal_name('test_internal_name')
         model.set_visible(1)
         model.set_attribute_type('test_attribute_type')
@@ -1905,13 +2407,16 @@ class TestMobileItemAttributeRelationships(unittest.TestCase):
         """Test cascade save for belongs-to relationships."""
         # Create related model (unsaved)
         related = MobileItem()
+        related.set_mobile_id(1)
         related.set_internal_name('test_internal_name')
         related.set_item_type('test_item_type')
+        related.set_item_id(1)
         self.assertTrue(related._dirty)
         self.assertIsNone(related.get_id())
 
         # Create parent (unsaved)
         parent = MobileItemAttribute()
+        parent.set_mobile_item_id(1)
         parent.set_internal_name('test_internal_name')
         parent.set_visible(1)
         parent.set_attribute_type('test_attribute_type')
@@ -1944,6 +2449,8 @@ class TestMobileItemBlueprintComponentRelationships(unittest.TestCase):
 
         # Create parent and set FK
         parent = MobileItemBlueprintComponent()
+        parent.set_component_item_id(1)
+        parent.set_ratio(1.0)
         parent.set_item_blueprint_id(related.get_id())
         parent.save()
 
@@ -1967,6 +2474,18 @@ class TestMobileItemBlueprintComponentRelationships(unittest.TestCase):
 
         # Create parent
         parent = MobileItemBlueprintComponent()
+        # Create prerequisite ItemBlueprint for item_blueprint_id
+
+        item_blueprint_prereq_setter = ItemBlueprint()
+
+        item_blueprint_prereq_setter.set_bake_time_ms(1)
+
+        item_blueprint_prereq_setter.save()
+
+
+        parent.set_item_blueprint_id(item_blueprint_prereq_setter.get_id())
+        parent.set_component_item_id(1)
+        parent.set_ratio(1.0)
 
         # Use setter
         parent.set_item_blueprint(related1)
@@ -1988,6 +2507,8 @@ class TestMobileItemBlueprintComponentRelationships(unittest.TestCase):
     def test_dirty_tracking_saved_model(self):
         """Test that saved models are marked clean."""
         model = MobileItemBlueprintComponent()
+        model.set_item_blueprint_id(1)
+        model.set_component_item_id(1)
         model.set_ratio(1.0)
         model.save()
         self.assertFalse(model._dirty)
@@ -1995,6 +2516,8 @@ class TestMobileItemBlueprintComponentRelationships(unittest.TestCase):
     def test_dirty_tracking_setter(self):
         """Test that setters mark model dirty."""
         model = MobileItemBlueprintComponent()
+        model.set_item_blueprint_id(1)
+        model.set_component_item_id(1)
         model.set_ratio(1.0)
         model.save()
         self.assertFalse(model._dirty)
@@ -2005,6 +2528,8 @@ class TestMobileItemBlueprintComponentRelationships(unittest.TestCase):
     def test_dirty_tracking_skip_save(self):
         """Test that clean models skip save operation."""
         model = MobileItemBlueprintComponent()
+        model.set_item_blueprint_id(1)
+        model.set_component_item_id(1)
         model.set_ratio(1.0)
         model.save()
         self.assertFalse(model._dirty)
@@ -2023,6 +2548,9 @@ class TestMobileItemBlueprintComponentRelationships(unittest.TestCase):
 
         # Create parent (unsaved)
         parent = MobileItemBlueprintComponent()
+        parent.set_item_blueprint_id(1)
+        parent.set_component_item_id(1)
+        parent.set_ratio(1.0)
         parent.set_item_blueprint(related)
 
         # Save parent with cascade
@@ -2055,11 +2583,13 @@ class TestMobileItemBlueprintRelationships(unittest.TestCase):
         child1 = MobileItemBlueprintComponent()
         child1.set_item_blueprint_id(parent.get_id())
         child1.set_component_item_id(1)
+        child1.set_ratio(1.0)
         child1.save()
 
         child2 = MobileItemBlueprintComponent()
         child2.set_item_blueprint_id(parent.get_id())
         child2.set_component_item_id(1)
+        child2.set_ratio(1.0)
         child2.save()
 
         # Test getter (eager mode)
@@ -2089,6 +2619,7 @@ class TestMobileItemBlueprintRelationships(unittest.TestCase):
         child = MobileItemBlueprintComponent()
         child.set_item_blueprint_id(parent.get_id())
         child.set_component_item_id(1)
+        child.set_ratio(1.0)
         child.save()
 
         # Test lazy mode
@@ -2154,6 +2685,18 @@ class TestMobileItemRelationships(unittest.TestCase):
         parent = MobileItem()
         parent.set_internal_name('test_internal_name')
         parent.set_item_type('test_item_type')
+        # Create prerequisite Item for item_id
+
+        item_prereq_basic = Item()
+
+        item_prereq_basic.set_internal_name('test_prereq_basic')
+
+        item_prereq_basic.set_item_type('test_prereq_basic')
+
+        item_prereq_basic.save()
+
+
+        parent.set_item_id(item_prereq_basic.get_id())
         parent.set_mobile_id(related.get_id())
         parent.save()
 
@@ -2172,14 +2715,38 @@ class TestMobileItemRelationships(unittest.TestCase):
         """Test mobile relationship setter."""
         # Create related models
         related1 = Mobile()
-        related1.set_mobile_type('test_mobile_type_1')
-        related1.set_what_we_call_you('test_what_we_call_you_1')
+        related1.set_mobile_type('test_mobile_type')
+        related1.set_what_we_call_you('test_what_we_call_you')
         related1.save()
 
         # Create parent
         parent = MobileItem()
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_setter = Mobile()
+
+        mobile_prereq_setter.set_mobile_type('test_prereq_setter')
+
+        mobile_prereq_setter.set_what_we_call_you('test_prereq_setter')
+
+        mobile_prereq_setter.save()
+
+
+        parent.set_mobile_id(mobile_prereq_setter.get_id())
         parent.set_internal_name('test_internal_name')
         parent.set_item_type('test_item_type')
+        # Create prerequisite Item for item_id
+
+        item_prereq_setter = Item()
+
+        item_prereq_setter.set_internal_name('test_prereq_setter')
+
+        item_prereq_setter.set_item_type('test_prereq_setter')
+
+        item_prereq_setter.save()
+
+
+        parent.set_item_id(item_prereq_setter.get_id())
 
         # Use setter
         parent.set_mobile(related1)
@@ -2204,6 +2771,18 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         # Create parent and set FK
         parent = MobileItem()
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_basic = Mobile()
+
+        mobile_prereq_basic.set_mobile_type('test_prereq_basic')
+
+        mobile_prereq_basic.set_what_we_call_you('test_prereq_basic')
+
+        mobile_prereq_basic.save()
+
+
+        parent.set_mobile_id(mobile_prereq_basic.get_id())
         parent.set_internal_name('test_internal_name')
         parent.set_item_type('test_item_type')
         parent.set_item_id(related.get_id())
@@ -2224,14 +2803,38 @@ class TestMobileItemRelationships(unittest.TestCase):
         """Test item relationship setter."""
         # Create related models
         related1 = Item()
-        related1.set_internal_name('test_internal_name_1')
-        related1.set_item_type('test_item_type_1')
+        related1.set_internal_name('test_internal_name')
+        related1.set_item_type('test_item_type')
         related1.save()
 
         # Create parent
         parent = MobileItem()
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_setter = Mobile()
+
+        mobile_prereq_setter.set_mobile_type('test_prereq_setter')
+
+        mobile_prereq_setter.set_what_we_call_you('test_prereq_setter')
+
+        mobile_prereq_setter.save()
+
+
+        parent.set_mobile_id(mobile_prereq_setter.get_id())
         parent.set_internal_name('test_internal_name')
         parent.set_item_type('test_item_type')
+        # Create prerequisite Item for item_id
+
+        item_prereq_setter = Item()
+
+        item_prereq_setter.set_internal_name('test_prereq_setter')
+
+        item_prereq_setter.set_item_type('test_prereq_setter')
+
+        item_prereq_setter.save()
+
+
+        parent.set_item_id(item_prereq_setter.get_id())
 
         # Use setter
         parent.set_item(related1)
@@ -2249,8 +2852,32 @@ class TestMobileItemRelationships(unittest.TestCase):
         """Test inventory_entries relationship basic getter."""
         # Create parent
         parent = MobileItem()
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_parent = Mobile()
+
+        mobile_prereq_parent.set_mobile_type('test_prereq_parent')
+
+        mobile_prereq_parent.set_what_we_call_you('test_prereq_parent')
+
+        mobile_prereq_parent.save()
+
+
+        parent.set_mobile_id(mobile_prereq_parent.get_id())
         parent.set_internal_name('test_internal_name')
         parent.set_item_type('test_item_type')
+        # Create prerequisite Item for item_id
+
+        item_prereq_parent = Item()
+
+        item_prereq_parent.set_internal_name('test_prereq_parent')
+
+        item_prereq_parent.set_item_type('test_prereq_parent')
+
+        item_prereq_parent.save()
+
+
+        parent.set_item_id(item_prereq_parent.get_id())
         parent.save()
 
 
@@ -2267,13 +2894,39 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         # Create related records
         child1 = InventoryEntry()
+        child1.set_mobile_item_id(parent.get_id())
         child1.set_inventory_id(1)
-        child1.set_item_id(item_prereq.get_id())
+        # Create prerequisite Item for item_id
+
+        item_prereq_child1 = Item()
+
+        item_prereq_child1.set_internal_name('test_prereq_child1')
+
+        item_prereq_child1.set_item_type('test_prereq_child1')
+
+        item_prereq_child1.save()
+
+
+        child1.set_item_id(item_prereq_child1.get_id())
+        child1.set_quantity(1.0)
         child1.save()
 
         child2 = InventoryEntry()
+        child2.set_mobile_item_id(parent.get_id())
         child2.set_inventory_id(1)
-        child2.set_item_id(item_prereq.get_id())
+        # Create prerequisite Item for item_id
+
+        item_prereq_child2 = Item()
+
+        item_prereq_child2.set_internal_name('test_prereq_child2')
+
+        item_prereq_child2.set_item_type('test_prereq_child2')
+
+        item_prereq_child2.save()
+
+
+        child2.set_item_id(item_prereq_child2.get_id())
+        child2.set_quantity(1.0)
         child2.save()
 
         # Test getter (eager mode)
@@ -2295,8 +2948,32 @@ class TestMobileItemRelationships(unittest.TestCase):
         """Test inventory_entries relationship lazy loading."""
         # Create parent with children
         parent = MobileItem()
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_parent_lazy = Mobile()
+
+        mobile_prereq_parent_lazy.set_mobile_type('test_prereq_parent_lazy')
+
+        mobile_prereq_parent_lazy.set_what_we_call_you('test_prereq_parent_lazy')
+
+        mobile_prereq_parent_lazy.save()
+
+
+        parent.set_mobile_id(mobile_prereq_parent_lazy.get_id())
         parent.set_internal_name('test_internal_name')
         parent.set_item_type('test_item_type')
+        # Create prerequisite Item for item_id
+
+        item_prereq_parent_lazy = Item()
+
+        item_prereq_parent_lazy.set_internal_name('test_prereq_parent_lazy')
+
+        item_prereq_parent_lazy.set_item_type('test_prereq_parent_lazy')
+
+        item_prereq_parent_lazy.save()
+
+
+        parent.set_item_id(item_prereq_parent_lazy.get_id())
         parent.save()
 
 
@@ -2313,8 +2990,21 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         # Create child
         child = InventoryEntry()
+        child.set_mobile_item_id(parent.get_id())
         child.set_inventory_id(1)
-        child.set_item_id(item_prereq_lazy.get_id())
+        # Create prerequisite Item for item_id
+
+        item_prereq_child_lazy = Item()
+
+        item_prereq_child_lazy.set_internal_name('test_prereq_child_lazy')
+
+        item_prereq_child_lazy.set_item_type('test_prereq_child_lazy')
+
+        item_prereq_child_lazy.save()
+
+
+        child.set_item_id(item_prereq_child_lazy.get_id())
+        child.set_quantity(1.0)
         child.save()
 
         # Test lazy mode
@@ -2331,24 +3021,48 @@ class TestMobileItemRelationships(unittest.TestCase):
         """Test mobile_item_attributes relationship basic getter."""
         # Create parent
         parent = MobileItem()
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_parent = Mobile()
+
+        mobile_prereq_parent.set_mobile_type('test_prereq_parent')
+
+        mobile_prereq_parent.set_what_we_call_you('test_prereq_parent')
+
+        mobile_prereq_parent.save()
+
+
+        parent.set_mobile_id(mobile_prereq_parent.get_id())
         parent.set_internal_name('test_internal_name')
         parent.set_item_type('test_item_type')
+        # Create prerequisite Item for item_id
+
+        item_prereq_parent = Item()
+
+        item_prereq_parent.set_internal_name('test_prereq_parent')
+
+        item_prereq_parent.set_item_type('test_prereq_parent')
+
+        item_prereq_parent.save()
+
+
+        parent.set_item_id(item_prereq_parent.get_id())
         parent.save()
 
 
         # Create related records
         child1 = MobileItemAttribute()
         child1.set_mobile_item_id(parent.get_id())
-        child1.set_internal_name('test_internal_name_1')
+        child1.set_internal_name('test_internal_name')
         child1.set_visible(1)
-        child1.set_attribute_type('test_attribute_type_1')
+        child1.set_attribute_type('test_attribute_type')
         child1.save()
 
         child2 = MobileItemAttribute()
         child2.set_mobile_item_id(parent.get_id())
-        child2.set_internal_name('test_internal_name_2')
-        child2.set_visible(2)
-        child2.set_attribute_type('test_attribute_type_2')
+        child2.set_internal_name('test_internal_name')
+        child2.set_visible(1)
+        child2.set_attribute_type('test_attribute_type')
         child2.save()
 
         # Test getter (eager mode)
@@ -2370,8 +3084,32 @@ class TestMobileItemRelationships(unittest.TestCase):
         """Test mobile_item_attributes relationship lazy loading."""
         # Create parent with children
         parent = MobileItem()
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_parent_lazy = Mobile()
+
+        mobile_prereq_parent_lazy.set_mobile_type('test_prereq_parent_lazy')
+
+        mobile_prereq_parent_lazy.set_what_we_call_you('test_prereq_parent_lazy')
+
+        mobile_prereq_parent_lazy.save()
+
+
+        parent.set_mobile_id(mobile_prereq_parent_lazy.get_id())
         parent.set_internal_name('test_internal_name')
         parent.set_item_type('test_item_type')
+        # Create prerequisite Item for item_id
+
+        item_prereq_parent_lazy = Item()
+
+        item_prereq_parent_lazy.set_internal_name('test_prereq_parent_lazy')
+
+        item_prereq_parent_lazy.set_item_type('test_prereq_parent_lazy')
+
+        item_prereq_parent_lazy.save()
+
+
+        parent.set_item_id(item_prereq_parent_lazy.get_id())
         parent.save()
 
 
@@ -2400,16 +3138,20 @@ class TestMobileItemRelationships(unittest.TestCase):
     def test_dirty_tracking_saved_model(self):
         """Test that saved models are marked clean."""
         model = MobileItem()
+        model.set_mobile_id(1)
         model.set_internal_name('test_internal_name')
         model.set_item_type('test_item_type')
+        model.set_item_id(1)
         model.save()
         self.assertFalse(model._dirty)
 
     def test_dirty_tracking_setter(self):
         """Test that setters mark model dirty."""
         model = MobileItem()
+        model.set_mobile_id(1)
         model.set_internal_name('test_internal_name')
         model.set_item_type('test_item_type')
+        model.set_item_id(1)
         model.save()
         self.assertFalse(model._dirty)
 
@@ -2419,8 +3161,10 @@ class TestMobileItemRelationships(unittest.TestCase):
     def test_dirty_tracking_skip_save(self):
         """Test that clean models skip save operation."""
         model = MobileItem()
+        model.set_mobile_id(1)
         model.set_internal_name('test_internal_name')
         model.set_item_type('test_item_type')
+        model.set_item_id(1)
         model.save()
         self.assertFalse(model._dirty)
 
@@ -2439,8 +3183,10 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         # Create parent (unsaved)
         parent = MobileItem()
+        parent.set_mobile_id(1)
         parent.set_internal_name('test_internal_name')
         parent.set_item_type('test_item_type')
+        parent.set_item_id(1)
         parent.set_mobile(related)
 
         # Save parent with cascade
@@ -2495,8 +3241,8 @@ class TestMobileRelationships(unittest.TestCase):
         """Test owner_mobile relationship setter."""
         # Create related models
         related1 = Mobile()
-        related1.set_mobile_type('test_mobile_type_1')
-        related1.set_what_we_call_you('test_what_we_call_you_1')
+        related1.set_mobile_type('test_mobile_type')
+        related1.set_what_we_call_you('test_what_we_call_you')
         related1.save()
 
         # Create parent
@@ -2547,8 +3293,8 @@ class TestMobileRelationships(unittest.TestCase):
         """Test owner_item relationship setter."""
         # Create related models
         related1 = Item()
-        related1.set_internal_name('test_internal_name_1')
-        related1.set_item_type('test_item_type_1')
+        related1.set_internal_name('test_internal_name')
+        related1.set_item_type('test_item_type')
         related1.save()
 
         # Create parent
@@ -2603,12 +3349,12 @@ class TestMobileRelationships(unittest.TestCase):
         """Test owner_player relationship setter."""
         # Create related models
         related1 = Player()
-        related1.set_full_name('test_full_name_1')
-        related1.set_what_we_call_you('test_what_we_call_you_1')
-        related1.set_security_token('test_security_token_1')
+        related1.set_full_name('test_full_name')
+        related1.set_what_we_call_you('test_what_we_call_you')
+        related1.set_security_token('test_security_token')
         related1.set_over_13(1)
         related1.set_year_of_birth(1)
-        related1.set_email('test_email_1')
+        related1.set_email('test_email')
         related1.save()
 
         # Create parent
@@ -2652,11 +3398,39 @@ class TestMobileRelationships(unittest.TestCase):
 
         # Create related records
         child1 = AttributeOwner()
-        child1.set_attribute_id(attribute_prereq.get_id())
+        child1.set_mobile_id(parent.get_id())
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_child1 = Attribute()
+
+        attribute_prereq_child1.set_internal_name('test_prereq_child1')
+
+        attribute_prereq_child1.set_visible(1)
+
+        attribute_prereq_child1.set_attribute_type('test_prereq_child1')
+
+        attribute_prereq_child1.save()
+
+
+        child1.set_attribute_id(attribute_prereq_child1.get_id())
         child1.save()
 
         child2 = AttributeOwner()
-        child2.set_attribute_id(attribute_prereq.get_id())
+        child2.set_mobile_id(parent.get_id())
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_child2 = Attribute()
+
+        attribute_prereq_child2.set_internal_name('test_prereq_child2')
+
+        attribute_prereq_child2.set_visible(1)
+
+        attribute_prereq_child2.set_attribute_type('test_prereq_child2')
+
+        attribute_prereq_child2.save()
+
+
+        child2.set_attribute_id(attribute_prereq_child2.get_id())
         child2.save()
 
         # Test getter (eager mode)
@@ -2698,7 +3472,21 @@ class TestMobileRelationships(unittest.TestCase):
 
         # Create child
         child = AttributeOwner()
-        child.set_attribute_id(attribute_prereq_lazy.get_id())
+        child.set_mobile_id(parent.get_id())
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_child_lazy = Attribute()
+
+        attribute_prereq_child_lazy.set_internal_name('test_prereq_child_lazy')
+
+        attribute_prereq_child_lazy.set_visible(1)
+
+        attribute_prereq_child_lazy.set_attribute_type('test_prereq_child_lazy')
+
+        attribute_prereq_child_lazy.save()
+
+
+        child.set_attribute_id(attribute_prereq_child_lazy.get_id())
         child.save()
 
         # Test lazy mode
@@ -2722,10 +3510,12 @@ class TestMobileRelationships(unittest.TestCase):
 
         # Create related records
         child1 = InventoryOwner()
+        child1.set_mobile_id(parent.get_id())
         child1.set_inventory_id(1)
         child1.save()
 
         child2 = InventoryOwner()
+        child2.set_mobile_id(parent.get_id())
         child2.set_inventory_id(1)
         child2.save()
 
@@ -2755,6 +3545,7 @@ class TestMobileRelationships(unittest.TestCase):
 
         # Create child
         child = InventoryOwner()
+        child.set_mobile_id(parent.get_id())
         child.set_inventory_id(1)
         child.save()
 
@@ -2791,16 +3582,38 @@ class TestMobileRelationships(unittest.TestCase):
         # Create related records
         child1 = MobileItem()
         child1.set_mobile_id(parent.get_id())
-        child1.set_internal_name('test_internal_name_1')
-        child1.set_item_type('test_item_type_1')
-        child1.set_item_id(item_prereq.get_id())
+        child1.set_internal_name('test_internal_name')
+        child1.set_item_type('test_item_type')
+        # Create prerequisite Item for item_id
+
+        item_prereq_child1 = Item()
+
+        item_prereq_child1.set_internal_name('test_prereq_child1')
+
+        item_prereq_child1.set_item_type('test_prereq_child1')
+
+        item_prereq_child1.save()
+
+
+        child1.set_item_id(item_prereq_child1.get_id())
         child1.save()
 
         child2 = MobileItem()
         child2.set_mobile_id(parent.get_id())
-        child2.set_internal_name('test_internal_name_2')
-        child2.set_item_type('test_item_type_2')
-        child2.set_item_id(item_prereq.get_id())
+        child2.set_internal_name('test_internal_name')
+        child2.set_item_type('test_item_type')
+        # Create prerequisite Item for item_id
+
+        item_prereq_child2 = Item()
+
+        item_prereq_child2.set_internal_name('test_prereq_child2')
+
+        item_prereq_child2.set_item_type('test_prereq_child2')
+
+        item_prereq_child2.save()
+
+
+        child2.set_item_id(item_prereq_child2.get_id())
         child2.save()
 
         # Test getter (eager mode)
@@ -2843,7 +3656,18 @@ class TestMobileRelationships(unittest.TestCase):
         child.set_mobile_id(parent.get_id())
         child.set_internal_name('test_internal_name')
         child.set_item_type('test_item_type')
-        child.set_item_id(item_prereq_lazy.get_id())
+        # Create prerequisite Item for item_id
+
+        item_prereq_child_lazy = Item()
+
+        item_prereq_child_lazy.set_internal_name('test_prereq_child_lazy')
+
+        item_prereq_child_lazy.set_item_type('test_prereq_child_lazy')
+
+        item_prereq_child_lazy.save()
+
+
+        child.set_item_id(item_prereq_child_lazy.get_id())
         child.save()
 
         # Test lazy mode
@@ -2956,11 +3780,39 @@ class TestPlayerRelationships(unittest.TestCase):
 
         # Create related records
         child1 = AttributeOwner()
-        child1.set_attribute_id(attribute_prereq.get_id())
+        child1.set_player_id(parent.get_id())
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_child1 = Attribute()
+
+        attribute_prereq_child1.set_internal_name('test_prereq_child1')
+
+        attribute_prereq_child1.set_visible(1)
+
+        attribute_prereq_child1.set_attribute_type('test_prereq_child1')
+
+        attribute_prereq_child1.save()
+
+
+        child1.set_attribute_id(attribute_prereq_child1.get_id())
         child1.save()
 
         child2 = AttributeOwner()
-        child2.set_attribute_id(attribute_prereq.get_id())
+        child2.set_player_id(parent.get_id())
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_child2 = Attribute()
+
+        attribute_prereq_child2.set_internal_name('test_prereq_child2')
+
+        attribute_prereq_child2.set_visible(1)
+
+        attribute_prereq_child2.set_attribute_type('test_prereq_child2')
+
+        attribute_prereq_child2.save()
+
+
+        child2.set_attribute_id(attribute_prereq_child2.get_id())
         child2.save()
 
         # Test getter (eager mode)
@@ -3006,7 +3858,21 @@ class TestPlayerRelationships(unittest.TestCase):
 
         # Create child
         child = AttributeOwner()
-        child.set_attribute_id(attribute_prereq_lazy.get_id())
+        child.set_player_id(parent.get_id())
+        # Create prerequisite Attribute for attribute_id
+
+        attribute_prereq_child_lazy = Attribute()
+
+        attribute_prereq_child_lazy.set_internal_name('test_prereq_child_lazy')
+
+        attribute_prereq_child_lazy.set_visible(1)
+
+        attribute_prereq_child_lazy.set_attribute_type('test_prereq_child_lazy')
+
+        attribute_prereq_child_lazy.save()
+
+
+        child.set_attribute_id(attribute_prereq_child_lazy.get_id())
         child.save()
 
         # Test lazy mode
@@ -3034,10 +3900,12 @@ class TestPlayerRelationships(unittest.TestCase):
 
         # Create related records
         child1 = InventoryOwner()
+        child1.set_player_id(parent.get_id())
         child1.set_inventory_id(1)
         child1.save()
 
         child2 = InventoryOwner()
+        child2.set_player_id(parent.get_id())
         child2.set_inventory_id(1)
         child2.save()
 
@@ -3071,6 +3939,7 @@ class TestPlayerRelationships(unittest.TestCase):
 
         # Create child
         child = InventoryOwner()
+        child.set_player_id(parent.get_id())
         child.set_inventory_id(1)
         child.save()
 
@@ -3099,14 +3968,16 @@ class TestPlayerRelationships(unittest.TestCase):
 
         # Create related records
         child1 = Mobile()
-        child1.set_mobile_type('test_mobile_type_1')
-        child1.set_what_we_call_you('test_what_we_call_you_1')
+        child1.set_owner_player_id(parent.get_id())
+        child1.set_mobile_type('test_mobile_type')
+        child1.set_what_we_call_you('test_what_we_call_you')
         child1.save()
 
         child2 = Mobile()
-        child2.set_mobile_type('test_mobile_type_2')
-        child2.set_what_we_call_you('test_what_we_call_you_2')
-        child1.save()
+        child2.set_owner_player_id(parent.get_id())
+        child2.set_mobile_type('test_mobile_type')
+        child2.set_what_we_call_you('test_what_we_call_you')
+        child2.save()
 
         # Test getter (1-to-1 relationship)
         result = parent.get_mobile()

@@ -907,26 +907,32 @@ def generate_pivot_owner_methods(
         setattr(self, cache_key, results)
         return results
 
-    def get_{pivot_singular}s(self, reload: bool = False) -> List['{pivot_class}']:
+    def get_{pivot_singular}s(self, reload: bool = False, lazy: bool = False):
         \"\"\"
         Get all {pivot_class} pivot records for this {owner_class}.
-        Returns a list of {pivot_class} objects.
+
+        Args:
+            reload: If True, bypass cache and fetch fresh from database.
+            lazy: If True, return an iterator. If False, return a list.
+
+        Returns:
+            List[{pivot_class}] or Iterator[{pivot_class}]
         \"\"\"
         cache_key = '_{pivot_singular}s_cache'
 
         if not reload and hasattr(self, cache_key):
             cached = getattr(self, cache_key)
             if cached is not None:
-                return cached
+                return iter(cached) if lazy else cached
 
         if self.get_id() is None:
-            return []
+            return iter([]) if lazy else []
 
         results = {pivot_class}.find_by_{owner_fk}(self.get_id())
 
         # Cache results
         setattr(self, cache_key, results)
-        return results
+        return iter(results) if lazy else results
 
     def add_{related_singular}(self, {related_singular}: '{related_class}') -> None:
         \"\"\"
@@ -1039,12 +1045,20 @@ def generate_pivot_owner_methods(
                     )
             cursor.close()
 
-            # Commit deletions
-            self._connection.commit()
-
-            # Add new ones (each will start its own transaction)
+            # Add new ones within the same transaction
             for item in {related_plural}_list:
-                self.add_{related_singular}(item)
+                # Save the related object if needed
+                if item._dirty:
+                    item.save(self._connection)
+
+                # Create pivot record manually to avoid nested transactions
+                pivot = {pivot_class}()
+                pivot.set_{owner_fk}(self.get_id())
+                pivot.set_{related_fk}(item.get_id())
+                pivot.save(self._connection)
+
+            # Commit all operations
+            self._connection.commit()
 
             # Clear cache
             cache_key = '_{related_plural}_cache'
@@ -1945,6 +1959,115 @@ def cleanup_seed_data(seed):
     return code
 
 
+def set_required_fields_for_model(
+    model: Dict[str, Any],
+    all_models: List[Dict[str, Any]],
+    tests: List[str],
+    var_name: str,
+    var_suffix: str = "",
+    skip_column: Optional[str] = None,
+) -> None:
+    """
+    Helper function to set ALL required (NOT NULL) fields for a model.
+    This ensures we never miss required fields in test generation.
+
+    Args:
+        model: The model dictionary containing columns
+        all_models: List of all models for FK prerequisite creation
+        tests: List to append test code to
+        var_name: Variable name of the model instance (e.g., 'parent', 'related1')
+        var_suffix: Suffix for prerequisite variable names
+        skip_column: Optional column name to skip (e.g., the FK we're testing)
+    """
+    for col in model['columns']:
+        if col['name'] == 'id' or col['is_nullable']:
+            continue
+
+        # Skip the column if requested (e.g., FK we're testing)
+        if skip_column and col['name'] == skip_column:
+            continue
+
+        python_type = TypeMapper.get_python_type(col['data_type'])
+
+        # Handle FK columns (ending with _id)
+        if col['name'].endswith('_id'):
+            prereq_var = create_prerequisite_for_fk_column(col, all_models, tests, var_suffix=var_suffix)
+            if prereq_var:
+                tests.append(f"        {var_name}.set_{col['name']}({prereq_var}.get_id())")
+            else:
+                # Fallback if we can't create prerequisite
+                tests.append(f"        {var_name}.set_{col['name']}(1)")
+        else:
+            # Handle regular required fields based on type
+            if python_type == 'str':
+                tests.append(f"        {var_name}.set_{col['name']}('test_{col['name']}')")
+            elif python_type == 'int':
+                tests.append(f"        {var_name}.set_{col['name']}(1)")
+            elif python_type == 'float':
+                tests.append(f"        {var_name}.set_{col['name']}(1.0)")
+            elif python_type == 'bool':
+                tests.append(f"        {var_name}.set_{col['name']}(True)")
+
+
+def create_prerequisite_for_fk_column(
+    col: Dict[str, Any],
+    all_models: List[Dict[str, Any]],
+    tests: List[str],
+    var_suffix: str = "",
+) -> Optional[str]:
+    """
+    Helper function to create prerequisite object for a NOT NULL FK column.
+    Returns the variable name of the created prerequisite, or None if it couldn't be created.
+    """
+    if not col['name'].endswith('_id') or col['is_nullable']:
+        return None
+
+    # Infer table name from column name (e.g., inventory_id -> inventories)
+    prereq_table = col['name'][:-3]  # Remove '_id' suffix
+
+    # Try plural form first (most common)
+    prereq_model = next((m for m in all_models if m['table_name'] == (prereq_table + 's')), None)
+    if not prereq_model:
+        # Try singular form
+        prereq_model = next((m for m in all_models if m['table_name'] == prereq_table), None)
+
+    if not prereq_model:
+        return None
+
+    prereq_var = f"{prereq_table}_prereq{var_suffix}"
+    prereq_class = prereq_model['class_name']
+
+    tests.append(f"        # Create prerequisite {prereq_class} for {col['name']}\n")
+    tests.append(f"        {prereq_var} = {prereq_class}()\n")
+
+    # Set required fields for prerequisite
+    # IMPORTANT: We treat ALL NOT NULL columns ending with _id as FKs, regardless of SQL FK constraints
+    for prereq_col in prereq_model['columns']:
+        if prereq_col['name'] == 'id':
+            continue
+        if prereq_col['is_nullable']:
+            continue
+
+        # For NOT NULL _id columns, set to 1 as placeholder (avoid infinite recursion)
+        if prereq_col['name'].endswith('_id'):
+            tests.append(f"        {prereq_var}.set_{prereq_col['name']}(1)\n")
+        else:
+            # Regular required field
+            py_type = TypeMapper.get_python_type(prereq_col['data_type'])
+            if py_type == 'str':
+                tests.append(f"        {prereq_var}.set_{prereq_col['name']}('test_prereq{var_suffix}')\n")
+            elif py_type == 'int':
+                tests.append(f"        {prereq_var}.set_{prereq_col['name']}(1)\n")
+            elif py_type == 'float':
+                tests.append(f"        {prereq_var}.set_{prereq_col['name']}(1.0)\n")
+            elif py_type == 'bool':
+                tests.append(f"        {prereq_var}.set_{prereq_col['name']}(True)\n")
+
+    tests.append(f"        {prereq_var}.save()\n\n")
+
+    return prereq_var
+
+
 def generate_belongs_to_tests(model: Dict[str, Any], all_models: List[Dict[str, Any]]) -> str:
     """Generate belongs-to relationship tests for a model."""
     class_name = model['class_name']
@@ -1968,34 +2091,18 @@ def generate_belongs_to_tests(model: Dict[str, Any], all_models: List[Dict[str, 
         # Create related model
         related = {target_class}()''')
 
-        # Set required fields for target class
+        # Set all required fields for target class
         target_model = next((m for m in all_models if m['class_name'] == target_class), None)
         if target_model:
-            for col in target_model.get('columns', []):
-                if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-                    python_type = TypeMapper.get_python_type(col['data_type'])
-                    if python_type == 'str':
-                        tests.append(f"        related.set_{col['name']}('test_{col['name']}')")
-                    elif python_type == 'int':
-                        tests.append(f"        related.set_{col['name']}(1)")
-                    elif python_type == 'bool':
-                        tests.append(f"        related.set_{col['name']}(True)")
+            set_required_fields_for_model(target_model, all_models, tests, "related", var_suffix="_basic")
 
         tests.append(f'''        related.save()
 
         # Create parent and set FK
         parent = {class_name}()''')
 
-        # Set required fields for parent
-        for col in model['columns']:
-            if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-                python_type = TypeMapper.get_python_type(col['data_type'])
-                if python_type == 'str':
-                    tests.append(f"        parent.set_{col['name']}('test_{col['name']}')")
-                elif python_type == 'int':
-                    tests.append(f"        parent.set_{col['name']}(1)")
-                elif python_type == 'bool':
-                    tests.append(f"        parent.set_{col['name']}(True)")
+        # Set all required fields for parent (skip the FK we're testing)
+        set_required_fields_for_model(model, all_models, tests, "parent", var_suffix="_basic", skip_column=fk_column)
 
         tests.append(f'''        parent.set_{fk_column}(related.get_id())
         parent.save()
@@ -2019,33 +2126,18 @@ def generate_belongs_to_tests(model: Dict[str, Any], all_models: List[Dict[str, 
         # Create related models
         related1 = {target_class}()''')
 
-        # Re-fetch target model for setter test
+        # Set all required fields for target model
         target_model_setter = next((m for m in all_models if m['class_name'] == target_class), None)
         if target_model_setter:
-            for col in target_model_setter.get('columns', []):
-                if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-                    python_type = TypeMapper.get_python_type(col['data_type'])
-                    if python_type == 'str':
-                        tests.append(f"        related1.set_{col['name']}('test_{col['name']}_1')")
-                    elif python_type == 'int':
-                        tests.append(f"        related1.set_{col['name']}(1)")
-                    elif python_type == 'bool':
-                        tests.append(f"        related1.set_{col['name']}(True)")
+            set_required_fields_for_model(target_model_setter, all_models, tests, "related1", var_suffix="_setter")
 
         tests.append(f'''        related1.save()
 
         # Create parent
         parent = {class_name}()''')
 
-        for col in model['columns']:
-            if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-                python_type = TypeMapper.get_python_type(col['data_type'])
-                if python_type == 'str':
-                    tests.append(f"        parent.set_{col['name']}('test_{col['name']}')")
-                elif python_type == 'int':
-                    tests.append(f"        parent.set_{col['name']}(1)")
-                elif python_type == 'bool':
-                    tests.append(f"        parent.set_{col['name']}(True)")
+        # Set all required fields for parent
+        set_required_fields_for_model(model, all_models, tests, "parent", var_suffix="_setter")
 
         tests.append(f'''
         # Use setter
@@ -2099,23 +2191,22 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
         # Create parent
         parent = {class_name}()''')
 
-        # Set required fields for parent
-        for col in model['columns']:
-            if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-                python_type = TypeMapper.get_python_type(col['data_type'])
-                if python_type == 'str':
-                    tests.append(f"        parent.set_{col['name']}('test_{col['name']}')")
-                elif python_type == 'int':
-                    tests.append(f"        parent.set_{col['name']}(1)")
-                elif python_type == 'bool':
-                    tests.append(f"        parent.set_{col['name']}(True)")
+        # Set all required fields for parent
+        set_required_fields_for_model(model, all_models, tests, "parent", var_suffix="_parent")
 
         tests.append("        parent.save()\n\n")
+
+        # Check if foreign model is a pivot table
+        is_pivot = foreign_model['table_name'] in PIVOT_TABLES
 
         # Find other required FK columns and create those records first
         prereq_records = {}
         for col in foreign_model['columns']:
-            if col['name'] != 'id' and col['name'] != fk_column and col['name'].endswith('_id') and not col['is_nullable']:
+            # For pivot tables, we need to create prerequisites for ALL FKs except the owner FK
+            # For regular tables, skip the FK pointing back to parent
+            skip_this_col = col['name'] == fk_column and not is_pivot
+
+            if col['name'] != 'id' and col['name'].endswith('_id') and not col['is_nullable'] and not skip_this_col:
                 # Need to create a prerequisite record
                 prereq_table = col['name'][:-3]  # Remove '_id' suffix
                 prereq_class = TableNaming.to_pascal_case(TableNaming.singularize(prereq_table + 's'))  # Pluralize and convert
@@ -2149,51 +2240,22 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
         tests.append(f'''        # Create related records
         child1 = {foreign_class}()''')
 
-        # Set required fields for child
-        for col in foreign_model['columns']:
-            if col['name'] != 'id' and not col['is_nullable']:
-                if col['name'] == fk_column:
-                    tests.append(f"        child1.set_{col['name']}(parent.get_id())")
-                elif col['name'].endswith('_id'):
-                    # Use prerequisite record if available
-                    if col['name'] in prereq_records:
-                        tests.append(f"        child1.set_{col['name']}({prereq_records[col['name']]}.get_id())")
-                    else:
-                        tests.append(f"        child1.set_{col['name']}(1)")
-                else:
-                    python_type = TypeMapper.get_python_type(col['data_type'])
-                    if python_type == 'str':
-                        tests.append(f"        child1.set_{col['name']}('test_{col['name']}_1')")
-                    elif python_type == 'int':
-                        tests.append(f"        child1.set_{col['name']}(1)")
-                    elif python_type == 'bool':
-                        tests.append(f"        child1.set_{col['name']}(True)")
+        # Set all required fields for child1, but handle the FK to parent specially
+        # First set the FK to parent
+        tests.append(f"        child1.set_{fk_column}(parent.get_id())")
+        # Then set all other required fields (skip the FK we just set)
+        set_required_fields_for_model(foreign_model, all_models, tests, "child1", var_suffix="_child1", skip_column=fk_column)
 
         tests.append(f'''        child1.save()
 
         child2 = {foreign_class}()''')
 
-        for col in foreign_model['columns']:
-            if col['name'] != 'id' and not col['is_nullable']:
-                if col['name'] == fk_column:
-                    tests.append(f"        child2.set_{col['name']}(parent.get_id())")
-                elif col['name'].endswith('_id'):
-                    # Use prerequisite record if available
-                    if col['name'] in prereq_records:
-                        tests.append(f"        child2.set_{col['name']}({prereq_records[col['name']]}.get_id())")
-                    else:
-                        tests.append(f"        child2.set_{col['name']}(1)")
-                else:
-                    python_type = TypeMapper.get_python_type(col['data_type'])
-                    if python_type == 'str':
-                        tests.append(f"        child2.set_{col['name']}('test_{col['name']}_2')")
-                    elif python_type == 'int':
-                        tests.append(f"        child2.set_{col['name']}(2)")
-                    elif python_type == 'bool':
-                        tests.append(f"        child2.set_{col['name']}(True)")
+        # Set all required fields for child2
+        tests.append(f"        child2.set_{fk_column}(parent.get_id())")
+        set_required_fields_for_model(foreign_model, all_models, tests, "child2", var_suffix="_child2", skip_column=fk_column)
 
         if is_one_to_one:
-            tests.append(f'''        child1.save()
+            tests.append(f'''        child2.save()
 
         # Test getter (1-to-1 relationship)
         result = parent.get_{rel_name}()
@@ -2237,22 +2299,19 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
         # Create parent with children
         parent = {class_name}()''')
 
-            for col in model['columns']:
-                if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-                    python_type = TypeMapper.get_python_type(col['data_type'])
-                    if python_type == 'str':
-                        tests.append(f"        parent.set_{col['name']}('test_{col['name']}')")
-                    elif python_type == 'int':
-                        tests.append(f"        parent.set_{col['name']}(1)")
-                    elif python_type == 'bool':
-                        tests.append(f"        parent.set_{col['name']}(True)")
+            # Set all required fields for parent
+            set_required_fields_for_model(model, all_models, tests, "parent", var_suffix="_parent_lazy")
 
             tests.append("        parent.save()\n\n")
 
             # Create prerequisite records for lazy test too
+            # Use same logic as basic test - for pivot tables, include all FKs
             prereq_records_lazy = {}
             for col in foreign_model['columns']:
-                if col['name'] != 'id' and col['name'] != fk_column and col['name'].endswith('_id') and not col['is_nullable']:
+                # For pivot tables, skip only the owner FK. For regular tables, skip parent FK
+                skip_this_col = col['name'] == fk_column and not is_pivot
+
+                if col['name'] != 'id' and col['name'].endswith('_id') and not col['is_nullable'] and not skip_this_col:
                     # Need to create a prerequisite record
                     prereq_table = col['name'][:-3]
                     prereq_class = TableNaming.to_pascal_case(TableNaming.singularize(prereq_table + 's'))
@@ -2285,24 +2344,9 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
             tests.append(f'''        # Create child
         child = {foreign_class}()''')
 
-            for col in foreign_model['columns']:
-                if col['name'] != 'id' and not col['is_nullable']:
-                    if col['name'] == fk_column:
-                        tests.append(f"        child.set_{col['name']}(parent.get_id())")
-                    elif col['name'].endswith('_id'):
-                        # Use prerequisite record if available
-                        if col['name'] in prereq_records_lazy:
-                            tests.append(f"        child.set_{col['name']}({prereq_records_lazy[col['name']]}.get_id())")
-                        else:
-                            tests.append(f"        child.set_{col['name']}(1)")
-                    else:
-                        python_type = TypeMapper.get_python_type(col['data_type'])
-                        if python_type == 'str':
-                            tests.append(f"        child.set_{col['name']}('test_{col['name']}')")
-                        elif python_type == 'int':
-                            tests.append(f"        child.set_{col['name']}(1)")
-                        elif python_type == 'bool':
-                            tests.append(f"        child.set_{col['name']}(True)")
+            # Set FK to parent and all other required fields
+            tests.append(f"        child.set_{fk_column}(parent.get_id())")
+            set_required_fields_for_model(foreign_model, all_models, tests, "child", var_suffix="_child_lazy", skip_column=fk_column)
 
             tests.append(f'''        child.save()
 
@@ -2319,7 +2363,7 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
     return "\n".join(tests)
 
 
-def generate_dirty_tracking_tests(model: Dict[str, Any]) -> str:
+def generate_dirty_tracking_tests(model: Dict[str, Any], all_models: List[Dict[str, Any]]) -> str:
     """Generate dirty tracking tests for a model."""
     class_name = model['class_name']
     columns = model['columns']
@@ -2350,7 +2394,8 @@ def generate_dirty_tracking_tests(model: Dict[str, Any]) -> str:
     else:
         return ""
 
-    tests = f'''
+    tests_list = []
+    tests_list.append(f'''
     def test_dirty_tracking_new_model(self):
         """Test that new models are marked dirty."""
         model = {class_name}()
@@ -2358,42 +2403,55 @@ def generate_dirty_tracking_tests(model: Dict[str, Any]) -> str:
 
     def test_dirty_tracking_saved_model(self):
         """Test that saved models are marked clean."""
-        model = {class_name}()'''
+        model = {class_name}()''')
 
     # Set required fields
+    # IMPORTANT: We treat ALL NOT NULL columns ending with _id as FKs, regardless of SQL FK constraints
     for col in columns:
-        if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
+        if col['name'] == 'id' or col['is_nullable']:
+            continue
+
+        # Handle NOT NULL _id columns
+        if col['name'].endswith('_id'):
+            tests_list.append(f"\n        model.set_{col['name']}(1)")
+        else:
             py_type = TypeMapper.get_python_type(col['data_type'])
             if py_type == 'str':
-                tests += f"\n        model.set_{col['name']}('test_{col['name']}')"
+                tests_list.append(f"\n        model.set_{col['name']}('test_{col['name']}')")
             elif py_type == 'int':
-                tests += f"\n        model.set_{col['name']}(1)"
+                tests_list.append(f"\n        model.set_{col['name']}(1)")
             elif py_type == 'bool':
-                tests += f"\n        model.set_{col['name']}(True)"
+                tests_list.append(f"\n        model.set_{col['name']}(True)")
             elif py_type == 'float':
-                tests += f"\n        model.set_{col['name']}(1.0)"
+                tests_list.append(f"\n        model.set_{col['name']}(1.0)")
 
-    tests += f'''
+    tests_list.append(f'''
         model.save()
         self.assertFalse(model._dirty)
 
     def test_dirty_tracking_setter(self):
         """Test that setters mark model dirty."""
-        model = {class_name}()'''
+        model = {class_name}()''')
 
     for col in columns:
-        if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
+        if col['name'] == 'id' or col['is_nullable']:
+            continue
+
+        # Handle NOT NULL _id columns
+        if col['name'].endswith('_id'):
+            tests_list.append(f"\n        model.set_{col['name']}(1)")
+        else:
             py_type = TypeMapper.get_python_type(col['data_type'])
             if py_type == 'str':
-                tests += f"\n        model.set_{col['name']}('test_{col['name']}')"
+                tests_list.append(f"\n        model.set_{col['name']}('test_{col['name']}')")
             elif py_type == 'int':
-                tests += f"\n        model.set_{col['name']}(1)"
+                tests_list.append(f"\n        model.set_{col['name']}(1)")
             elif py_type == 'bool':
-                tests += f"\n        model.set_{col['name']}(True)"
+                tests_list.append(f"\n        model.set_{col['name']}(True)")
             elif py_type == 'float':
-                tests += f"\n        model.set_{col['name']}(1.0)"
+                tests_list.append(f"\n        model.set_{col['name']}(1.0)")
 
-    tests += f'''
+    tests_list.append(f'''
         model.save()
         self.assertFalse(model._dirty)
 
@@ -2402,30 +2460,36 @@ def generate_dirty_tracking_tests(model: Dict[str, Any]) -> str:
 
     def test_dirty_tracking_skip_save(self):
         """Test that clean models skip save operation."""
-        model = {class_name}()'''
+        model = {class_name}()''')
 
     for col in columns:
-        if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
+        if col['name'] == 'id' or col['is_nullable']:
+            continue
+
+        # Handle NOT NULL _id columns
+        if col['name'].endswith('_id'):
+            tests_list.append(f"\n        model.set_{col['name']}(1)")
+        else:
             py_type = TypeMapper.get_python_type(col['data_type'])
             if py_type == 'str':
-                tests += f"\n        model.set_{col['name']}('test_{col['name']}')"
+                tests_list.append(f"\n        model.set_{col['name']}('test_{col['name']}')")
             elif py_type == 'int':
-                tests += f"\n        model.set_{col['name']}(1)"
+                tests_list.append(f"\n        model.set_{col['name']}(1)")
             elif py_type == 'bool':
-                tests += f"\n        model.set_{col['name']}(True)"
+                tests_list.append(f"\n        model.set_{col['name']}(True)")
             elif py_type == 'float':
-                tests += f"\n        model.set_{col['name']}(1.0)"
+                tests_list.append(f"\n        model.set_{col['name']}(1.0)")
 
-    tests += f'''
+    tests_list.append(f'''
         model.save()
         self.assertFalse(model._dirty)
 
         # Save again without changes
         model.save()
         self.assertFalse(model._dirty)
-'''
+''')
 
-    return tests
+    return "".join(tests_list)
 
 
 def generate_cascade_save_tests(model: Dict[str, Any], all_models: List[Dict[str, Any]]) -> str:
@@ -2453,13 +2517,21 @@ def generate_cascade_save_tests(model: Dict[str, Any], all_models: List[Dict[str
         related = {target_class}()'''
 
     # Set required fields for target
+    # IMPORTANT: We treat ALL NOT NULL columns ending with _id as FKs, regardless of SQL FK constraints
     for col in target_model.get('columns', []):
-        if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
+        if col['name'] == 'id' or col['is_nullable']:
+            continue
+
+        if col['name'].endswith('_id'):
+            tests += f"\n        related.set_{col['name']}(1)"
+        else:
             python_type = TypeMapper.get_python_type(col['data_type'])
             if python_type == 'str':
                 tests += f"\n        related.set_{col['name']}('test_{col['name']}')"
             elif python_type == 'int':
                 tests += f"\n        related.set_{col['name']}(1)"
+            elif python_type == 'float':
+                tests += f"\n        related.set_{col['name']}(1.0)"
             elif python_type == 'bool':
                 tests += f"\n        related.set_{col['name']}(True)"
 
@@ -2471,13 +2543,21 @@ def generate_cascade_save_tests(model: Dict[str, Any], all_models: List[Dict[str
         parent = {class_name}()'''
 
     # Set required fields for parent
+    # IMPORTANT: We treat ALL NOT NULL columns ending with _id as FKs, regardless of SQL FK constraints
     for col in model['columns']:
-        if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
+        if col['name'] == 'id' or col['is_nullable']:
+            continue
+
+        if col['name'].endswith('_id'):
+            tests += f"\n        parent.set_{col['name']}(1)"
+        else:
             python_type = TypeMapper.get_python_type(col['data_type'])
             if python_type == 'str':
                 tests += f"\n        parent.set_{col['name']}('test_{col['name']}')"
             elif python_type == 'int':
                 tests += f"\n        parent.set_{col['name']}(1)"
+            elif python_type == 'float':
+                tests += f"\n        parent.set_{col['name']}(1.0)"
             elif python_type == 'bool':
                 tests += f"\n        parent.set_{col['name']}(True)"
 
@@ -2509,6 +2589,11 @@ def generate_tests(models: List[Dict[str, Any]]) -> str:
         "",
         "import sys",
         "import os",
+        "",
+        "# Add parent directory to path for models import",
+        "parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))",
+        "if parent_dir not in sys.path:",
+        "    sys.path.insert(0, parent_dir)",
         "",
         "# Add Thrift generated code to path",
         "thrift_gen_path = '/vagrant/gamedb/thrift/gen-py'",
@@ -2636,7 +2721,7 @@ class Test{class_name}Relationships(unittest.TestCase):
             test_class += has_many_tests
 
         # Add dirty tracking tests
-        dirty_tests = generate_dirty_tracking_tests(model)
+        dirty_tests = generate_dirty_tracking_tests(model, models)
         if dirty_tests:
             test_class += dirty_tests
 
@@ -2881,7 +2966,7 @@ def main():
         # Generate tests
         print("\nGenerating tests.py...")
         test_code = generate_tests(generated_models)
-        test_file = os.path.join(os.path.dirname(__file__), "tests.py")
+        test_file = os.path.join(os.path.dirname(__file__), "tests", "tests.py")
         with open(test_file, "w") as f:
             f.write(test_code)
         print(f"  - Written to {test_file}")

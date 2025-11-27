@@ -6,6 +6,7 @@
 **Component Path:** /vagrant/gamedb/thrift/py/db_models/
 
 ## Update History
+- **2025-11-27 (Commit: a803046)**: Fixed test generation to use code-level constraints (NOT NULL + `_id` suffix) instead of SQL FK constraints. All 129 tests now pass. Added critical insight about ignoring SQL FK constraints in favor of code-level constraint detection.
 - **2025-11-27 (Commit: a803046)**: Enhanced with domain model clarifications, design decisions, and implementation guidance based on deep architectural review
 - **2025-11-26 (Commit: a803046)**: Initial exploration
 
@@ -27,7 +28,9 @@ The db_models component is a code generator that introspects MySQL database sche
 
 This is the **new approach** replacing the legacy hand-written models in `/vagrant/gamedb/thrift/py/dbinc/`. The generator creates a single monolithic `models.py` file with all model classes, plus a corresponding `tests.py` file with comprehensive test coverage.
 
-**CRITICAL NOTE:** The generated code currently has Python import path issues. Tests fail because generated models import from `game.ttypes` without proper PYTHONPATH configuration. Run with: `PYTHONPATH="/vagrant/gamedb/thrift/gen-py:$PYTHONPATH" python3 tests.py`
+**Test Status:** All 129 generated tests pass. Test generation properly handles code-level FK constraints (NOT NULL columns ending with `_id`) rather than relying on SQL FK constraints.
+
+**Python Path Note:** Tests require PYTHONPATH configuration because generated models import from `game.ttypes`. Run with: `PYTHONPATH="/vagrant/gamedb/thrift/gen-py:$PYTHONPATH" python3 tests.py`
 
 ## Important Files
 
@@ -565,6 +568,47 @@ This section documents key design decisions that affect code generation and usag
 
 **Implementation:** Generator should either create tables in dependency order or wrap CREATE TABLE in `SET FOREIGN_KEY_CHECKS=0`.
 
+### Test Generation: Code-Level Constraints, Not SQL FK Constraints
+
+**CRITICAL INSIGHT (2025-11-27):** SQL FK constraints are incomplete and unreliable for test generation. The database schema only declares SOME foreign keys as SQL constraints, but there are many more code-level FK relationships.
+
+**The Real Source of Truth:** ANY `NOT NULL` column ending with `_id` is a foreign key relationship, regardless of whether MySQL has a FK constraint declared.
+
+**Examples from schema:**
+- `inventory_entries.item_id` - NOT NULL, ends with `_id`, but NO SQL FK constraint → Code-level FK
+- `inventory_entries.inventory_id` - NOT NULL, ends with `_id`, HAS SQL FK constraint → Both SQL and code-level FK
+- `mobile_items.mobile_id` - NOT NULL, ends with `_id`, but NO SQL FK constraint → Code-level FK
+- `mobile_items.item_id` - NOT NULL, ends with `_id`, but NO SQL FK constraint → Code-level FK
+
+**Problem with SQL FK constraints:** Originally test generation used `get_foreign_key_constraints()` to determine which fields needed prerequisites. This caused tests to fail because:
+1. SQL only knows about SOME FKs (incomplete information)
+2. Test generation would skip "non-FK" `_id` columns
+3. Database would reject INSERTs with "Field 'item_id' doesn't have a default value"
+
+**The Solution:** Completely ignore SQL FK constraints for test generation. Use this logic instead:
+
+```python
+for each NOT NULL column in the model:
+    if column ends with '_id':
+        # It's a FK - create prerequisite object or set to 1
+    else:
+        # Regular required field - set based on type:
+        # - float: 1.0
+        # - int: 1
+        # - str: 'test_value'
+        # - bool: True
+```
+
+**Implementation:** Created `set_required_fields_for_model()` helper function that systematically sets ALL NOT NULL fields for any model being created in tests. This ensures:
+- ALL FK columns get valid values (via prerequisite creation)
+- ALL regular required fields get valid values (via type-based defaults)
+- No required fields are ever missed
+- Tests are resilient to schema changes
+
+**Result:** All 129 generated tests pass. Test generation now works correctly regardless of whether SQL FK constraints are declared or not.
+
+**Key Takeaway:** For this codebase, **code-level constraints are the complete set**. SQL FK constraints are just a subset (and often incomplete). Always trust code-level constraints (NOT NULL + `_id` suffix) over SQL FK constraints.
+
 ### ID-Based Save Logic: Trust the Caller
 
 **Decision:** Use ID presence to determine INSERT vs UPDATE. Trust that IDs in Thrift objects are correct.
@@ -661,11 +705,19 @@ struct NetworkMessage {
 
 ## Known Issues / Technical Debt
 
-### CRITICAL: Import Path Broken
+### RESOLVED: Test Generation Now Works (2025-11-27)
 
-**Issue:** Generated models.py imports `from game.ttypes import ...` but Python path doesn't include `/vagrant/gamedb/thrift/gen-py`. Tests fail immediately with ModuleNotFoundError.
+**Issue:** Test generation was using SQL FK constraints to determine which fields needed prerequisites. This caused tests to fail because SQL FK constraints are incomplete - many NOT NULL `_id` columns exist without SQL FK constraints.
 
-**Impact:** Cannot run any generated code. All tests fail on import.
+**Resolution:** Test generation now ignores SQL FK constraints entirely and uses code-level constraint detection: ANY NOT NULL column ending with `_id` is treated as a FK. Created `set_required_fields_for_model()` helper that systematically sets ALL NOT NULL fields.
+
+**Result:** All 129 tests pass. See "Test Generation: Code-Level Constraints, Not SQL FK Constraints" in Design Decisions section for details.
+
+### LOW: Import Path Requires PYTHONPATH Configuration
+
+**Issue:** Generated models.py imports `from game.ttypes import ...` but Python path doesn't include `/vagrant/gamedb/thrift/gen-py` by default.
+
+**Impact:** Tests require PYTHONPATH configuration to run.
 
 **Workaround:** `PYTHONPATH="/vagrant/gamedb/thrift/gen-py:$PYTHONPATH" python3 tests.py`
 
@@ -674,6 +726,8 @@ struct NetworkMessage {
 2. Modify generated imports to use relative path
 3. Add path manipulation in generated code header
 4. Create __init__.py with path setup
+
+**Note:** This is low priority since the workaround is simple and tests pass reliably.
 
 ### CRITICAL: Player-Mobile Relationship Generates Wrong Method Name
 
@@ -835,6 +889,11 @@ Brief coverage of utility functions in the generator:
 - `generate_getters()` / `generate_setters()` - Creates accessor methods for all columns
 - `generate_find_by_methods()` - Creates static finders for each FK column
 - `generate_cascade_save_code()` - Generates code to walk and save relationships (excluding attributes)
+
+### Test Generation Helpers (Added 2025-11-27)
+
+- `set_required_fields_for_model()` - **[NEW]** Systematically sets ALL NOT NULL fields for a model instance in tests. Handles both FK columns (creates prerequisites) and regular required fields (sets type-appropriate defaults). This is the core function that ensures tests never miss required fields.
+- `create_prerequisite_for_fk_column()` - Creates a prerequisite object for a NOT NULL FK column. Returns the variable name of the created prerequisite. Used by `set_required_fields_for_model()` for FK handling.
 
 ### Naming Helpers
 

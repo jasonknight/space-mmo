@@ -45,7 +45,7 @@ class AttributeOwner:
           PRIMARY KEY (`id`),
           KEY `attribute_id` (`attribute_id`),
           CONSTRAINT `attribute_owners_ibfk_1` FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=615 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=909 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -589,7 +589,7 @@ class Attribute:
           `vector3_z` double DEFAULT NULL,
           `asset_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=617 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=992 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -992,7 +992,7 @@ class Inventory:
           `max_volume` double NOT NULL,
           `last_calculated_volume` double DEFAULT '0',
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=103 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1368,7 +1368,7 @@ class InventoryEntry:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_entries_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1894,7 +1894,7 @@ class InventoryOwner:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_owners_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=144 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=341 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2434,7 +2434,7 @@ class ItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=56 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2781,7 +2781,7 @@ class ItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=121 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=261 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3045,7 +3045,7 @@ class Item:
           `item_type` varchar(50) NOT NULL,
           `blueprint_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1341 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1803 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3338,26 +3338,32 @@ class Item:
         setattr(self, cache_key, results)
         return results
 
-    def get_attribute_owners(self, reload: bool = False) -> List['AttributeOwner']:
+    def get_attribute_owners(self, reload: bool = False, lazy: bool = False):
         """
         Get all AttributeOwner pivot records for this Item.
-        Returns a list of AttributeOwner objects.
+
+        Args:
+            reload: If True, bypass cache and fetch fresh from database.
+            lazy: If True, return an iterator. If False, return a list.
+
+        Returns:
+            List[AttributeOwner] or Iterator[AttributeOwner]
         """
         cache_key = '_attribute_owners_cache'
 
         if not reload and hasattr(self, cache_key):
             cached = getattr(self, cache_key)
             if cached is not None:
-                return cached
+                return iter(cached) if lazy else cached
 
         if self.get_id() is None:
-            return []
+            return iter([]) if lazy else []
 
         results = AttributeOwner.find_by_item_id(self.get_id())
 
         # Cache results
         setattr(self, cache_key, results)
-        return results
+        return iter(results) if lazy else results
 
     def add_attribute(self, attribute: 'Attribute') -> None:
         """
@@ -3470,12 +3476,20 @@ class Item:
                     )
             cursor.close()
 
-            # Commit deletions
-            self._connection.commit()
-
-            # Add new ones (each will start its own transaction)
+            # Add new ones within the same transaction
             for item in attributes_list:
-                self.add_attribute(item)
+                # Save the related object if needed
+                if item._dirty:
+                    item.save(self._connection)
+
+                # Create pivot record manually to avoid nested transactions
+                pivot = AttributeOwner()
+                pivot.set_item_id(self.get_id())
+                pivot.set_attribute_id(item.get_id())
+                pivot.save(self._connection)
+
+            # Commit all operations
+            self._connection.commit()
 
             # Clear cache
             cache_key = '_attributes_cache'
@@ -3532,26 +3546,32 @@ class Item:
         setattr(self, cache_key, results)
         return results
 
-    def get_inventory_owners(self, reload: bool = False) -> List['InventoryOwner']:
+    def get_inventory_owners(self, reload: bool = False, lazy: bool = False):
         """
         Get all InventoryOwner pivot records for this Item.
-        Returns a list of InventoryOwner objects.
+
+        Args:
+            reload: If True, bypass cache and fetch fresh from database.
+            lazy: If True, return an iterator. If False, return a list.
+
+        Returns:
+            List[InventoryOwner] or Iterator[InventoryOwner]
         """
         cache_key = '_inventory_owners_cache'
 
         if not reload and hasattr(self, cache_key):
             cached = getattr(self, cache_key)
             if cached is not None:
-                return cached
+                return iter(cached) if lazy else cached
 
         if self.get_id() is None:
-            return []
+            return iter([]) if lazy else []
 
         results = InventoryOwner.find_by_item_id(self.get_id())
 
         # Cache results
         setattr(self, cache_key, results)
-        return results
+        return iter(results) if lazy else results
 
     def add_inventory(self, inventory: 'Inventory') -> None:
         """
@@ -3664,12 +3684,20 @@ class Item:
                     )
             cursor.close()
 
-            # Commit deletions
-            self._connection.commit()
-
-            # Add new ones (each will start its own transaction)
+            # Add new ones within the same transaction
             for item in inventories_list:
-                self.add_inventory(item)
+                # Save the related object if needed
+                if item._dirty:
+                    item.save(self._connection)
+
+                # Create pivot record manually to avoid nested transactions
+                pivot = InventoryOwner()
+                pivot.set_item_id(self.get_id())
+                pivot.set_inventory_id(item.get_id())
+                pivot.save(self._connection)
+
+            # Commit all operations
+            self._connection.commit()
 
             # Clear cache
             cache_key = '_inventories_cache'
@@ -3951,7 +3979,7 @@ class MobileItemAttribute:
           PRIMARY KEY (`id`),
           KEY `mobile_item_id` (`mobile_item_id`),
           CONSTRAINT `mobile_item_attributes_ibfk_1` FOREIGN KEY (`mobile_item_id`) REFERENCES `mobile_items` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -4289,7 +4317,7 @@ class MobileItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `mobile_item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `mobile_item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -4560,7 +4588,7 @@ class MobileItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=109 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=245 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -4765,7 +4793,7 @@ class MobileItem:
           `blueprint_id` bigint DEFAULT NULL,
           `item_id` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=64 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=193 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5343,7 +5371,7 @@ class Mobile:
           `owner_player_id` bigint DEFAULT NULL,
           `what_we_call_you` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=443 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=975 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5769,26 +5797,32 @@ class Mobile:
         setattr(self, cache_key, results)
         return results
 
-    def get_attribute_owners(self, reload: bool = False) -> List['AttributeOwner']:
+    def get_attribute_owners(self, reload: bool = False, lazy: bool = False):
         """
         Get all AttributeOwner pivot records for this Mobile.
-        Returns a list of AttributeOwner objects.
+
+        Args:
+            reload: If True, bypass cache and fetch fresh from database.
+            lazy: If True, return an iterator. If False, return a list.
+
+        Returns:
+            List[AttributeOwner] or Iterator[AttributeOwner]
         """
         cache_key = '_attribute_owners_cache'
 
         if not reload and hasattr(self, cache_key):
             cached = getattr(self, cache_key)
             if cached is not None:
-                return cached
+                return iter(cached) if lazy else cached
 
         if self.get_id() is None:
-            return []
+            return iter([]) if lazy else []
 
         results = AttributeOwner.find_by_mobile_id(self.get_id())
 
         # Cache results
         setattr(self, cache_key, results)
-        return results
+        return iter(results) if lazy else results
 
     def add_attribute(self, attribute: 'Attribute') -> None:
         """
@@ -5901,12 +5935,20 @@ class Mobile:
                     )
             cursor.close()
 
-            # Commit deletions
-            self._connection.commit()
-
-            # Add new ones (each will start its own transaction)
+            # Add new ones within the same transaction
             for item in attributes_list:
-                self.add_attribute(item)
+                # Save the related object if needed
+                if item._dirty:
+                    item.save(self._connection)
+
+                # Create pivot record manually to avoid nested transactions
+                pivot = AttributeOwner()
+                pivot.set_mobile_id(self.get_id())
+                pivot.set_attribute_id(item.get_id())
+                pivot.save(self._connection)
+
+            # Commit all operations
+            self._connection.commit()
 
             # Clear cache
             cache_key = '_attributes_cache'
@@ -5963,26 +6005,32 @@ class Mobile:
         setattr(self, cache_key, results)
         return results
 
-    def get_inventory_owners(self, reload: bool = False) -> List['InventoryOwner']:
+    def get_inventory_owners(self, reload: bool = False, lazy: bool = False):
         """
         Get all InventoryOwner pivot records for this Mobile.
-        Returns a list of InventoryOwner objects.
+
+        Args:
+            reload: If True, bypass cache and fetch fresh from database.
+            lazy: If True, return an iterator. If False, return a list.
+
+        Returns:
+            List[InventoryOwner] or Iterator[InventoryOwner]
         """
         cache_key = '_inventory_owners_cache'
 
         if not reload and hasattr(self, cache_key):
             cached = getattr(self, cache_key)
             if cached is not None:
-                return cached
+                return iter(cached) if lazy else cached
 
         if self.get_id() is None:
-            return []
+            return iter([]) if lazy else []
 
         results = InventoryOwner.find_by_mobile_id(self.get_id())
 
         # Cache results
         setattr(self, cache_key, results)
-        return results
+        return iter(results) if lazy else results
 
     def add_inventory(self, inventory: 'Inventory') -> None:
         """
@@ -6095,12 +6143,20 @@ class Mobile:
                     )
             cursor.close()
 
-            # Commit deletions
-            self._connection.commit()
-
-            # Add new ones (each will start its own transaction)
+            # Add new ones within the same transaction
             for item in inventories_list:
-                self.add_inventory(item)
+                # Save the related object if needed
+                if item._dirty:
+                    item.save(self._connection)
+
+                # Create pivot record manually to avoid nested transactions
+                pivot = InventoryOwner()
+                pivot.set_mobile_id(self.get_id())
+                pivot.set_inventory_id(item.get_id())
+                pivot.save(self._connection)
+
+            # Commit all operations
+            self._connection.commit()
 
             # Clear cache
             cache_key = '_inventories_cache'
@@ -6471,7 +6527,7 @@ class Player:
           `year_of_birth` bigint NOT NULL,
           `email` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=219 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=468 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -6711,26 +6767,32 @@ class Player:
         setattr(self, cache_key, results)
         return results
 
-    def get_attribute_owners(self, reload: bool = False) -> List['AttributeOwner']:
+    def get_attribute_owners(self, reload: bool = False, lazy: bool = False):
         """
         Get all AttributeOwner pivot records for this Player.
-        Returns a list of AttributeOwner objects.
+
+        Args:
+            reload: If True, bypass cache and fetch fresh from database.
+            lazy: If True, return an iterator. If False, return a list.
+
+        Returns:
+            List[AttributeOwner] or Iterator[AttributeOwner]
         """
         cache_key = '_attribute_owners_cache'
 
         if not reload and hasattr(self, cache_key):
             cached = getattr(self, cache_key)
             if cached is not None:
-                return cached
+                return iter(cached) if lazy else cached
 
         if self.get_id() is None:
-            return []
+            return iter([]) if lazy else []
 
         results = AttributeOwner.find_by_player_id(self.get_id())
 
         # Cache results
         setattr(self, cache_key, results)
-        return results
+        return iter(results) if lazy else results
 
     def add_attribute(self, attribute: 'Attribute') -> None:
         """
@@ -6843,12 +6905,20 @@ class Player:
                     )
             cursor.close()
 
-            # Commit deletions
-            self._connection.commit()
-
-            # Add new ones (each will start its own transaction)
+            # Add new ones within the same transaction
             for item in attributes_list:
-                self.add_attribute(item)
+                # Save the related object if needed
+                if item._dirty:
+                    item.save(self._connection)
+
+                # Create pivot record manually to avoid nested transactions
+                pivot = AttributeOwner()
+                pivot.set_player_id(self.get_id())
+                pivot.set_attribute_id(item.get_id())
+                pivot.save(self._connection)
+
+            # Commit all operations
+            self._connection.commit()
 
             # Clear cache
             cache_key = '_attributes_cache'
@@ -6905,26 +6975,32 @@ class Player:
         setattr(self, cache_key, results)
         return results
 
-    def get_inventory_owners(self, reload: bool = False) -> List['InventoryOwner']:
+    def get_inventory_owners(self, reload: bool = False, lazy: bool = False):
         """
         Get all InventoryOwner pivot records for this Player.
-        Returns a list of InventoryOwner objects.
+
+        Args:
+            reload: If True, bypass cache and fetch fresh from database.
+            lazy: If True, return an iterator. If False, return a list.
+
+        Returns:
+            List[InventoryOwner] or Iterator[InventoryOwner]
         """
         cache_key = '_inventory_owners_cache'
 
         if not reload and hasattr(self, cache_key):
             cached = getattr(self, cache_key)
             if cached is not None:
-                return cached
+                return iter(cached) if lazy else cached
 
         if self.get_id() is None:
-            return []
+            return iter([]) if lazy else []
 
         results = InventoryOwner.find_by_player_id(self.get_id())
 
         # Cache results
         setattr(self, cache_key, results)
-        return results
+        return iter(results) if lazy else results
 
     def add_inventory(self, inventory: 'Inventory') -> None:
         """
@@ -7037,12 +7113,20 @@ class Player:
                     )
             cursor.close()
 
-            # Commit deletions
-            self._connection.commit()
-
-            # Add new ones (each will start its own transaction)
+            # Add new ones within the same transaction
             for item in inventories_list:
-                self.add_inventory(item)
+                # Save the related object if needed
+                if item._dirty:
+                    item.save(self._connection)
+
+                # Create pivot record manually to avoid nested transactions
+                pivot = InventoryOwner()
+                pivot.set_player_id(self.get_id())
+                pivot.set_inventory_id(item.get_id())
+                pivot.save(self._connection)
+
+            # Commit all operations
+            self._connection.commit()
 
             # Clear cache
             cache_key = '_inventories_cache'
