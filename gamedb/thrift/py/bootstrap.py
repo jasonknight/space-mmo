@@ -4,9 +4,75 @@ Bootstrap script to create the gamedb database and all necessary tables.
 """
 
 import sys
-sys.path.append('../gen-py')
+
+sys.path.append("../gen-py")
 
 from db import DB
+
+
+def check_column_exists(cursor, database, table, column):
+    """Check if a column exists in a table."""
+    cursor.execute(
+        """
+        SELECT COUNT(*) as col_exists
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = %s
+        AND TABLE_NAME = %s
+        AND COLUMN_NAME = %s;
+        """,
+        (
+            database,
+            table,
+            column,
+        ),
+    )
+    result = cursor.fetchone()
+    return result[0] > 0
+
+
+def add_column_if_not_exists(
+    cursor,
+    database,
+    table,
+    column,
+    column_def,
+):
+    """Add a column to a table if it doesn't already exist."""
+    if check_column_exists(cursor, database, table, column):
+        print(f"   - Column {column} already exists in {table}")
+        return False
+    else:
+        alter_sql = f"ALTER TABLE {database}.{table} ADD COLUMN {column} {column_def};"
+        cursor.execute(alter_sql)
+        print(f"   ✓ Added column {column} to {table}")
+        return True
+
+
+def apply_migrations(db, database_name):
+    """Apply schema migrations to existing tables."""
+    print(f"\n4. Applying schema migrations to '{database_name}'...")
+
+    try:
+        cursor = db.connection.cursor()
+
+        # Migration: Add mobile_item_id to inventory_entries
+        add_column_if_not_exists(
+            cursor,
+            database_name,
+            "inventory_entries",
+            "mobile_item_id",
+            "BIGINT NULL",
+        )
+
+        db.connection.commit()
+        cursor.close()
+        print("   ✓ All migrations applied successfully")
+        return True
+    except Exception as e:
+        print(f"   ✗ Error applying migrations: {e}")
+        db.connection.rollback()
+        return False
+
 
 def main():
     """Create the gamedb database and all tables."""
@@ -108,6 +174,9 @@ def main():
         db.connection.commit()
         print("\n   ✓ All tables created successfully")
 
+        # Apply schema migrations
+        apply_migrations(db, database_name)
+
         cursor.close()
         db.disconnect()
 
@@ -123,5 +192,6 @@ def main():
         db.disconnect()
         sys.exit(1)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

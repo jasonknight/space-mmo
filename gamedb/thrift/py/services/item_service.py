@@ -44,7 +44,7 @@ from game.ttypes import (
     FieldEnumMapping,
 )
 from game.ItemService import Iface as ItemServiceIface
-from db import DB
+from models.item_model import ItemModel
 from common import is_ok
 from services.base_service import BaseServiceHandler
 
@@ -52,12 +52,18 @@ from services.base_service import BaseServiceHandler
 class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
     """
     Implementation of the ItemService thrift interface.
-    Handles item CRUD operations using the DB layer.
+    Handles item CRUD operations using the ItemModel layer.
     """
 
-    def __init__(self, db: DB, database: str):
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        password: str,
+        database: str,
+    ):
         BaseServiceHandler.__init__(self, ItemServiceHandler)
-        self.db = db
+        self.item_model = ItemModel(host, user, password, database)
         self.database = database
 
     def create(self, request: ItemRequest) -> ItemResponse:
@@ -82,10 +88,7 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                 f"Creating item with internal_name={create_data.item.internal_name}"
             )
 
-            results = self.db.create_item(
-                self.database,
-                create_data.item,
-            )
+            results = self.item_model.create(create_data.item)
 
             if is_ok(results):
                 logger.info(f"SUCCESS: Created item with id={create_data.item.id}")
@@ -141,24 +144,7 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             item_id = load_data.item_id
             logger.info(f"Loading item_id={item_id}")
 
-            # Determine table to use based on backing_table if provided
-            table = None
-            if (
-                hasattr(load_data, "backing_table")
-                and load_data.backing_table is not None
-            ):
-                from game.ttypes import TABLE2STR
-
-                table = TABLE2STR.get(load_data.backing_table)
-                logger.info(
-                    f"Using table={table} from backing_table={load_data.backing_table}"
-                )
-
-            result, item = self.db.load_item(
-                self.database,
-                item_id,
-                table,
-            )
+            result, item = self.item_model.load(item_id)
 
             if item:
                 logger.info(f"SUCCESS: Loaded item_id={item_id}")
@@ -212,10 +198,7 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             item_id = save_data.item.id if save_data.item.id else "NEW"
             logger.info(f"Saving item_id={item_id}")
 
-            results = self.db.save_item(
-                self.database,
-                save_data.item,
-            )
+            results = self.item_model.save(save_data.item)
 
             if is_ok(results):
                 logger.info(f"SUCCESS: Saved item_id={save_data.item.id}")
@@ -271,10 +254,7 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             item_id = destroy_data.item_id
             logger.info(f"Destroying item_id={item_id}")
 
-            results = self.db.destroy_item(
-                self.database,
-                item_id,
-            )
+            results = self.item_model.destroy(item_id)
 
             if is_ok(results):
                 logger.info(f"SUCCESS: Destroyed item_id={item_id}")
@@ -337,8 +317,7 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                 f"Listing items: page={page}, results_per_page={results_per_page}, search_string={search_string}"
             )
 
-            result, items, total_count = self.db.list_item(
-                self.database,
+            result, items, total_count = self.item_model.search(
                 page,
                 results_per_page,
                 search_string=search_string,
@@ -408,7 +387,8 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             )
 
             # Use custom SQL query for lightweight autocomplete
-            cursor = self.db.connection.cursor(dictionary=True)
+            self.item_model.connect()
+            cursor = self.item_model.connection.cursor(dictionary=True)
 
             # Search by internal_name with LIKE
             query = f"""
@@ -495,11 +475,7 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             )
 
             # Load the root item
-            result, item = self.db.load_item(
-                self.database,
-                item_id,
-                None,
-            )
+            result, item = self.item_model.load(item_id)
 
             if not item:
                 logger.warning(f"FAILURE: Item_id={item_id} not found")
@@ -612,11 +588,7 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                         continue
 
                     # Load the component item
-                    result, component_item = self.db.load_item(
-                        self.database,
-                        component_item_id,
-                        None,
-                    )
+                    result, component_item = self.item_model.load(component_item_id)
 
                     if component_item:
                         # Add to visited set

@@ -14,6 +14,7 @@ from game.ttypes import (
     AttributeValue,
     Mobile,
 )
+from db_tables import get_table_sql
 
 logger = logging.getLogger(__name__)
 
@@ -27,15 +28,7 @@ class MobileMixin:
     ) -> list[str]:
         return [
             f"CREATE DATABASE IF NOT EXISTS {database};",
-            f"""CREATE TABLE IF NOT EXISTS {database}.mobiles (
-                id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                mobile_type VARCHAR(50) NOT NULL,
-                owner_mobile_id BIGINT,
-                owner_item_id BIGINT,
-                owner_asset_id BIGINT,
-                owner_player_id BIGINT,
-                what_we_call_you VARCHAR(255) NOT NULL
-            );""",
+            get_table_sql("mobiles", database),
         ]
 
     def get_mobile_sql(

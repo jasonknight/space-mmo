@@ -333,10 +333,10 @@ int compare_by_permissions(const void *a, const void *b) {
 void truncate_name(const char *name, char *buffer, size_t buffer_size) {
     size_t name_len = strlen(name);
 
-    if (name_len <= 30) {
+    if (name_len <= 60) {
         snprintf(buffer, buffer_size, "%s", name);
     } else {
-        snprintf(buffer, buffer_size, "%.27s...", name);
+        snprintf(buffer, buffer_size, "%.57s...", name);
     }
 }
 
@@ -490,7 +490,7 @@ void print_table(struct FileEntryArray *array, const char *directory) {
         display_dir = directory;
     }
 
-    int filename_width = 30;
+    int filename_width = 60;
     int total_width = filename_width + 2 + widths.date + 2 + widths.size + 2 + widths.user_group + 2 + widths.permissions;
 
     int file_count = array->count;

@@ -4,10 +4,18 @@ Auto-generated model classes for all database tables.
 Generated from database schema - do not modify manually.
 """
 
-from dotenv import load_dotenv
-from typing import Dict, List, Optional, Any, Iterator, Union
-import mysql.connector
+import sys
 import os
+
+# Add Thrift generated code to path
+thrift_gen_path = '/vagrant/gamedb/thrift/gen-py'
+if thrift_gen_path not in sys.path:
+    sys.path.insert(0, thrift_gen_path)
+
+from dotenv import load_dotenv
+from game.ttypes import GameResult, StatusType, GameError, Owner, AttributeValue, AttributeType, ItemVector3, Attribute
+from typing import Dict, List, Optional, Any, Iterator, Union, Tuple
+import mysql.connector
 
 # Load environment variables
 load_dotenv()
@@ -37,7 +45,7 @@ class AttributeOwner:
           PRIMARY KEY (`id`),
           KEY `attribute_id` (`attribute_id`),
           CONSTRAINT `attribute_owners_ibfk_1` FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=474 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=615 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -46,18 +54,23 @@ class AttributeOwner:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = AttributeOwner._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -455,15 +468,7 @@ class AttributeOwner:
         Find all records by attribute_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = AttributeOwner._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -484,15 +489,7 @@ class AttributeOwner:
         Find all records by mobile_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = AttributeOwner._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -513,15 +510,7 @@ class AttributeOwner:
         Find all records by item_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = AttributeOwner._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -542,15 +531,7 @@ class AttributeOwner:
         Find all records by asset_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = AttributeOwner._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -571,15 +552,7 @@ class AttributeOwner:
         Find all records by player_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = AttributeOwner._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -616,7 +589,7 @@ class Attribute:
           `vector3_z` double DEFAULT NULL,
           `asset_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=473 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=617 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -625,18 +598,23 @@ class Attribute:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = Attribute._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -842,22 +820,22 @@ class Attribute:
             thrift_params['visible'] = self._data.get('visible')
             thrift_params['attribute_type'] = self._data.get('attribute_type')
 
-        # Convert flattened database columns to AttributeValue union
-        value = None
-        if self._data.get('bool_value') is not None:
-            value = AttributeValue(bool_value=self._data['bool_value'])
-        elif self._data.get('double_value') is not None:
-            value = AttributeValue(double_value=self._data['double_value'])
-        elif self._data.get('vector3_x') is not None:
-            value = AttributeValue(
-                vector3=ItemVector3(
-                    x=self._data['vector3_x'],
-                    y=self._data['vector3_y'],
-                    z=self._data['vector3_z'],
-                ),
-            )
-        elif self._data.get('asset_id') is not None:
-            value = AttributeValue(asset_id=self._data['asset_id'])
+            # Convert flattened database columns to AttributeValue union
+            value = None
+            if self._data.get('bool_value') is not None:
+                value = AttributeValue(bool_value=self._data['bool_value'])
+            elif self._data.get('double_value') is not None:
+                value = AttributeValue(double_value=self._data['double_value'])
+            elif self._data.get('vector3_x') is not None:
+                value = AttributeValue(
+                    vector3=ItemVector3(
+                        x=self._data['vector3_x'],
+                        y=self._data['vector3_y'],
+                        z=self._data['vector3_z'],
+                    ),
+                )
+            elif self._data.get('asset_id') is not None:
+                value = AttributeValue(asset_id=self._data['asset_id'])
             thrift_params['value'] = value
 
             # Create Thrift object
@@ -981,15 +959,7 @@ class Attribute:
         Find all records by asset_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = Attribute._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -1022,7 +992,7 @@ class Inventory:
           `max_volume` double NOT NULL,
           `last_calculated_volume` double DEFAULT '0',
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1031,18 +1001,23 @@ class Inventory:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = Inventory._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -1358,15 +1333,7 @@ class Inventory:
         Find all records by owner_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = Inventory._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -1410,18 +1377,23 @@ class InventoryEntry:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = InventoryEntry._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -1845,15 +1817,7 @@ class InventoryEntry:
         Find all records by inventory_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = InventoryEntry._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -1874,15 +1838,7 @@ class InventoryEntry:
         Find all records by item_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = InventoryEntry._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -1903,15 +1859,7 @@ class InventoryEntry:
         Find all records by mobile_item_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = InventoryEntry._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -1946,7 +1894,7 @@ class InventoryOwner:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_owners_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=56 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=144 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1955,18 +1903,23 @@ class InventoryOwner:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = InventoryOwner._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -2364,15 +2317,7 @@ class InventoryOwner:
         Find all records by inventory_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = InventoryOwner._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -2393,15 +2338,7 @@ class InventoryOwner:
         Find all records by mobile_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = InventoryOwner._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -2422,15 +2359,7 @@ class InventoryOwner:
         Find all records by item_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = InventoryOwner._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -2451,15 +2380,7 @@ class InventoryOwner:
         Find all records by asset_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = InventoryOwner._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -2480,15 +2401,7 @@ class InventoryOwner:
         Find all records by player_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = InventoryOwner._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -2530,18 +2443,23 @@ class ItemBlueprintComponent:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = ItemBlueprintComponent._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -2813,15 +2731,7 @@ class ItemBlueprintComponent:
         Find all records by item_blueprint_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = ItemBlueprintComponent._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -2842,15 +2752,7 @@ class ItemBlueprintComponent:
         Find all records by component_item_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = ItemBlueprintComponent._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -2879,7 +2781,7 @@ class ItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=49 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=121 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2888,18 +2790,23 @@ class ItemBlueprint:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = ItemBlueprint._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -3138,7 +3045,7 @@ class Item:
           `item_type` varchar(50) NOT NULL,
           `blueprint_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1116 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1341 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3147,18 +3054,23 @@ class Item:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = Item._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -3490,15 +3402,7 @@ class Item:
             return
 
         # Use a fresh connection to avoid transaction conflicts
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = Item._create_connection()
         cursor = connection.cursor()
 
         try:
@@ -3692,15 +3596,7 @@ class Item:
             return
 
         # Use a fresh connection to avoid transaction conflicts
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = Item._create_connection()
         cursor = connection.cursor()
 
         try:
@@ -3849,17 +3745,17 @@ class Item:
             thrift_params['item_type'] = self._data.get('item_type')
             thrift_params['blueprint_id'] = self._data.get('blueprint_id')
 
-        # Load attributes via pivot table and convert to map<AttributeType, Attribute>
-        attributes_map = {}
-        if self.get_id() is not None:
-            # Get attributes through the pivot relationship
-            attribute_models = self.get_attributes(reload=True)
-            for attr_model in attribute_models:
-                # Convert each attribute model to Thrift
-                attr_results, attr_thrift = attr_model.into_thrift()
-                if attr_thrift is not None:
-                    # Use attribute_type as the map key
-                    attributes_map[attr_thrift.attribute_type] = attr_thrift
+            # Load attributes via pivot table and convert to map<AttributeType, Attribute>
+            attributes_map = {}
+            if self.get_id() is not None:
+                # Get attributes through the pivot relationship
+                attribute_models = self.get_attributes(reload=True)
+                for attr_model in attribute_models:
+                    # Convert each attribute model to Thrift
+                    attr_results, attr_thrift = attr_model.into_thrift()
+                    if attr_thrift is not None:
+                        # Use attribute_type as the map key
+                        attributes_map[attr_thrift.attribute_type] = attr_thrift
             thrift_params['attributes'] = attributes_map
 
             # Create Thrift object
@@ -4015,15 +3911,7 @@ class Item:
         Find all records by blueprint_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = Item._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -4072,18 +3960,23 @@ class MobileItemAttribute:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = MobileItemAttribute._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -4342,15 +4235,7 @@ class MobileItemAttribute:
         Find all records by mobile_item_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = MobileItemAttribute._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -4371,15 +4256,7 @@ class MobileItemAttribute:
         Find all records by asset_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = MobileItemAttribute._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -4421,18 +4298,23 @@ class MobileItemBlueprintComponent:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = MobileItemBlueprintComponent._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -4628,15 +4510,7 @@ class MobileItemBlueprintComponent:
         Find all records by item_blueprint_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = MobileItemBlueprintComponent._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -4657,15 +4531,7 @@ class MobileItemBlueprintComponent:
         Find all records by component_item_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = MobileItemBlueprintComponent._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -4694,7 +4560,7 @@ class MobileItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=109 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -4703,18 +4569,23 @@ class MobileItemBlueprint:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = MobileItemBlueprint._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -4894,7 +4765,7 @@ class MobileItem:
           `blueprint_id` bigint DEFAULT NULL,
           `item_id` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=64 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -4903,18 +4774,23 @@ class MobileItem:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = MobileItem._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -5216,17 +5092,17 @@ class MobileItem:
             thrift_params['blueprint_id'] = self._data.get('blueprint_id')
             thrift_params['item_id'] = self._data.get('item_id')
 
-        # Load attributes via pivot table and convert to map<AttributeType, Attribute>
-        attributes_map = {}
-        if self.get_id() is not None:
-            # Get attributes through the pivot relationship
-            attribute_models = self.get_attributes(reload=True)
-            for attr_model in attribute_models:
-                # Convert each attribute model to Thrift
-                attr_results, attr_thrift = attr_model.into_thrift()
-                if attr_thrift is not None:
-                    # Use attribute_type as the map key
-                    attributes_map[attr_thrift.attribute_type] = attr_thrift
+            # Load attributes via pivot table and convert to map<AttributeType, Attribute>
+            attributes_map = {}
+            if self.get_id() is not None:
+                # Get attributes through the pivot relationship
+                attribute_models = self.get_attributes(reload=True)
+                for attr_model in attribute_models:
+                    # Convert each attribute model to Thrift
+                    attr_results, attr_thrift = attr_model.into_thrift()
+                    if attr_thrift is not None:
+                        # Use attribute_type as the map key
+                        attributes_map[attr_thrift.attribute_type] = attr_thrift
             thrift_params['attributes'] = attributes_map
 
             # Load mobile relationship
@@ -5391,15 +5267,7 @@ class MobileItem:
         Find all records by mobile_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = MobileItem._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -5420,15 +5288,7 @@ class MobileItem:
         Find all records by blueprint_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = MobileItem._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -5449,15 +5309,7 @@ class MobileItem:
         Find all records by item_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = MobileItem._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -5491,7 +5343,7 @@ class Mobile:
           `owner_player_id` bigint DEFAULT NULL,
           `what_we_call_you` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=165 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=443 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5500,18 +5352,23 @@ class Mobile:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = Mobile._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -5558,29 +5415,73 @@ class Mobile:
         self._dirty = True
 
     def set_owner_mobile_id(self, value: Optional[int]) -> None:
-        """Set the value of owner_mobile_id."""
+        """Set the value of owner_mobile_id and clear other owner FKs."""
         self._data['owner_mobile_id'] = value
+        # Clear other owner FKs to enforce exactly-one constraint
+        self._data['owner_player_id'] = None
+        self._data['owner_item_id'] = None
+        self._data['owner_asset_id'] = None
         self._dirty = True
 
     def set_owner_item_id(self, value: Optional[int]) -> None:
-        """Set the value of owner_item_id."""
+        """Set the value of owner_item_id and clear other owner FKs."""
         self._data['owner_item_id'] = value
+        # Clear other owner FKs to enforce exactly-one constraint
+        self._data['owner_player_id'] = None
+        self._data['owner_mobile_id'] = None
+        self._data['owner_asset_id'] = None
         self._dirty = True
 
     def set_owner_asset_id(self, value: Optional[int]) -> None:
-        """Set the value of owner_asset_id."""
+        """Set the value of owner_asset_id and clear other owner FKs."""
         self._data['owner_asset_id'] = value
+        # Clear other owner FKs to enforce exactly-one constraint
+        self._data['owner_player_id'] = None
+        self._data['owner_mobile_id'] = None
+        self._data['owner_item_id'] = None
         self._dirty = True
 
     def set_owner_player_id(self, value: Optional[int]) -> None:
-        """Set the value of owner_player_id."""
+        """Set the value of owner_player_id and clear other owner FKs."""
         self._data['owner_player_id'] = value
+        # Clear other owner FKs to enforce exactly-one constraint
+        self._data['owner_mobile_id'] = None
+        self._data['owner_item_id'] = None
+        self._data['owner_asset_id'] = None
         self._dirty = True
 
     def set_what_we_call_you(self, value: str) -> None:
         """Set the value of what_we_call_you."""
         self._data['what_we_call_you'] = value
         self._dirty = True
+
+
+    def validate_owner(self) -> None:
+        """
+        Validate Owner union: exactly one owner must be set and must be valid type.
+
+        Raises:
+            ValueError: If validation fails
+        """
+        owner_fks = {
+            'player': self.get_owner_player_id(),
+            'mobile': self.get_owner_mobile_id(),
+            'item': self.get_owner_item_id(),
+            'asset': self.get_owner_asset_id(),
+        }
+
+        # Check exactly one is set
+        set_owners = [k for k, v in owner_fks.items() if v is not None]
+        if len(set_owners) == 0:
+            raise ValueError("Mobile must have exactly one owner (none set)")
+        if len(set_owners) > 1:
+            raise ValueError(f"Mobile must have exactly one owner (multiple set: {set_owners})")
+
+        # Check valid type for this table
+        valid_types = ['player', 'mobile']
+        if set_owners[0] not in valid_types:
+            raise ValueError(f"Mobile cannot be owned by {set_owners[0]} (valid types: {valid_types})")
+
 
 
     def get_owner_mobile(self, strict: bool = False) -> Optional['Mobile']:
@@ -5932,15 +5833,7 @@ class Mobile:
             return
 
         # Use a fresh connection to avoid transaction conflicts
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = Mobile._create_connection()
         cursor = connection.cursor()
 
         try:
@@ -6134,15 +6027,7 @@ class Mobile:
             return
 
         # Use a fresh connection to avoid transaction conflicts
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = Mobile._create_connection()
         cursor = connection.cursor()
 
         try:
@@ -6304,29 +6189,29 @@ class Mobile:
             thrift_params['mobile_type'] = self._data.get('mobile_type')
             thrift_params['what_we_call_you'] = self._data.get('what_we_call_you')
 
-        # Convert database owner_* columns to Owner union
-        owner = None
-        if self._data.get('owner_player_id') is not None:
-            owner = Owner(player_id=self._data['owner_player_id'])
-        elif self._data.get('owner_mobile_id') is not None:
-            owner = Owner(mobile_id=self._data['owner_mobile_id'])
-        elif self._data.get('owner_item_id') is not None:
-            owner = Owner(item_id=self._data['owner_item_id'])
-        elif self._data.get('owner_asset_id') is not None:
-            owner = Owner(asset_id=self._data['owner_asset_id'])
+            # Convert database owner_* columns to Owner union
+            owner = None
+            if self._data.get('owner_player_id') is not None:
+                owner = Owner(player_id=self._data['owner_player_id'])
+            elif self._data.get('owner_mobile_id') is not None:
+                owner = Owner(mobile_id=self._data['owner_mobile_id'])
+            elif self._data.get('owner_item_id') is not None:
+                owner = Owner(item_id=self._data['owner_item_id'])
+            elif self._data.get('owner_asset_id') is not None:
+                owner = Owner(asset_id=self._data['owner_asset_id'])
             thrift_params['owner'] = owner
 
-        # Load attributes via pivot table and convert to map<AttributeType, Attribute>
-        attributes_map = {}
-        if self.get_id() is not None:
-            # Get attributes through the pivot relationship
-            attribute_models = self.get_attributes(reload=True)
-            for attr_model in attribute_models:
-                # Convert each attribute model to Thrift
-                attr_results, attr_thrift = attr_model.into_thrift()
-                if attr_thrift is not None:
-                    # Use attribute_type as the map key
-                    attributes_map[attr_thrift.attribute_type] = attr_thrift
+            # Load attributes via pivot table and convert to map<AttributeType, Attribute>
+            attributes_map = {}
+            if self.get_id() is not None:
+                # Get attributes through the pivot relationship
+                attribute_models = self.get_attributes(reload=True)
+                for attr_model in attribute_models:
+                    # Convert each attribute model to Thrift
+                    attr_results, attr_thrift = attr_model.into_thrift()
+                    if attr_thrift is not None:
+                        # Use attribute_type as the map key
+                        attributes_map[attr_thrift.attribute_type] = attr_thrift
             thrift_params['attributes'] = attributes_map
 
             # Create Thrift object
@@ -6489,15 +6374,7 @@ class Mobile:
         Find all records by owner_mobile_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = Mobile._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -6518,15 +6395,7 @@ class Mobile:
         Find all records by owner_item_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = Mobile._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -6547,15 +6416,7 @@ class Mobile:
         Find all records by owner_asset_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = Mobile._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -6576,15 +6437,7 @@ class Mobile:
         Find all records by owner_player_id.
         Returns a list of instances with matching records.
         """
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = Mobile._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -6618,7 +6471,7 @@ class Player:
           `year_of_birth` bigint NOT NULL,
           `email` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=78 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=219 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -6627,18 +6480,23 @@ class Player:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = Player._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""
@@ -6780,39 +6638,36 @@ class Player:
 
         return iter(results) if lazy else results
 
-    def get_mobiles(self, reload: bool = False, lazy: bool = False):
+    def get_mobile(self, reload: bool = False):
         """
-        Get all associated Mobile records.
+        Get the associated Mobile record (1-to-1 relationship).
 
         Args:
             reload: If True, bypass cache and fetch fresh from database.
-            lazy: If True, return an iterator. If False, return a list.
 
         Returns:
-            List[Mobile] or Iterator[Mobile]
+            Optional[Mobile]
         """
-        cache_key = '_mobiles_cache'
+        cache_key = '_mobile_cache'
 
         # Check cache unless reload is requested
         if not reload and hasattr(self, cache_key):
-            cached = getattr(self, cache_key)
-            if cached is not None:
-                if lazy:
-                    return iter(cached)
-                return cached
+            return getattr(self, cache_key)
 
         # Fetch from database
         my_id = self.get_id()
         if my_id is None:
-            return iter([]) if lazy else []
+            return None
 
         results = Mobile.find_by_owner_player_id(my_id)
 
-        # Cache results for non-lazy calls
-        if not lazy:
-            setattr(self, cache_key, results)
+        # Should only be one result for 1-to-1
+        result = results[0] if results else None
 
-        return iter(results) if lazy else results
+        # Cache result
+        setattr(self, cache_key, result)
+
+        return result
 
     def get_attributes(self, reload: bool = False) -> List['Attribute']:
         """
@@ -6920,15 +6775,7 @@ class Player:
             return
 
         # Use a fresh connection to avoid transaction conflicts
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = Player._create_connection()
         cursor = connection.cursor()
 
         try:
@@ -7122,15 +6969,7 @@ class Player:
             return
 
         # Use a fresh connection to avoid transaction conflicts
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = Player._create_connection()
         cursor = connection.cursor()
 
         try:
@@ -7247,6 +7086,15 @@ class Player:
         if hasattr(thrift_obj, 'email'):
             self._data['email'] = thrift_obj.email
 
+        # Handle embedded mobile (1-to-1 relationship)
+        if hasattr(thrift_obj, 'mobile') and thrift_obj.mobile is not None:
+            mobile_obj = Mobile()
+            mobile_obj.from_thrift(thrift_obj.mobile)
+            # Set the foreign key to link to this parent
+            mobile_obj.set_owner_player_id(self.get_id())
+            # Cache the embedded object
+            self._cached_mobile = mobile_obj
+
         self._dirty = True
         return self
 
@@ -7273,6 +7121,15 @@ class Player:
             thrift_params['over_13'] = self._data.get('over_13')
             thrift_params['year_of_birth'] = self._data.get('year_of_birth')
             thrift_params['email'] = self._data.get('email')
+
+            # Load embedded mobile (1-to-1 relationship)
+            mobile_model = self.get_mobile()
+            if mobile_model is not None:
+                mobile_results, mobile_thrift = mobile_model.into_thrift()
+                if mobile_thrift is not None:
+                    thrift_params['mobile'] = mobile_thrift
+                else:
+                    results.extend(mobile_results)
 
             # Create Thrift object
             thrift_obj = Player(**thrift_params)

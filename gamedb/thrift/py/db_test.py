@@ -1,115 +1,219 @@
+#!/usr/bin/env python3
+"""
+Concurrent test runner for database models.
+
+This script runs all model tests in parallel using multiprocessing,
+with each test using its own unique database to avoid conflicts.
+"""
+
 import sys
-sys.path.append('../gen-py')
+import multiprocessing
+from typing import Callable, Tuple
 
-from db import DB
+sys.path.append("../gen-py")
 
-# Import setup/teardown and test functions from submodules
-from dbinc.item_test import (
-    setup_database,
-    teardown_database,
-    test_item_blueprint,
-    test_attribute,
-    test_item,
-)
-from dbinc.inventory_test import test_inventory
-from dbinc.mobile_test import test_mobile
-from dbinc.player_test import test_player
+# Database credentials
+DB_HOST = "localhost"
+DB_USER = "admin"
+DB_PASSWORD = "minda"
 
 
-def test_unified_dispatchers(db: DB, database_name: str):
-    """Test unified dispatcher functions (save, load, create, update, destroy)."""
-    from game.ttypes import (
-        Item,
-        ItemType,
-        Attribute,
-        AttributeType,
-        Mobile,
-        MobileType,
-    )
+def run_test_module(
+    test_info: Tuple[str, str, Callable, Callable, Callable],
+) -> Tuple[str, bool, str]:
+    """
+    Run a test module in a separate process.
 
-    print("Testing unified dispatchers...")
+    Args:
+        test_info: Tuple of (test_name, database_name, setup_fn, test_fn, teardown_fn)
 
-    # Test unified save with Item
-    item = Item(
-        id=None,
-        internal_name="test_unified_item",
-        attributes={},
-        max_stack_size=50,
-        item_type=ItemType.RAWMATERIAL,
-        blueprint=None,
-    )
+    Returns:
+        Tuple of (test_name, success, error_message)
+    """
+    test_name, database_name, setup_fn, test_fn, teardown_fn = test_info
 
-    save_results = db.save(database_name, item)
-    from common import is_ok
-    assert is_ok(save_results), f"Failed to save Item via unified save: {save_results[0].message}"
-    print(f"  ✓ Saved Item via unified save: {save_results[0].message}")
+    try:
+        print(f"\n{'=' * 60}")
+        print(f"Starting: {test_name}")
+        print(f"Database: {database_name}")
+        print(f"{'=' * 60}\n")
 
-    # Test unified load
-    load_result, loaded_item = db.load(database_name, item.id, 'Item')
-    from common import is_true
-    assert is_true(load_result), f"Failed to load Item via unified load: {load_result.message}"
-    assert loaded_item.internal_name == item.internal_name, "Item internal_name mismatch"
-    print(f"  ✓ Loaded Item via unified load: {load_result.message}")
+        # Setup database
+        setup_fn(DB_HOST, DB_USER, DB_PASSWORD, database_name)
 
-    # Test unified update
-    loaded_item.internal_name = "test_unified_item_updated"
-    update_results = db.update(database_name, loaded_item)
-    assert is_ok(update_results), f"Failed to update Item via unified update: {update_results[0].message}"
-    print(f"  ✓ Updated Item via unified update: {update_results[0].message}")
+        # Run the test function
+        test_fn(DB_HOST, DB_USER, DB_PASSWORD, database_name)
 
-    # Test unified destroy
-    destroy_results = db.destroy(database_name, loaded_item)
-    assert is_ok(destroy_results), f"Failed to destroy Item via unified destroy: {destroy_results[0].message}"
-    print(f"  ✓ Destroyed Item via unified destroy: {destroy_results[0].message}")
+        # Teardown database
+        teardown_fn(DB_HOST, DB_USER, DB_PASSWORD, database_name)
 
-    # Test unified create with Mobile
-    mobile = Mobile(
-        id=None,
-        mobile_type=MobileType.NPC,
-        attributes={},
-        owner=None,
-    )
+        print(f"\n{'=' * 60}")
+        print(f"✓ PASSED: {test_name}")
+        print(f"{'=' * 60}\n")
 
-    create_results = db.create(database_name, mobile)
-    assert is_ok(create_results), f"Failed to create Mobile via unified create: {create_results[0].message}"
-    print(f"  ✓ Created Mobile via unified create: {create_results[0].message}")
+        return (test_name, True, "")
 
-    # Clean up
-    db.destroy(database_name, mobile)
+    except Exception as e:
+        error_msg = f"{type(e).__name__}: {str(e)}"
+        print(f"\n{'=' * 60}")
+        print(f"✗ FAILED: {test_name}")
+        print(f"Error: {error_msg}")
+        print(f"{'=' * 60}\n")
 
-    print("  ✓ All assertions passed for unified dispatchers\n")
+        # Try to cleanup even on failure
+        try:
+            teardown_fn(DB_HOST, DB_USER, DB_PASSWORD, database_name)
+        except:
+            pass
+
+        return (test_name, False, error_msg)
 
 
 def main():
-    # Database connection details
-    db_host = "localhost"
-    db_user = "gamedbadmin"
-    db_password = "gamedbadmin"
-    database_name = "test_game_db"
+    """Main test runner."""
+    print("\n" + "=" * 80)
+    print("DATABASE MODEL TEST SUITE - CONCURRENT RUNNER")
+    print("=" * 80)
+    print(
+        f"\nRunning tests in parallel using {multiprocessing.cpu_count()} CPU cores\n"
+    )
 
-    # Create DB instance
-    db = DB(db_host, db_user, db_password)
+    # Import test modules
+    from dbinc.item_test import (
+        setup_database as item_setup,
+        teardown_database as item_teardown,
+        test_item_blueprint,
+        test_item,
+        test_search_item,
+    )
+    from dbinc.mobile_item_test import (
+        setup_database as mobile_item_setup,
+        teardown_database as mobile_item_teardown,
+        test_mobile_item,
+        test_search_mobile_item,
+    )
+    from dbinc.inventory_test import (
+        setup_database as inventory_setup,
+        teardown_database as inventory_teardown,
+        test_inventory,
+        test_list_inventory,
+    )
+    from dbinc.mobile_test import (
+        setup_database as mobile_setup,
+        teardown_database as mobile_teardown,
+        test_mobile,
+    )
+    from dbinc.player_test import (
+        setup_database as player_setup,
+        teardown_database as player_teardown,
+        test_player,
+        test_list_player,
+        test_player_with_character_attributes,
+    )
 
-    try:
-        # Setup database
-        setup_database(db, database_name)
+    # Define all tests with unique database names
+    tests = [
+        (
+            "ItemBlueprint Tests",
+            "test_item_blueprint_db",
+            item_setup,
+            test_item_blueprint,
+            item_teardown,
+        ),
+        ("Item Tests", "test_item_db", item_setup, test_item, item_teardown),
+        (
+            "Item Search Tests",
+            "test_item_search_db",
+            item_setup,
+            test_search_item,
+            item_teardown,
+        ),
+        (
+            "MobileItem Tests",
+            "test_mobile_item_db",
+            mobile_item_setup,
+            test_mobile_item,
+            mobile_item_teardown,
+        ),
+        (
+            "MobileItem Search Tests",
+            "test_mobile_item_search_db",
+            mobile_item_setup,
+            test_search_mobile_item,
+            mobile_item_teardown,
+        ),
+        (
+            "Inventory Tests",
+            "test_inventory_db",
+            inventory_setup,
+            test_inventory,
+            inventory_teardown,
+        ),
+        (
+            "Inventory List Tests",
+            "test_inventory_list_db",
+            inventory_setup,
+            test_list_inventory,
+            inventory_teardown,
+        ),
+        ("Mobile Tests", "test_mobile_db", mobile_setup, test_mobile, mobile_teardown),
+        ("Player Tests", "test_player_db", player_setup, test_player, player_teardown),
+        (
+            "Player List Tests",
+            "test_player_list_db",
+            player_setup,
+            test_list_player,
+            player_teardown,
+        ),
+        (
+            "Player Character Attributes Tests",
+            "test_player_char_db",
+            player_setup,
+            test_player_with_character_attributes,
+            player_teardown,
+        ),
+    ]
 
-        # Run all tests
-        test_item_blueprint(db, database_name)
-        test_attribute(db, database_name)
-        test_item(db, database_name)
-        test_inventory(db, database_name)
-        test_mobile(db, database_name)
-        test_player(db, database_name)
-        test_unified_dispatchers(db, database_name)
+    print(f"Running {len(tests)} test suites concurrently...\n")
 
-        print("=" * 50)
-        print("All tests passed!")
-        print("=" * 50)
+    # Run all tests in parallel
+    with multiprocessing.Pool() as pool:
+        results = pool.map(run_test_module, tests)
 
-    finally:
-        # Cleanup
-        teardown_database(db, database_name)
+    # Collect and display results
+    print("\n" + "=" * 80)
+    print("TEST RESULTS SUMMARY")
+    print("=" * 80 + "\n")
+
+    passed = []
+    failed = []
+
+    for test_name, success, error_msg in results:
+        if success:
+            passed.append(test_name)
+            print(f"✓ PASSED: {test_name}")
+        else:
+            failed.append((test_name, error_msg))
+            print(f"✗ FAILED: {test_name}")
+            print(f"  Error: {error_msg}")
+
+    # Final summary
+    print("\n" + "=" * 80)
+    print(f"Total: {len(tests)} tests")
+    print(f"Passed: {len(passed)}")
+    print(f"Failed: {len(failed)}")
+    print("=" * 80 + "\n")
+
+    if failed:
+        print("Failed tests:")
+        for test_name, error_msg in failed:
+            print(f"  - {test_name}: {error_msg}")
+        print()
+        sys.exit(1)
+    else:
+        print("🎉 All tests passed!")
+        print()
+        sys.exit(0)
 
 
 if __name__ == "__main__":

@@ -1,10 +1,11 @@
 import sys
 import os
+import mysql.connector
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../gen-py"))
 
-from db import DB
+from models.player_model import PlayerModel
 from game.ttypes import (
     Player,
     Mobile,
@@ -15,65 +16,113 @@ from game.ttypes import (
     GameError,
 )
 from common import is_ok, is_true
+from db_tables import get_table_sql
 
 
-def setup_database(db: DB, database_name: str):
+def setup_database(host: str, user: str, password: str, database_name: str):
     """Create all necessary tables for testing."""
-    db.connect()
-    cursor = db.connection.cursor()
+    connection = mysql.connector.connect(
+        host=host,
+        user=user,
+        password=password,
+        auth_plugin="mysql_native_password",
+        ssl_disabled=True,
+        use_pure=True,
+    )
+    cursor = connection.cursor()
 
     # Create database
     cursor.execute(f"DROP DATABASE IF EXISTS {database_name};")
     cursor.execute(f"CREATE DATABASE {database_name};")
 
-    # Create all tables
-    for stmt in db.get_item_blueprints_table_sql(database_name):
-        cursor.execute(stmt)
+    # Create players table
+    cursor.execute(
+        f"CREATE TABLE IF NOT EXISTS {database_name}.players ("
+        f"id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+        f"full_name VARCHAR(255) NOT NULL, "
+        f"what_we_call_you VARCHAR(255) NOT NULL, "
+        f"security_token VARCHAR(255) NOT NULL, "
+        f"over_13 BOOLEAN NOT NULL, "
+        f"year_of_birth INT NOT NULL, "
+        f"email VARCHAR(255) NOT NULL"
+        f");"
+    )
 
-    for stmt in db.get_item_blueprint_components_table_sql(database_name):
-        cursor.execute(stmt)
+    # Create mobiles table
+    cursor.execute(
+        f"CREATE TABLE IF NOT EXISTS {database_name}.mobiles ("
+        f"id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+        f"mobile_type VARCHAR(50) NOT NULL, "
+        f"what_we_call_you VARCHAR(255), "
+        f"owner_player_id BIGINT, "
+        f"owner_mobile_id BIGINT, "
+        f"owner_item_id BIGINT, "
+        f"owner_asset_id BIGINT"
+        f");"
+    )
 
-    for stmt in db.get_items_table_sql(database_name):
-        cursor.execute(stmt)
+    # Create attributes table
+    cursor.execute(
+        f"CREATE TABLE IF NOT EXISTS {database_name}.attributes ("
+        f"id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+        f"internal_name VARCHAR(255) NOT NULL, "
+        f"visible BOOLEAN NOT NULL, "
+        f"attribute_type VARCHAR(50) NOT NULL, "
+        f"bool_value BOOLEAN, "
+        f"double_value DOUBLE, "
+        f"vector3_x DOUBLE, "
+        f"vector3_y DOUBLE, "
+        f"vector3_z DOUBLE, "
+        f"asset_id BIGINT"
+        f");"
+    )
 
-    for stmt in db.get_attributes_table_sql(database_name):
-        cursor.execute(stmt)
+    # Create attribute_owners table
+    cursor.execute(
+        f"CREATE TABLE IF NOT EXISTS {database_name}.attribute_owners ("
+        f"id BIGINT AUTO_INCREMENT PRIMARY KEY, "
+        f"attribute_id BIGINT NOT NULL, "
+        f"mobile_id BIGINT, "
+        f"item_id BIGINT, "
+        f"asset_id BIGINT, "
+        f"player_id BIGINT, "
+        f"FOREIGN KEY (attribute_id) REFERENCES {database_name}.attributes(id)"
+        f");"
+    )
 
-    for stmt in db.get_attribute_owners_table_sql(database_name):
-        cursor.execute(stmt)
-
-    for stmt in db.get_inventories_table_sql(database_name):
-        cursor.execute(stmt)
-
-    for stmt in db.get_inventory_entries_table_sql(database_name):
-        cursor.execute(stmt)
-
-    for stmt in db.get_inventory_owners_table_sql(database_name):
-        cursor.execute(stmt)
-
-    for stmt in db.get_mobiles_table_sql(database_name):
-        cursor.execute(stmt)
-
-    for stmt in db.get_players_table_sql(database_name):
-        cursor.execute(stmt)
-
-    db.connection.commit()
+    connection.commit()
     cursor.close()
+    connection.close()
 
 
-def teardown_database(db: DB, database_name: str):
+def teardown_database(host: str, user: str, password: str, database_name: str):
     """Delete the test database."""
-    db.connect()
-    cursor = db.connection.cursor()
+    connection = mysql.connector.connect(
+        host=host,
+        user=user,
+        password=password,
+        auth_plugin="mysql_native_password",
+        ssl_disabled=True,
+        use_pure=True,
+    )
+    cursor = connection.cursor()
     cursor.execute(f"DROP DATABASE IF EXISTS {database_name};")
-    db.connection.commit()
+    connection.commit()
     cursor.close()
-    db.disconnect()
+    connection.close()
 
 
-def test_player(db: DB, database_name: str):
+def test_player(
+    host: str,
+    user: str,
+    password: str,
+    database_name: str,
+):
     """Test Player save and load."""
     print("Testing Player...")
+
+    # Create player model
+    player_model = PlayerModel(host, user, password, database_name)
 
     # Create player
     player = Player(
@@ -87,13 +136,13 @@ def test_player(db: DB, database_name: str):
     )
 
     # Save player
-    save_results = db.save_player(database_name, player)
+    save_results = player_model.save(player)
     assert is_ok(save_results), f"Failed to save Player: {save_results[0].message}"
     print(f"  ✓ Saved: {save_results[0].message}")
 
     # Verify that a mobile was created for this player
-    db.connect()
-    cursor = db.connection.cursor()
+    player_model.connect()
+    cursor = player_model.connection.cursor()
     cursor.execute(
         f"SELECT id, mobile_type, owner_player_id FROM {database_name}.mobiles WHERE owner_player_id = {player.id}",
     )
@@ -112,7 +161,7 @@ def test_player(db: DB, database_name: str):
     )
 
     # Load player
-    load_result, loaded_player = db.load_player(database_name, player.id)
+    load_result, loaded_player = player_model.load(player.id)
     assert is_true(load_result), f"Failed to load Player: {load_result.message}"
     print(f"  ✓ Loaded: {load_result.message}")
 
@@ -146,14 +195,14 @@ def test_player(db: DB, database_name: str):
     loaded_player.what_we_call_you = "Janie"
     loaded_player.year_of_birth = 1995
 
-    update_results = db.save_player(database_name, loaded_player)
+    update_results = player_model.save(loaded_player)
     assert is_ok(update_results), (
         f"Failed to update Player: {update_results[0].message}"
     )
     print(f"  ✓ Updated: {update_results[0].message}")
 
     # Load again and verify updates
-    load_result2, updated_player = db.load_player(database_name, loaded_player.id)
+    load_result2, updated_player = player_model.load(loaded_player.id)
     assert is_true(load_result2), (
         f"Failed to load updated Player: {load_result2.message}"
     )
@@ -165,8 +214,8 @@ def test_player(db: DB, database_name: str):
     print("  ✓ Update verified")
 
     # Verify mobile still exists after update
-    db.connect()
-    cursor = db.connection.cursor()
+    player_model.connect()
+    cursor = player_model.connection.cursor()
     cursor.execute(
         f"SELECT id FROM {database_name}.mobiles WHERE owner_player_id = {loaded_player.id}",
     )
@@ -179,14 +228,14 @@ def test_player(db: DB, database_name: str):
 
     # Test destroy
     print("  Testing destroy...")
-    destroy_results = db.destroy_player(database_name, loaded_player.id)
+    destroy_results = player_model.destroy(loaded_player.id)
     assert is_ok(destroy_results), (
         f"Failed to destroy Player: {destroy_results[0].message}"
     )
     print(f"  ✓ Destroyed: {destroy_results[0].message}")
 
     # Verify load fails after destroy
-    load_result3, destroyed_player = db.load_player(database_name, loaded_player.id)
+    load_result3, destroyed_player = player_model.load(loaded_player.id)
     assert not is_true(load_result3), "Load should fail after destroy"
     assert destroyed_player is None, "Destroyed player should be None"
     assert load_result3.error_code == GameError.DB_RECORD_NOT_FOUND, (
@@ -195,8 +244,8 @@ def test_player(db: DB, database_name: str):
     print("  ✓ Destroy verified: load failed with DB_RECORD_NOT_FOUND")
 
     # Verify mobile was also deleted
-    db.connect()
-    cursor = db.connection.cursor()
+    player_model.connect()
+    cursor = player_model.connection.cursor()
     cursor.execute(
         f"SELECT id FROM {database_name}.mobiles WHERE id = {mobile_id}",
     )
@@ -209,13 +258,24 @@ def test_player(db: DB, database_name: str):
 
     print("  ✓ All assertions passed for Player\n")
 
+    # Disconnect
+    player_model.disconnect()
 
-def test_list_player(db: DB, database_name: str):
+
+def test_list_player(
+    host: str,
+    user: str,
+    password: str,
+    database_name: str,
+):
     """Test Player list functionality with pagination and search."""
     print("Testing Player list functionality...")
 
     import random
     import string
+
+    # Create player model
+    player_model = PlayerModel(host, user, password, database_name)
 
     # Generate random string helper
     def random_string(length=10):
@@ -244,7 +304,7 @@ def test_list_player(db: DB, database_name: str):
             email=f"{nickname.lower()}@test.com",
         )
 
-        save_results = db.save_player(database_name, player)
+        save_results = player_model.save(player)
         assert is_ok(save_results), (
             f"Failed to save player {i}: {save_results[0].message}"
         )
@@ -259,8 +319,7 @@ def test_list_player(db: DB, database_name: str):
     results_per_page = 10
 
     while True:
-        result, players, total_count = db.list_player(
-            database_name,
+        result, players, total_count = player_model.search(
             page,
             results_per_page,
         )
@@ -290,8 +349,7 @@ def test_list_player(db: DB, database_name: str):
     # Test search on full_name
     print("  Testing search on full_name...")
     search_full_name = search_test_names[0][0]
-    result, players, total_count = db.list_player(
-        database_name,
+    result, players, total_count = player_model.search(
         0,
         100,
         search_string=search_full_name,
@@ -310,8 +368,7 @@ def test_list_player(db: DB, database_name: str):
     # Test search on what_we_call_you
     print("  Testing search on what_we_call_you...")
     search_nickname = search_test_names[1][1]
-    result, players, total_count = db.list_player(
-        database_name,
+    result, players, total_count = player_model.search(
         0,
         100,
         search_string=search_nickname,
@@ -330,8 +387,7 @@ def test_list_player(db: DB, database_name: str):
     # Test partial search
     print("  Testing partial search...")
     partial_search = "Player_"
-    result, players, total_count = db.list_player(
-        database_name,
+    result, players, total_count = player_model.search(
         0,
         100,
         search_string=partial_search,
@@ -344,12 +400,23 @@ def test_list_player(db: DB, database_name: str):
 
     print("  ✓ All list tests passed for Player\n")
 
+    # Disconnect
+    player_model.disconnect()
 
-def test_player_with_character_attributes(db: DB, database_name: str):
+
+def test_player_with_character_attributes(
+    host: str,
+    user: str,
+    password: str,
+    database_name: str,
+):
     """Test Player with mobile character attributes."""
     print("Testing Player with character attributes...")
 
     import random
+
+    # Create player model
+    player_model = PlayerModel(host, user, password, database_name)
 
     # Create mobile with character attributes
     mobile_owner = Owner()
@@ -398,12 +465,12 @@ def test_player_with_character_attributes(db: DB, database_name: str):
     )
 
     # Save player
-    save_results = db.save_player(database_name, player)
+    save_results = player_model.save(player)
     assert is_ok(save_results), f"Failed to save Player: {save_results[0].message}"
     print(f"  ✓ Saved: {save_results[0].message}")
 
     # Load player
-    load_result, loaded_player = db.load_player(database_name, player.id)
+    load_result, loaded_player = player_model.load(player.id)
     assert is_true(load_result), f"Failed to load Player: {load_result.message}"
     print(f"  ✓ Loaded: {load_result.message}")
 
@@ -436,6 +503,9 @@ def test_player_with_character_attributes(db: DB, database_name: str):
 
     print("  ✓ All assertions passed for Player with character attributes\n")
 
+    # Disconnect
+    player_model.disconnect()
+
 
 def main():
     """Run all tests."""
@@ -450,19 +520,16 @@ def main():
     print("=" * 60)
     print()
 
-    # Initialize database connection
-    db = DB(host, user, password)
-
     try:
         # Setup database and tables
         print("Setting up test database...")
-        setup_database(db, database_name)
+        setup_database(host, user, password, database_name)
         print("✓ Database setup complete\n")
 
         # Run tests
-        test_player(db, database_name)
-        test_list_player(db, database_name)
-        test_player_with_character_attributes(db, database_name)
+        test_player(host, user, password, database_name)
+        test_list_player(host, user, password, database_name)
+        test_player_with_character_attributes(host, user, password, database_name)
 
         print("=" * 60)
         print("All tests passed successfully!")
@@ -477,7 +544,7 @@ def main():
     finally:
         # Teardown database
         print("\nCleaning up test database...")
-        teardown_database(db, database_name)
+        teardown_database(host, user, password, database_name)
         print("✓ Cleanup complete")
 
 

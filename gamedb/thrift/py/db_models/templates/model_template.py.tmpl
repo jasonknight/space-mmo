@@ -27,18 +27,23 @@ class {class_name}:
         self._connection: Optional[mysql.connector.connection.MySQLConnection] = None
         self._dirty: bool = True  # New models are dirty by default
 
+    @staticmethod
+    def _create_connection():
+        """Create a new database connection."""
+        return mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_DATABASE,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+
     def _connect(self) -> None:
         """Establish database connection if not already connected."""
         if not self._connection or not self._connection.is_connected():
-            self._connection = mysql.connector.connect(
-                host=DB_HOST,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                database=DB_DATABASE,
-                auth_plugin='mysql_native_password',
-                ssl_disabled=True,
-                use_pure=True,
-            )
+            self._connection = {class_name}._create_connection()
 
     def _disconnect(self) -> None:
         """Close database connection."""

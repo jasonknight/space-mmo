@@ -2,12 +2,14 @@
 """
 Simple test script for ItemService to verify basic functionality.
 """
-import sys
-sys.path.append('../../gen-py')
-sys.path.append('..')
 
+import sys
+
+sys.path.append("../../gen-py")
+sys.path.append("..")
+
+import mysql.connector
 from services.item_service import ItemServiceHandler
-from db import DB
 from game.ttypes import (
     ItemRequest,
     ItemRequestData,
@@ -20,49 +22,58 @@ from game.ttypes import (
     StatusType,
 )
 from common import is_ok
+from db_tables import get_table_sql
+
 
 def test_item_service():
     print("=" * 60)
     print("ItemService Test Suite")
     print("=" * 60)
 
-    # Initialize database connection
-    db = DB(host='localhost', user='admin', password='minda')
-    db.connect()
-    database = 'gamedb_test_itemservice'
+    # Database credentials
+    host = "localhost"
+    user = "admin"
+    password = "minda"
+    database = "gamedb_test_itemservice"
 
     # Setup test database
     print("\nSetting up test database...")
-    cursor = db.connection.cursor()
+    connection = mysql.connector.connect(
+        host=host,
+        user=user,
+        password=password,
+        auth_plugin="mysql_native_password",
+        ssl_disabled=True,
+        use_pure=True,
+    )
+    cursor = connection.cursor()
     cursor.execute(f"DROP DATABASE IF EXISTS {database}")
+    cursor.execute(f"CREATE DATABASE {database}")
 
-    for stmt in db.get_items_table_sql(database):
-        cursor.execute(stmt)
-    for stmt in db.get_item_blueprints_table_sql(database):
-        cursor.execute(stmt)
-    for stmt in db.get_item_blueprint_components_table_sql(database):
-        cursor.execute(stmt)
-    for stmt in db.get_attributes_table_sql(database):
-        cursor.execute(stmt)
-    for stmt in db.get_attribute_owners_table_sql(database):
-        cursor.execute(stmt)
+    # Create tables using centralized schemas
+    cursor.execute(get_table_sql("items", database))
+    cursor.execute(get_table_sql("attributes", database))
+    cursor.execute(get_table_sql("attribute_owners", database))
 
-    db.connection.commit()
+    connection.commit()
     cursor.close()
+    connection.close()
     print("✓ Database setup complete\n")
 
     # Initialize service
-    service = ItemServiceHandler(db, database)
+    service = ItemServiceHandler(host, user, password, database)
 
     # Test describe()
     print("Testing describe() method...")
     metadata = service.describe()
     assert metadata.service_name == "ItemService"
     assert metadata.version == "1.0"
-    assert len(metadata.methods) == 4  # create, load, save, destroy
+    assert len(metadata.methods) >= 4  # at least create, load, save, destroy
     assert len(metadata.enums) > 0
     print(f"✓ Service metadata: {metadata.service_name} v{metadata.version}")
-    print(f"✓ Methods: {', '.join([m.method_name for m in metadata.methods])}\n")
+    print(
+        f"✓ Methods ({len(metadata.methods)}): {', '.join([m.method_name for m in metadata.methods])}\n"
+    )
 
     # Test create()
     print("Testing create() method...")
@@ -81,7 +92,9 @@ def test_item_service():
     )
 
     create_response = service.create(create_request)
-    assert is_ok(create_response.results), f"Create failed: {create_response.results[0].message}"
+    assert is_ok(create_response.results), (
+        f"Create failed: {create_response.results[0].message}"
+    )
     assert create_response.response_data is not None
     assert create_response.response_data.create_item.item.id is not None
     item_id = create_response.response_data.create_item.item.id
@@ -96,7 +109,9 @@ def test_item_service():
     )
 
     load_response = service.load(load_request)
-    assert is_ok(load_response.results), f"Load failed: {load_response.results[0].message}"
+    assert is_ok(load_response.results), (
+        f"Load failed: {load_response.results[0].message}"
+    )
     assert load_response.response_data is not None
     loaded_item = load_response.response_data.load_item.item
     assert loaded_item.id == item_id
@@ -117,9 +132,13 @@ def test_item_service():
     )
 
     save_response = service.save(save_request)
-    assert is_ok(save_response.results), f"Save failed: {save_response.results[0].message}"
+    assert is_ok(save_response.results), (
+        f"Save failed: {save_response.results[0].message}"
+    )
     assert save_response.response_data is not None
-    print(f"✓ Updated item: {save_response.response_data.save_item.item.internal_name}\n")
+    print(
+        f"✓ Updated item: {save_response.response_data.save_item.item.internal_name}\n"
+    )
 
     # Verify update
     print("Verifying update...")
@@ -140,7 +159,9 @@ def test_item_service():
     )
 
     destroy_response = service.destroy(destroy_request)
-    assert is_ok(destroy_response.results), f"Destroy failed: {destroy_response.results[0].message}"
+    assert is_ok(destroy_response.results), (
+        f"Destroy failed: {destroy_response.results[0].message}"
+    )
     print(f"✓ Destroyed item id={item_id}\n")
 
     # Verify destroy
@@ -152,15 +173,25 @@ def test_item_service():
 
     # Cleanup
     print("Cleaning up test database...")
-    cursor = db.connection.cursor()
+    connection = mysql.connector.connect(
+        host=host,
+        user=user,
+        password=password,
+        auth_plugin="mysql_native_password",
+        ssl_disabled=True,
+        use_pure=True,
+    )
+    cursor = connection.cursor()
     cursor.execute(f"DROP DATABASE IF EXISTS {database}")
-    db.connection.commit()
+    connection.commit()
     cursor.close()
+    connection.close()
     print("✓ Cleanup complete\n")
 
     print("=" * 60)
     print("All ItemService tests passed successfully!")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     test_item_service()

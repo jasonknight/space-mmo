@@ -37,7 +37,7 @@ from game.ttypes import (
     FieldEnumMapping,
 )
 from game.PlayerService import Iface as PlayerServiceIface
-from db import DB
+from models.player_model import PlayerModel
 from common import is_ok
 from services.lru_cache import LRUCache
 from services.base_service import BaseServiceHandler
@@ -46,13 +46,20 @@ from services.base_service import BaseServiceHandler
 class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
     """
     Implementation of the PlayerService thrift interface.
-    Handles player operations using the DB layer.
+    Handles player operations using the PlayerModel layer.
     Includes an LRU cache to reduce database queries for frequently accessed players.
     """
 
-    def __init__(self, db: DB, database: str, cache_size: int = 1000):
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        password: str,
+        database: str,
+        cache_size: int = 1000,
+    ):
         BaseServiceHandler.__init__(self, PlayerServiceHandler)
-        self.db = db
+        self.player_model = PlayerModel(host, user, password, database)
         self.database = database
         self.cache = LRUCache(max_size=cache_size)
 
@@ -98,10 +105,7 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
 
             # Cache miss - load from database
             logger.debug(f"Cache miss, loading from DATABASE for player_id={player_id}")
-            result, player = self.db.load_player(
-                self.database,
-                player_id,
-            )
+            result, player = self.player_model.load(player_id)
 
             if player:
                 logger.info(f"SUCCESS: Loaded player_id={player_id} from DATABASE")
@@ -158,10 +162,7 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
             logger.info(f"Creating player: {create_data.player.what_we_call_you}")
             logger.debug(f"Full name: {create_data.player.full_name}")
 
-            results = self.db.create_player(
-                self.database,
-                create_data.player,
-            )
+            results = self.player_model.create(create_data.player)
 
             if is_ok(results):
                 logger.info(f"SUCCESS: Created player with id={create_data.player.id}")
@@ -222,10 +223,7 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
             logger.info(f"Saving player_id={player_id}")
             logger.debug(f"Player name: {save_data.player.what_we_call_you}")
 
-            results = self.db.save_player(
-                self.database,
-                save_data.player,
-            )
+            results = self.player_model.save(save_data.player)
 
             if is_ok(results):
                 logger.info(f"SUCCESS: Saved player_id={save_data.player.id}")
@@ -285,10 +283,7 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
             player_id = delete_data.player_id
             logger.info(f"Deleting player_id={player_id}")
 
-            results = self.db.destroy_player(
-                self.database,
-                player_id,
-            )
+            results = self.player_model.destroy(player_id)
 
             if is_ok(results):
                 logger.info(f"SUCCESS: Deleted player_id={player_id}")
@@ -354,8 +349,7 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
                 f"Listing players: page={page}, results_per_page={results_per_page}, search_string={search_string}"
             )
 
-            result, players, total_count = self.db.list_player(
-                self.database,
+            result, players, total_count = self.player_model.search(
                 page,
                 results_per_page,
                 search_string=search_string,

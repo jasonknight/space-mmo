@@ -8,11 +8,37 @@ import argparse
 import mysql.connector
 from typing import Dict, List, Tuple, Any, Optional
 import os
-import uuid
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Import from generator modules
+from generator import (
+    TableNaming,
+    TypeMapper,
+    get_table_columns,
+    get_all_tables,
+    get_create_table_statement,
+    get_foreign_key_constraints,
+    get_unique_constraints,
+    OWNER_COLUMNS,
+    ATTRIBUTE_VALUE_COLUMNS,
+    PIVOT_TABLES,
+    TABLE_TO_THRIFT_MAPPING,
+)
+from generator.config import (
+    get_thrift_struct_name,
+    has_thrift_mapping,
+    needs_owner_conversion,
+    needs_attribute_value_conversion,
+    needs_attribute_map_conversion,
+    is_pivot_table,
+    is_one_to_one_relationship,
+    has_embedded_relationship,
+    get_valid_owner_types,
+    validate_config,
+)
 
 
 # MySQL type to Python type mapping
@@ -203,16 +229,16 @@ def generate_db_to_owner_union_code(table_name: str, columns: List[Dict[str, Any
         return ""
 
     code = '''
-        # Convert database owner_* columns to Owner union
-        owner = None
-        if self._data.get('owner_player_id') is not None:
-            owner = Owner(player_id=self._data['owner_player_id'])
-        elif self._data.get('owner_mobile_id') is not None:
-            owner = Owner(mobile_id=self._data['owner_mobile_id'])
-        elif self._data.get('owner_item_id') is not None:
-            owner = Owner(item_id=self._data['owner_item_id'])
-        elif self._data.get('owner_asset_id') is not None:
-            owner = Owner(asset_id=self._data['owner_asset_id'])
+            # Convert database owner_* columns to Owner union
+            owner = None
+            if self._data.get('owner_player_id') is not None:
+                owner = Owner(player_id=self._data['owner_player_id'])
+            elif self._data.get('owner_mobile_id') is not None:
+                owner = Owner(mobile_id=self._data['owner_mobile_id'])
+            elif self._data.get('owner_item_id') is not None:
+                owner = Owner(item_id=self._data['owner_item_id'])
+            elif self._data.get('owner_asset_id') is not None:
+                owner = Owner(asset_id=self._data['owner_asset_id'])
 '''
     return code
 
@@ -262,22 +288,22 @@ def generate_db_to_attribute_value_code() -> str:
         Generated Python code as a string
     """
     code = '''
-        # Convert flattened database columns to AttributeValue union
-        value = None
-        if self._data.get('bool_value') is not None:
-            value = AttributeValue(bool_value=self._data['bool_value'])
-        elif self._data.get('double_value') is not None:
-            value = AttributeValue(double_value=self._data['double_value'])
-        elif self._data.get('vector3_x') is not None:
-            value = AttributeValue(
-                vector3=ItemVector3(
-                    x=self._data['vector3_x'],
-                    y=self._data['vector3_y'],
-                    z=self._data['vector3_z'],
-                ),
-            )
-        elif self._data.get('asset_id') is not None:
-            value = AttributeValue(asset_id=self._data['asset_id'])
+            # Convert flattened database columns to AttributeValue union
+            value = None
+            if self._data.get('bool_value') is not None:
+                value = AttributeValue(bool_value=self._data['bool_value'])
+            elif self._data.get('double_value') is not None:
+                value = AttributeValue(double_value=self._data['double_value'])
+            elif self._data.get('vector3_x') is not None:
+                value = AttributeValue(
+                    vector3=ItemVector3(
+                        x=self._data['vector3_x'],
+                        y=self._data['vector3_y'],
+                        z=self._data['vector3_z'],
+                    ),
+                )
+            elif self._data.get('asset_id') is not None:
+                value = AttributeValue(asset_id=self._data['asset_id'])
 '''
     return code
 
@@ -318,17 +344,17 @@ def generate_pivot_to_attribute_map_code() -> str:
         Generated Python code as a string
     """
     code = '''
-        # Load attributes via pivot table and convert to map<AttributeType, Attribute>
-        attributes_map = {}
-        if self.get_id() is not None:
-            # Get attributes through the pivot relationship
-            attribute_models = self.get_attributes(reload=True)
-            for attr_model in attribute_models:
-                # Convert each attribute model to Thrift
-                attr_results, attr_thrift = attr_model.into_thrift()
-                if attr_thrift is not None:
-                    # Use attribute_type as the map key
-                    attributes_map[attr_thrift.attribute_type] = attr_thrift
+            # Load attributes via pivot table and convert to map<AttributeType, Attribute>
+            attributes_map = {}
+            if self.get_id() is not None:
+                # Get attributes through the pivot relationship
+                attribute_models = self.get_attributes(reload=True)
+                for attr_model in attribute_models:
+                    # Convert each attribute model to Thrift
+                    attr_results, attr_thrift = attr_model.into_thrift()
+                    if attr_thrift is not None:
+                        # Use attribute_type as the map key
+                        attributes_map[attr_thrift.attribute_type] = attr_thrift
 '''
     return code
 
@@ -732,7 +758,7 @@ def get_pivot_table_info(
             # Infer the referenced table name from the column name
             # e.g., player_id -> players, mobile_id -> mobiles
             owner_type = col_name.replace("_id", "")
-            referenced_table = pluralize(owner_type)
+            referenced_table = TableNaming.pluralize(owner_type)
 
             # Check if there's an actual FK constraint for this column
             fk_info = {
@@ -825,17 +851,17 @@ def generate_pivot_owner_methods(
     For example, on Player model, generate methods to interact with attributes through attribute_owners pivot.
     """
     # Convert table names to class names
-    owner_class = to_pascal_case(singularize_table_name(owner_table_name))
-    pivot_class = to_pascal_case(singularize_table_name(pivot_table_name))
-    related_class = to_pascal_case(singularize_table_name(related_table_name))
+    owner_class = TableNaming.to_pascal_case(TableNaming.singularize(owner_table_name))
+    pivot_class = TableNaming.to_pascal_case(TableNaming.singularize(pivot_table_name))
+    related_class = TableNaming.to_pascal_case(TableNaming.singularize(related_table_name))
 
     # Determine the relationship name (e.g., attributes, inventories)
-    related_plural = pluralize(singularize_table_name(related_table_name))
-    related_singular = singularize_table_name(related_table_name)
-    pivot_singular = singularize_table_name(pivot_table_name)
+    related_plural = TableNaming.pluralize(TableNaming.singularize(related_table_name))
+    related_singular = TableNaming.singularize(related_table_name)
+    pivot_singular = TableNaming.singularize(pivot_table_name)
 
     # FK column names
-    owner_fk = f"{singularize_table_name(owner_table_name)}_id"
+    owner_fk = f"{TableNaming.singularize(owner_table_name)}_id"
     related_fk = f"{related_singular}_id"
 
     methods = f"""
@@ -945,15 +971,7 @@ def generate_pivot_owner_methods(
             return
 
         # Use a fresh connection to avoid transaction conflicts
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = {owner_class}._create_connection()
         cursor = connection.cursor()
 
         try:
@@ -1057,11 +1075,11 @@ def generate_belongs_to_methods(
         is_nullable = rel["is_nullable"]
 
         # Convert table name to class name
-        singular_name = singularize_table_name(referenced_table)
-        class_name = to_pascal_case(singular_name)
+        singular_name = TableNaming.singularize(referenced_table)
+        class_name = TableNaming.to_pascal_case(singular_name)
 
         # Relationship method name (e.g., owner_player from owner_player_id)
-        rel_name = get_relationship_name(column_name)
+        rel_name = TableNaming.column_to_relationship_name(column_name)
 
         # Optional type annotation (use string for forward reference)
         return_type = f"Optional['{class_name}']" if is_nullable else f"'{class_name}'"
@@ -1123,10 +1141,11 @@ def generate_belongs_to_methods(
 
 
 def generate_has_many_methods(
+    table_name: str,
     has_many_rels: List[Dict[str, Any]],
     table_columns: Dict[str, List[Dict[str, Any]]],
 ) -> str:
-    """Generate has-many relationship methods."""
+    """Generate has-many relationship methods (or 1-to-1 for configured relationships)."""
     methods = []
 
     for rel in has_many_rels:
@@ -1134,15 +1153,51 @@ def generate_has_many_methods(
         foreign_column = rel["foreign_column"]
 
         # Convert table names to class names
-        foreign_singular = singularize_table_name(foreign_table)
-        foreign_class = to_pascal_case(foreign_singular)
+        foreign_singular = TableNaming.singularize(foreign_table)
+        foreign_class = TableNaming.to_pascal_case(foreign_singular)
 
-        # Relationship method name (pluralized)
-        # Example: inventory_entries for has_many inventory_entries
-        rel_name = foreign_table
+        # Check if this is a 1-to-1 relationship
+        is_one_to_one = is_one_to_one_relationship(table_name, foreign_table, foreign_column)
 
-        # Getter method with lazy loading support
-        getter = f"""    def get_{rel_name}(self, reload: bool = False, lazy: bool = False):
+        if is_one_to_one:
+            # Generate singular getter for 1-to-1 relationship
+            rel_name = foreign_singular  # Singular name (e.g., 'mobile' not 'mobiles')
+
+            getter = f"""    def get_{rel_name}(self, reload: bool = False):
+        \"\"\"
+        Get the associated {foreign_class} record (1-to-1 relationship).
+
+        Args:
+            reload: If True, bypass cache and fetch fresh from database.
+
+        Returns:
+            Optional[{foreign_class}]
+        \"\"\"
+        cache_key = '_{rel_name}_cache'
+
+        # Check cache unless reload is requested
+        if not reload and hasattr(self, cache_key):
+            return getattr(self, cache_key)
+
+        # Fetch from database
+        my_id = self.get_id()
+        if my_id is None:
+            return None
+
+        results = {foreign_class}.find_by_{foreign_column}(my_id)
+
+        # Should only be one result for 1-to-1
+        result = results[0] if results else None
+
+        # Cache result
+        setattr(self, cache_key, result)
+
+        return result"""
+        else:
+            # Generate plural getter for 1-to-many relationship
+            rel_name = foreign_table  # Plural name (e.g., 'inventory_entries')
+
+            getter = f"""    def get_{rel_name}(self, reload: bool = False, lazy: bool = False):
         \"\"\"
         Get all associated {foreign_class} records.
 
@@ -1185,7 +1240,7 @@ def generate_getters(columns: List[Dict[str, Any]]) -> str:
     """Generate getter methods for all columns."""
     getters = []
     for col in columns:
-        python_type = get_python_type(col["data_type"])
+        python_type = TypeMapper.get_python_type(col["data_type"])
         optional_type = (
             f"Optional[{python_type}]" if col["is_nullable"] else python_type
         )
@@ -1198,19 +1253,82 @@ def generate_getters(columns: List[Dict[str, Any]]) -> str:
     return "\n\n".join(getters)
 
 
-def generate_setters(columns: List[Dict[str, Any]]) -> str:
+def generate_validate_owner_method(table_name: str, class_name: str) -> str:
+    """
+    Generate validate_owner() method for models with Owner union fields.
+
+    Args:
+        table_name: Database table name
+        class_name: Model class name
+
+    Returns:
+        Generated method code as a string
+    """
+    valid_types = get_valid_owner_types(table_name)
+    valid_types_str = ', '.join([f"'{t}'" for t in valid_types])
+
+    method = f'''
+    def validate_owner(self) -> None:
+        """
+        Validate Owner union: exactly one owner must be set and must be valid type.
+
+        Raises:
+            ValueError: If validation fails
+        """
+        owner_fks = {{
+            'player': self.get_owner_player_id(),
+            'mobile': self.get_owner_mobile_id(),
+            'item': self.get_owner_item_id(),
+            'asset': self.get_owner_asset_id(),
+        }}
+
+        # Check exactly one is set
+        set_owners = [k for k, v in owner_fks.items() if v is not None]
+        if len(set_owners) == 0:
+            raise ValueError("{class_name} must have exactly one owner (none set)")
+        if len(set_owners) > 1:
+            raise ValueError(f"{class_name} must have exactly one owner (multiple set: {{set_owners}})")
+
+        # Check valid type for this table
+        valid_types = [{valid_types_str}]
+        if set_owners[0] not in valid_types:
+            raise ValueError(f"{class_name} cannot be owned by {{set_owners[0]}} (valid types: {{valid_types}})")
+'''
+
+    return method
+
+
+def generate_setters(columns: List[Dict[str, Any]], table_name: str = None) -> str:
     """Generate setter methods for all columns."""
     setters = []
+
+    # Track if we're generating owner setters
+    owner_columns = ['owner_player_id', 'owner_mobile_id', 'owner_item_id', 'owner_asset_id']
+    has_owner_fields = any(col['name'] in owner_columns for col in columns)
+
     for col in columns:
-        python_type = get_python_type(col["data_type"])
+        python_type = TypeMapper.get_python_type(col["data_type"])
         optional_type = (
             f"Optional[{python_type}]" if col["is_nullable"] else python_type
         )
 
-        setter = f"""    def set_{col["name"]}(self, value: {optional_type}) -> None:
+        # Special handling for owner FK columns
+        if has_owner_fields and col["name"] in owner_columns:
+            other_owners = [oc for oc in owner_columns if oc != col["name"]]
+            clear_code = "\n        ".join([f"self._data['{oc}'] = None" for oc in other_owners])
+
+            setter = f"""    def set_{col["name"]}(self, value: {optional_type}) -> None:
+        \"\"\"Set the value of {col["name"]} and clear other owner FKs.\"\"\"
+        self._data['{col["name"]}'] = value
+        # Clear other owner FKs to enforce exactly-one constraint
+        {clear_code}
+        self._dirty = True"""
+        else:
+            setter = f"""    def set_{col["name"]}(self, value: {optional_type}) -> None:
         \"\"\"Set the value of {col["name"]}.\"\"\"
         self._data['{col["name"]}'] = value
         self._dirty = True"""
+
         setters.append(setter)
 
     return "\n\n".join(setters)
@@ -1224,7 +1342,7 @@ def generate_find_by_methods(
 
     for col in columns:
         if col["name"].endswith("_id"):
-            python_type = get_python_type(col["data_type"])
+            python_type = TypeMapper.get_python_type(col["data_type"])
 
             method = f"""    @staticmethod
     def find_by_{col["name"]}(value: {python_type}) -> List['{class_name}']:
@@ -1232,15 +1350,7 @@ def generate_find_by_methods(
         Find all records by {col["name"]}.
         Returns a list of instances with matching records.
         \"\"\"
-        connection = mysql.connector.connect(
-            host=DB_HOST,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_DATABASE,
-            auth_plugin='mysql_native_password',
-            ssl_disabled=True,
-            use_pure=True,
-        )
+        connection = {class_name}._create_connection()
         cursor = connection.cursor(dictionary=True)
         results = []
         try:
@@ -1267,7 +1377,7 @@ def collect_required_types(columns: List[Dict[str, Any]]) -> set:
     """Collect all unique Python types needed for the model."""
     types = set()
     for col in columns:
-        python_type = get_python_type(col["data_type"])
+        python_type = TypeMapper.get_python_type(col["data_type"])
         if python_type == "datetime":
             types.add("datetime")
         elif python_type == "Any":
@@ -1290,7 +1400,7 @@ def generate_imports(columns: List[Dict[str, Any]], has_relationships: bool = Fa
 
     imports.append(f"from typing import {', '.join(typing_imports)}")
 
-    required_types = collect_required_types(columns)
+    required_types = TypeMapper.collect_required_types(columns)
     if "datetime" in required_types:
         imports.append("from datetime import datetime")
 
@@ -1323,7 +1433,7 @@ def generate_cascade_save_code(
     # Belongs-to cascade save (save parent objects first)
     belongs_to_code = []
     for rel in belongs_to_rels:
-        rel_name = get_relationship_name(rel["column"])
+        rel_name = TableNaming.column_to_relationship_name(rel["column"])
         column_name = rel["column"]
 
         code = f"""# Save {rel_name} if cached and dirty
@@ -1422,6 +1532,30 @@ def generate_from_thrift_method(
     if table_name in ['items', 'mobiles', 'mobile_items']:
         method_code += generate_attribute_map_to_pivot_code()
 
+    # Handle embedded 1-to-1 relationships (e.g., Player.mobile)
+    has_many_rels = relationships.get('has_many', [])
+    for rel in has_many_rels:
+        foreign_table = rel['foreign_table']
+        foreign_column = rel['foreign_column']
+
+        # Check if this is a 1-to-1 relationship that should be embedded
+        if is_one_to_one_relationship(table_name, foreign_table, foreign_column):
+            foreign_singular = TableNaming.singularize(foreign_table)
+            foreign_class = TableNaming.to_pascal_case(foreign_singular)
+
+            # Check if relationship should be embedded in Thrift
+            if has_embedded_relationship(table_name, foreign_singular):
+                method_code += f'''
+        # Handle embedded {foreign_singular} (1-to-1 relationship)
+        if hasattr(thrift_obj, '{foreign_singular}') and thrift_obj.{foreign_singular} is not None:
+            {foreign_singular}_obj = {foreign_class}()
+            {foreign_singular}_obj.from_thrift(thrift_obj.{foreign_singular})
+            # Set the foreign key to link to this parent
+            {foreign_singular}_obj.set_{foreign_column}(self.get_id())
+            # Cache the embedded object
+            self._cached_{foreign_singular} = {foreign_singular}_obj
+'''
+
     # Mark as dirty
     method_code += '''
         self._dirty = True
@@ -1503,7 +1637,7 @@ def generate_into_thrift_method(
     # Load belongs-to relationships
     belongs_to_rels = relationships.get("belongs_to", [])
     for rel in belongs_to_rels:
-        rel_name = get_relationship_name(rel["column"])
+        rel_name = TableNaming.column_to_relationship_name(rel["column"])
         # Skip if it's part of an owner union
         if rel["column"] in ['owner_player_id', 'owner_mobile_id', 'owner_item_id', 'owner_asset_id']:
             continue
@@ -1517,6 +1651,30 @@ def generate_into_thrift_method(
                     thrift_params['{rel_name}'] = {rel_name}_thrift
                 else:
                     results.extend({rel_name}_results)
+'''
+
+    # Load has-many/1-to-1 embedded relationships
+    has_many_rels = relationships.get('has_many', [])
+    for rel in has_many_rels:
+        foreign_table = rel['foreign_table']
+        foreign_column = rel['foreign_column']
+
+        # Check if this is a 1-to-1 relationship that should be embedded
+        if is_one_to_one_relationship(table_name, foreign_table, foreign_column):
+            foreign_singular = TableNaming.singularize(foreign_table)
+            foreign_class = TableNaming.to_pascal_case(foreign_singular)
+
+            # Check if relationship should be embedded in Thrift
+            if has_embedded_relationship(table_name, foreign_singular):
+                method_code += f'''
+            # Load embedded {foreign_singular} (1-to-1 relationship)
+            {foreign_singular}_model = self.get_{foreign_singular}()
+            if {foreign_singular}_model is not None:
+                {foreign_singular}_results, {foreign_singular}_thrift = {foreign_singular}_model.into_thrift()
+                if {foreign_singular}_thrift is not None:
+                    thrift_params['{foreign_singular}'] = {foreign_singular}_thrift
+                else:
+                    results.extend({foreign_singular}_results)
 '''
 
     # Construct the Thrift object
@@ -1556,8 +1714,8 @@ def generate_model(
 ) -> str:
     """Generate a complete model file from the template."""
     # Convert plural table name to singular class name
-    singular_name = singularize_table_name(table_name)
-    class_name = to_pascal_case(singular_name)
+    singular_name = TableNaming.singularize(table_name)
+    class_name = TableNaming.to_pascal_case(singular_name)
 
     # Get relationships for this table
     belongs_to_rels = relationships.get("belongs_to", [])
@@ -1591,12 +1749,17 @@ def generate_model(
     # Generate all components
     imports = generate_imports(columns, has_relationships, has_thrift_conversion)
     getters = generate_getters(columns)
-    setters = generate_setters(columns)
+    setters = generate_setters(columns, table_name)
     find_by_methods = generate_find_by_methods(columns, class_name, table_name)
+
+    # Generate validate_owner method if table has owner fields
+    validate_owner_method = ""
+    if needs_owner_conversion(columns):
+        validate_owner_method = generate_validate_owner_method(table_name, class_name)
 
     # Generate relationship methods
     belongs_to_methods = generate_belongs_to_methods(belongs_to_rels, table_columns) if belongs_to_rels else ""
-    has_many_methods = generate_has_many_methods(has_many_rels, table_columns) if has_many_rels else ""
+    has_many_methods = generate_has_many_methods(table_name, has_many_rels, table_columns) if has_many_rels else ""
 
     # Generate cascade save code
     cascade_save_belongs_to, cascade_save_has_many = generate_cascade_save_code(
@@ -1641,7 +1804,7 @@ def generate_model(
         table_name=table_name,
         create_table_statement=formatted_create_table,
         getters=getters,
-        setters=setters,
+        setters=setters + ("\n\n" + validate_owner_method if validate_owner_method else ""),
         pivot_helper_methods=pivot_helper_methods,
         belongs_to_methods=belongs_to_methods,
         has_many_methods=has_many_methods,
@@ -1697,7 +1860,7 @@ def create_seed_data():
             if col['name'] == 'id' or col['name'].endswith('_id'):
                 continue
             if not col['is_nullable']:
-                python_type = get_python_type(col['data_type'])
+                python_type = TypeMapper.get_python_type(col['data_type'])
                 if python_type == 'str':
                     code += f"    seed['{class_name.lower()}1'].set_{col['name']}('test_{col['name']}_1')\n"
                 elif python_type == 'int':
@@ -1715,7 +1878,7 @@ def create_seed_data():
             if col['name'] == 'id' or col['name'].endswith('_id'):
                 continue
             if not col['is_nullable']:
-                python_type = get_python_type(col['data_type'])
+                python_type = TypeMapper.get_python_type(col['data_type'])
                 if python_type == 'str':
                     code += f"    seed['{class_name.lower()}2'].set_{col['name']}('test_{col['name']}_2')\n"
                 elif python_type == 'int':
@@ -1750,14 +1913,14 @@ def create_seed_data():
                     # Find the relationship for this FK
                     for rel in belongs_to_rels:
                         if rel['column'] == col['name']:
-                            target_class = to_pascal_case(singularize_table_name(rel['referenced_table']))
+                            target_class = TableNaming.to_pascal_case(TableNaming.singularize(rel['referenced_table']))
                             # Use seed data if available
                             seed_key = f"{target_class.lower()}1"
                             code += f"    if '{seed_key}' in seed:\n"
                             code += f"        seed['{class_name.lower()}1'].set_{col['name']}(seed['{seed_key}'].get_id())\n"
                 continue
             if not col['is_nullable']:
-                python_type = get_python_type(col['data_type'])
+                python_type = TypeMapper.get_python_type(col['data_type'])
                 if python_type == 'str':
                     code += f"    seed['{class_name.lower()}1'].set_{col['name']}('test_{col['name']}_1')\n"
                 elif python_type == 'int':
@@ -1793,8 +1956,8 @@ def generate_belongs_to_tests(model: Dict[str, Any], all_models: List[Dict[str, 
     tests = []
 
     for rel in belongs_to_rels:
-        rel_name = get_relationship_name(rel['column'])
-        target_class = to_pascal_case(singularize_table_name(rel['referenced_table']))
+        rel_name = TableNaming.column_to_relationship_name(rel['column'])
+        target_class = TableNaming.to_pascal_case(TableNaming.singularize(rel['referenced_table']))
         fk_column = rel['column']
 
         # Basic getter test
@@ -1810,7 +1973,7 @@ def generate_belongs_to_tests(model: Dict[str, Any], all_models: List[Dict[str, 
         if target_model:
             for col in target_model.get('columns', []):
                 if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-                    python_type = get_python_type(col['data_type'])
+                    python_type = TypeMapper.get_python_type(col['data_type'])
                     if python_type == 'str':
                         tests.append(f"        related.set_{col['name']}('test_{col['name']}')")
                     elif python_type == 'int':
@@ -1826,7 +1989,7 @@ def generate_belongs_to_tests(model: Dict[str, Any], all_models: List[Dict[str, 
         # Set required fields for parent
         for col in model['columns']:
             if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-                python_type = get_python_type(col['data_type'])
+                python_type = TypeMapper.get_python_type(col['data_type'])
                 if python_type == 'str':
                     tests.append(f"        parent.set_{col['name']}('test_{col['name']}')")
                 elif python_type == 'int':
@@ -1861,7 +2024,7 @@ def generate_belongs_to_tests(model: Dict[str, Any], all_models: List[Dict[str, 
         if target_model_setter:
             for col in target_model_setter.get('columns', []):
                 if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-                    python_type = get_python_type(col['data_type'])
+                    python_type = TypeMapper.get_python_type(col['data_type'])
                     if python_type == 'str':
                         tests.append(f"        related1.set_{col['name']}('test_{col['name']}_1')")
                     elif python_type == 'int':
@@ -1876,7 +2039,7 @@ def generate_belongs_to_tests(model: Dict[str, Any], all_models: List[Dict[str, 
 
         for col in model['columns']:
             if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-                python_type = get_python_type(col['data_type'])
+                python_type = TypeMapper.get_python_type(col['data_type'])
                 if python_type == 'str':
                     tests.append(f"        parent.set_{col['name']}('test_{col['name']}')")
                 elif python_type == 'int':
@@ -1902,8 +2065,9 @@ def generate_belongs_to_tests(model: Dict[str, Any], all_models: List[Dict[str, 
 
 
 def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, Any]]) -> str:
-    """Generate has-many relationship tests for a model."""
+    """Generate has-many relationship tests for a model (including 1-to-1 tests)."""
     class_name = model['class_name']
+    table_name = model['table_name']
     has_many_rels = model.get('relationships', {}).get('has_many', [])
 
     if not has_many_rels:
@@ -1913,8 +2077,14 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
 
     for rel in has_many_rels:
         rel_name = rel['foreign_table']
-        foreign_class = to_pascal_case(singularize_table_name(rel['foreign_table']))
+        foreign_table = rel['foreign_table']
+        foreign_class = TableNaming.to_pascal_case(TableNaming.singularize(rel['foreign_table']))
         fk_column = rel['foreign_column']
+
+        # Check if this is a 1-to-1 relationship
+        is_one_to_one = is_one_to_one_relationship(table_name, foreign_table, fk_column)
+        if is_one_to_one:
+            rel_name = TableNaming.singularize(rel_name)  # Use singular name for 1-to-1
 
         # Find the foreign model
         foreign_model = next((m for m in all_models if m['class_name'] == foreign_class), None)
@@ -1932,7 +2102,7 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
         # Set required fields for parent
         for col in model['columns']:
             if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-                python_type = get_python_type(col['data_type'])
+                python_type = TypeMapper.get_python_type(col['data_type'])
                 if python_type == 'str':
                     tests.append(f"        parent.set_{col['name']}('test_{col['name']}')")
                 elif python_type == 'int':
@@ -1948,7 +2118,7 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
             if col['name'] != 'id' and col['name'] != fk_column and col['name'].endswith('_id') and not col['is_nullable']:
                 # Need to create a prerequisite record
                 prereq_table = col['name'][:-3]  # Remove '_id' suffix
-                prereq_class = to_pascal_case(singularize_table_name(prereq_table + 's'))  # Pluralize and convert
+                prereq_class = TableNaming.to_pascal_case(TableNaming.singularize(prereq_table + 's'))  # Pluralize and convert
 
                 # Find the prerequisite model
                 prereq_model = next((m for m in all_models if m['table_name'] == (prereq_table + 's')), None)
@@ -1966,7 +2136,7 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
                     # Set required fields for prerequisite
                     for prereq_col in prereq_model['columns']:
                         if prereq_col['name'] != 'id' and not prereq_col['is_nullable'] and not prereq_col['name'].endswith('_id'):
-                            py_type = get_python_type(prereq_col['data_type'])
+                            py_type = TypeMapper.get_python_type(prereq_col['data_type'])
                             if py_type == 'str':
                                 tests.append(f"        {prereq_var}.set_{prereq_col['name']}('test_prereq')\n")
                             elif py_type == 'int':
@@ -1991,7 +2161,7 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
                     else:
                         tests.append(f"        child1.set_{col['name']}(1)")
                 else:
-                    python_type = get_python_type(col['data_type'])
+                    python_type = TypeMapper.get_python_type(col['data_type'])
                     if python_type == 'str':
                         tests.append(f"        child1.set_{col['name']}('test_{col['name']}_1')")
                     elif python_type == 'int':
@@ -2014,7 +2184,7 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
                     else:
                         tests.append(f"        child2.set_{col['name']}(1)")
                 else:
-                    python_type = get_python_type(col['data_type'])
+                    python_type = TypeMapper.get_python_type(col['data_type'])
                     if python_type == 'str':
                         tests.append(f"        child2.set_{col['name']}('test_{col['name']}_2')")
                     elif python_type == 'int':
@@ -2022,7 +2192,26 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
                     elif python_type == 'bool':
                         tests.append(f"        child2.set_{col['name']}(True)")
 
-        tests.append(f'''        child2.save()
+        if is_one_to_one:
+            tests.append(f'''        child1.save()
+
+        # Test getter (1-to-1 relationship)
+        result = parent.get_{rel_name}()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, {foreign_class})
+        self.assertEqual(result.get_{fk_column}(), parent.get_id())
+
+        # Test caching
+        result2 = parent.get_{rel_name}()
+        self.assertIs(result, result2)
+
+        # Test reload
+        result3 = parent.get_{rel_name}(reload=True)
+        self.assertIsNotNone(result3)
+        self.assertEqual(result3.get_{fk_column}(), parent.get_id())
+''')
+        else:
+            tests.append(f'''        child2.save()
 
         # Test getter (eager mode)
         results = parent.get_{rel_name}(lazy=False)
@@ -2039,82 +2228,83 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
         self.assertEqual(len(results3), 2)
 ''')
 
-        # Lazy mode test
-        test_name = f"test_has_many_{rel_name}_lazy"
-        tests.append(f'''
+        # Lazy mode test (skip for 1-to-1 relationships)
+        if not is_one_to_one:
+            test_name = f"test_has_many_{rel_name}_lazy"
+            tests.append(f'''
     def {test_name}(self):
         """Test {rel_name} relationship lazy loading."""
         # Create parent with children
         parent = {class_name}()''')
 
-        for col in model['columns']:
-            if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-                python_type = get_python_type(col['data_type'])
-                if python_type == 'str':
-                    tests.append(f"        parent.set_{col['name']}('test_{col['name']}')")
-                elif python_type == 'int':
-                    tests.append(f"        parent.set_{col['name']}(1)")
-                elif python_type == 'bool':
-                    tests.append(f"        parent.set_{col['name']}(True)")
+            for col in model['columns']:
+                if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
+                    python_type = TypeMapper.get_python_type(col['data_type'])
+                    if python_type == 'str':
+                        tests.append(f"        parent.set_{col['name']}('test_{col['name']}')")
+                    elif python_type == 'int':
+                        tests.append(f"        parent.set_{col['name']}(1)")
+                    elif python_type == 'bool':
+                        tests.append(f"        parent.set_{col['name']}(True)")
 
-        tests.append("        parent.save()\n\n")
+            tests.append("        parent.save()\n\n")
 
-        # Create prerequisite records for lazy test too
-        prereq_records_lazy = {}
-        for col in foreign_model['columns']:
-            if col['name'] != 'id' and col['name'] != fk_column and col['name'].endswith('_id') and not col['is_nullable']:
-                # Need to create a prerequisite record
-                prereq_table = col['name'][:-3]
-                prereq_class = to_pascal_case(singularize_table_name(prereq_table + 's'))
+            # Create prerequisite records for lazy test too
+            prereq_records_lazy = {}
+            for col in foreign_model['columns']:
+                if col['name'] != 'id' and col['name'] != fk_column and col['name'].endswith('_id') and not col['is_nullable']:
+                    # Need to create a prerequisite record
+                    prereq_table = col['name'][:-3]
+                    prereq_class = TableNaming.to_pascal_case(TableNaming.singularize(prereq_table + 's'))
 
-                # Find the prerequisite model
-                prereq_model = next((m for m in all_models if m['table_name'] == (prereq_table + 's')), None)
-                if not prereq_model:
-                    prereq_model = next((m for m in all_models if m['table_name'] == prereq_table), None)
+                    # Find the prerequisite model
+                    prereq_model = next((m for m in all_models if m['table_name'] == (prereq_table + 's')), None)
+                    if not prereq_model:
+                        prereq_model = next((m for m in all_models if m['table_name'] == prereq_table), None)
 
-                if prereq_model:
-                    prereq_var = f"{prereq_table}_prereq_lazy"
-                    prereq_records_lazy[col['name']] = prereq_var
+                    if prereq_model:
+                        prereq_var = f"{prereq_table}_prereq_lazy"
+                        prereq_records_lazy[col['name']] = prereq_var
 
-                    tests.append(f"        # Create prerequisite {prereq_model['class_name']} for {col['name']}\n")
-                    tests.append(f"        {prereq_var} = {prereq_model['class_name']}()\n")
+                        tests.append(f"        # Create prerequisite {prereq_model['class_name']} for {col['name']}\n")
+                        tests.append(f"        {prereq_var} = {prereq_model['class_name']}()\n")
 
-                    # Set required fields for prerequisite
-                    for prereq_col in prereq_model['columns']:
-                        if prereq_col['name'] != 'id' and not prereq_col['is_nullable'] and not prereq_col['name'].endswith('_id'):
-                            py_type = get_python_type(prereq_col['data_type'])
-                            if py_type == 'str':
-                                tests.append(f"        {prereq_var}.set_{prereq_col['name']}('test_prereq_lazy')\n")
-                            elif py_type == 'int':
-                                tests.append(f"        {prereq_var}.set_{prereq_col['name']}(1)\n")
-                            elif py_type == 'bool':
-                                tests.append(f"        {prereq_var}.set_{prereq_col['name']}(True)\n")
+                        # Set required fields for prerequisite
+                        for prereq_col in prereq_model['columns']:
+                            if prereq_col['name'] != 'id' and not prereq_col['is_nullable'] and not prereq_col['name'].endswith('_id'):
+                                py_type = TypeMapper.get_python_type(prereq_col['data_type'])
+                                if py_type == 'str':
+                                    tests.append(f"        {prereq_var}.set_{prereq_col['name']}('test_prereq_lazy')\n")
+                                elif py_type == 'int':
+                                    tests.append(f"        {prereq_var}.set_{prereq_col['name']}(1)\n")
+                                elif py_type == 'bool':
+                                    tests.append(f"        {prereq_var}.set_{prereq_col['name']}(True)\n")
 
-                    tests.append(f"        {prereq_var}.save()\n\n")
+                        tests.append(f"        {prereq_var}.save()\n\n")
 
-        tests.append(f'''        # Create child
+            tests.append(f'''        # Create child
         child = {foreign_class}()''')
 
-        for col in foreign_model['columns']:
-            if col['name'] != 'id' and not col['is_nullable']:
-                if col['name'] == fk_column:
-                    tests.append(f"        child.set_{col['name']}(parent.get_id())")
-                elif col['name'].endswith('_id'):
-                    # Use prerequisite record if available
-                    if col['name'] in prereq_records_lazy:
-                        tests.append(f"        child.set_{col['name']}({prereq_records_lazy[col['name']]}.get_id())")
+            for col in foreign_model['columns']:
+                if col['name'] != 'id' and not col['is_nullable']:
+                    if col['name'] == fk_column:
+                        tests.append(f"        child.set_{col['name']}(parent.get_id())")
+                    elif col['name'].endswith('_id'):
+                        # Use prerequisite record if available
+                        if col['name'] in prereq_records_lazy:
+                            tests.append(f"        child.set_{col['name']}({prereq_records_lazy[col['name']]}.get_id())")
+                        else:
+                            tests.append(f"        child.set_{col['name']}(1)")
                     else:
-                        tests.append(f"        child.set_{col['name']}(1)")
-                else:
-                    python_type = get_python_type(col['data_type'])
-                    if python_type == 'str':
-                        tests.append(f"        child.set_{col['name']}('test_{col['name']}')")
-                    elif python_type == 'int':
-                        tests.append(f"        child.set_{col['name']}(1)")
-                    elif python_type == 'bool':
-                        tests.append(f"        child.set_{col['name']}(True)")
+                        python_type = TypeMapper.get_python_type(col['data_type'])
+                        if python_type == 'str':
+                            tests.append(f"        child.set_{col['name']}('test_{col['name']}')")
+                        elif python_type == 'int':
+                            tests.append(f"        child.set_{col['name']}(1)")
+                        elif python_type == 'bool':
+                            tests.append(f"        child.set_{col['name']}(True)")
 
-        tests.append(f'''        child.save()
+            tests.append(f'''        child.save()
 
         # Test lazy mode
         results_iter = parent.get_{rel_name}(lazy=True)
@@ -2144,7 +2334,7 @@ def generate_dirty_tracking_tests(model: Dict[str, Any]) -> str:
     if not test_col:
         return ""
 
-    python_type = get_python_type(test_col['data_type'])
+    python_type = TypeMapper.get_python_type(test_col['data_type'])
     if python_type == 'str':
         test_value1 = "'test_value_1'"
         test_value2 = "'test_value_2'"
@@ -2173,7 +2363,7 @@ def generate_dirty_tracking_tests(model: Dict[str, Any]) -> str:
     # Set required fields
     for col in columns:
         if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-            py_type = get_python_type(col['data_type'])
+            py_type = TypeMapper.get_python_type(col['data_type'])
             if py_type == 'str':
                 tests += f"\n        model.set_{col['name']}('test_{col['name']}')"
             elif py_type == 'int':
@@ -2193,7 +2383,7 @@ def generate_dirty_tracking_tests(model: Dict[str, Any]) -> str:
 
     for col in columns:
         if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-            py_type = get_python_type(col['data_type'])
+            py_type = TypeMapper.get_python_type(col['data_type'])
             if py_type == 'str':
                 tests += f"\n        model.set_{col['name']}('test_{col['name']}')"
             elif py_type == 'int':
@@ -2216,7 +2406,7 @@ def generate_dirty_tracking_tests(model: Dict[str, Any]) -> str:
 
     for col in columns:
         if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-            py_type = get_python_type(col['data_type'])
+            py_type = TypeMapper.get_python_type(col['data_type'])
             if py_type == 'str':
                 tests += f"\n        model.set_{col['name']}('test_{col['name']}')"
             elif py_type == 'int':
@@ -2248,8 +2438,8 @@ def generate_cascade_save_tests(model: Dict[str, Any], all_models: List[Dict[str
 
     # Take first belongs-to relationship for testing
     rel = belongs_to_rels[0]
-    rel_name = get_relationship_name(rel['column'])
-    target_class = to_pascal_case(singularize_table_name(rel['referenced_table']))
+    rel_name = TableNaming.column_to_relationship_name(rel['column'])
+    target_class = TableNaming.to_pascal_case(TableNaming.singularize(rel['referenced_table']))
 
     # Find target model
     target_model = next((m for m in all_models if m['class_name'] == target_class), None)
@@ -2265,7 +2455,7 @@ def generate_cascade_save_tests(model: Dict[str, Any], all_models: List[Dict[str
     # Set required fields for target
     for col in target_model.get('columns', []):
         if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-            python_type = get_python_type(col['data_type'])
+            python_type = TypeMapper.get_python_type(col['data_type'])
             if python_type == 'str':
                 tests += f"\n        related.set_{col['name']}('test_{col['name']}')"
             elif python_type == 'int':
@@ -2283,7 +2473,7 @@ def generate_cascade_save_tests(model: Dict[str, Any], all_models: List[Dict[str
     # Set required fields for parent
     for col in model['columns']:
         if col['name'] != 'id' and not col['is_nullable'] and not col['name'].endswith('_id'):
-            python_type = get_python_type(col['data_type'])
+            python_type = TypeMapper.get_python_type(col['data_type'])
             if python_type == 'str':
                 tests += f"\n        parent.set_{col['name']}('test_{col['name']}')"
             elif python_type == 'int':
@@ -2309,10 +2499,27 @@ def generate_cascade_save_tests(model: Dict[str, Any], all_models: List[Dict[str
 
 def generate_tests(models: List[Dict[str, Any]]) -> str:
     """Generate comprehensive tests.py file for all models with relationship testing."""
+    # Add sys.path manipulation first
+    header = [
+        "#!/usr/bin/env python3",
+        '"""',
+        "Auto-generated test suite for all models.",
+        "Generated from database schema - do not modify manually.",
+        '"""',
+        "",
+        "import sys",
+        "import os",
+        "",
+        "# Add Thrift generated code to path",
+        "thrift_gen_path = '/vagrant/gamedb/thrift/gen-py'",
+        "if thrift_gen_path not in sys.path:",
+        "    sys.path.insert(0, thrift_gen_path)",
+        "",
+    ]
+
     imports = [
         "import unittest",
         "import mysql.connector",
-        "import os",
         "import uuid",
         "from dotenv import load_dotenv",
     ]
@@ -2438,10 +2645,20 @@ class Test{class_name}Relationships(unittest.TestCase):
         if cascade_tests:
             test_class += cascade_tests
 
+        # Add Thrift conversion tests if table has Thrift mapping
+        if has_thrift_mapping(model['table_name']):
+            # Basic note about Thrift conversion - full tests would be added here
+            test_class += f'''
+    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
+    # TODO: Add Owner union tests for tables with owner fields
+    # TODO: Add AttributeValue union tests for attributes table
+'''
+
         test_classes.append(test_class)
 
     # Combine everything
-    test_code = "\n".join(imports)
+    test_code = "\n".join(header)
+    test_code += "\n".join(imports)
     test_code += "\nfrom datetime import datetime"
     test_code += module_setup
     test_code += seed_data_code
@@ -2502,6 +2719,23 @@ def main():
         tables = get_all_tables(cursor, db_database)
         print(f"Found {len(tables)} tables: {', '.join(tables)}")
 
+        # Validate configuration
+        print("\nValidating configuration...")
+        # Temporarily add Thrift path for validation
+        import sys
+        thrift_gen_path = '/vagrant/gamedb/thrift/gen-py'
+        if thrift_gen_path not in sys.path:
+            sys.path.insert(0, thrift_gen_path)
+
+        config_errors = validate_config(tables)
+        if config_errors:
+            print("❌ Configuration validation failed:")
+            for error in config_errors:
+                print(f"  - {error}")
+            print("\nPlease fix configuration in generator/config.py")
+            return 1
+        print("✓ Configuration valid")
+
         # Get foreign key constraints
         print("\nDetecting foreign key constraints...")
         fk_constraints = get_foreign_key_constraints(cursor, db_database)
@@ -2543,15 +2777,20 @@ def main():
         all_imports.add("import mysql.connector")
         all_imports.add("import os")
         all_imports.add("from dotenv import load_dotenv")
-        all_imports.add("from typing import Dict, List, Optional, Any, Iterator, Union")
+        all_imports.add("from typing import Dict, List, Optional, Any, Iterator, Union, Tuple")
 
         # Check if any model needs datetime
         needs_datetime = any(
-            any(get_python_type(col["data_type"]) == "datetime" for col in table_columns[table])
+            any(TypeMapper.get_python_type(col["data_type"]) == "datetime" for col in table_columns[table])
             for table in tables
         )
         if needs_datetime:
             all_imports.add("from datetime import datetime")
+
+        # Check if any model has Thrift conversion (needs Thrift imports)
+        needs_thrift = any(has_thrift_mapping(table) for table in tables)
+        if needs_thrift:
+            all_imports.add("from game.ttypes import GameResult, StatusType, GameError, Owner, AttributeValue, AttributeType, ItemVector3, Attribute")
 
         # Add header
         models_output.append("#!/usr/bin/env python3")
@@ -2560,7 +2799,15 @@ def main():
         models_output.append("Generated from database schema - do not modify manually.")
         models_output.append('"""')
         models_output.append("")
-        models_output.append("\n".join(sorted(all_imports)))
+        models_output.append("import sys")
+        models_output.append("import os")
+        models_output.append("")
+        models_output.append("# Add Thrift generated code to path")
+        models_output.append("thrift_gen_path = '/vagrant/gamedb/thrift/gen-py'")
+        models_output.append("if thrift_gen_path not in sys.path:")
+        models_output.append("    sys.path.insert(0, thrift_gen_path)")
+        models_output.append("")
+        models_output.append("\n".join(sorted([imp for imp in all_imports if not imp.startswith("import os")])))
         models_output.append("")
         models_output.append("# Load environment variables")
         models_output.append("load_dotenv()")
@@ -2603,11 +2850,11 @@ def main():
                 models_output.append("")
 
             # Track generated model
-            singular_name = singularize_table_name(table_name)
+            singular_name = TableNaming.singularize(table_name)
             generated_models.append(
                 {
                     "table_name": table_name,
-                    "class_name": to_pascal_case(singular_name),
+                    "class_name": TableNaming.to_pascal_case(singular_name),
                     "columns": columns,
                     "relationships": relationships,
                 }
@@ -2623,7 +2870,7 @@ def main():
         # Delete old individual model files
         print("\nCleaning up old individual model files...")
         for model_info in generated_models:
-            singular_name = singularize_table_name(model_info["table_name"])
+            singular_name = TableNaming.singularize(model_info["table_name"])
             old_file = os.path.join(os.path.dirname(__file__), f"{singular_name}.py")
             if os.path.exists(old_file):
                 os.remove(old_file)

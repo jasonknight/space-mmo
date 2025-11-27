@@ -3,6 +3,7 @@ typedef i64 ItemId
 typedef i64 MobileId
 typedef i64 PlayerId
 
+//@mysql_table('players')
 struct Player {
     1: optional PlayerId id;
     // Whatever the player's full legal name is
@@ -21,6 +22,7 @@ struct Player {
 // class, it gives some broad category to the item, is it 
 // a consumable, virtual, weapon, These are special, globally
 // interesting types for quick sorting
+//@info store this as a string of the member, eg 'CONTAINER' or 'WEAPON'
 enum ItemType {
     VIRTUAL = 1, // Items that never have a physical existence, like quest items.
     // To decide if someone has "done" part of a quest, we just add a Virtual item to
@@ -31,8 +33,11 @@ enum ItemType {
     WEAPON=3,
     RAWMATERIAL=4,
     REFINEDMATERIAL=5,
+    BLUEPRINT=6, // only blueprint type items have an actual blueprint attached, though it
+    // might seem like all of them could have them, in practice, only certain ones do. 
 }
 
+//@info store this as a string of the member, eg 'PLAYER' or 'NPC'
 enum MobileType {
     PLAYER = 1,
     NPC = 2,
@@ -79,6 +84,7 @@ union Owner {
     4: PlayerId player_id;
 }
 
+//@info store this as a string of the member, eg 'QUANTITY' or 'SIZE'
 enum AttributeType {
     TRANSLATED_NAME = 1,
     TRANSLATED_SHORT_DESCRIPTION = 2,
@@ -112,14 +118,17 @@ enum AttributeType {
     DEXTERITY = 18, // Weapon handling, engineering with fine equipment
     ARCANA = 19, // Discovery, item info, revealing secrets, blueprint study
     OPERATIONS = 20, // Repair, scanning, equipment use, ship weapons, mining
+    BLUEPRINT_ITEM_ID = 21, // links this item to its blueprint item for manufacture.
 }
 
+//@info this is stored on the 'attributes' table as 'vector3_*', x, y, and z must be NOT NULL to be valid
 struct ItemVector3 {
     1: double x;
     2: double y;
     3: double z;
 }
 
+//@info this is stored on the 'attributes' table flattened, so each member is a column, except for ItemVector3, see @info for ItemVector3
 union AttributeValue {
     1: bool bool_value;
     2: double double_value;
@@ -129,6 +138,8 @@ union AttributeValue {
     4: AssetId asset_id; 
  }
 
+//@mysql_table('attributes')
+//@info one-to-many relation through the attribute_owners table. the attribute_owners table is essential an unwrapped Owner.
 struct Attribute {
     1: optional i64 id; // this member only matters for a materialized attribute of an owned item
     2: string internal_name;
@@ -138,6 +149,7 @@ struct Attribute {
     6: Owner owner;
 }
 
+//@mysql_table('items')
 struct Item {
     1: optional i64 id;
     2: string internal_name; // used internally to talk about the item, but
@@ -145,19 +157,43 @@ struct Item {
     3: map<AttributeType, Attribute> attributes;
     4: optional i64 max_stack_size;
     5: ItemType item_type;
-    // Optional because not items can be constructed by players
+    // Optional because not all items can be constructed by players
     6: optional ItemBlueprint blueprint;
     7: optional BackingTable backing_table;
 }
 
+//@mysql_table('mobile_items')
+//@info this must be kept in sync with Item struct as any Item should be able to be copied into the table for MobileItem, but not the other way around.
+struct MobileItem {
+    // This struct is meant to mirror Item, except we have
+    // some extra fields, but those need to be copied over
+    // from the template
+    1: optional ItemId id;
+    2: ItemId item_id;
+    3: MobileId mobile_id;
+    4: string internal_name; // used internally to talk about the item, but
+    // not shown to users, as their names/descriptions must come for i18n translations
+    5: map<AttributeType, Attribute> attributes;
+    6: optional i64 max_stack_size;
+    7: ItemType item_type;
+    // Optional because not all items can be constructed by players
+    8: optional ItemBlueprint blueprint;
+    9: optional BackingTable backing_table;
+}
+
+//@mysql_table('item_blueprint_components')
+//@info also can be represented by 'mobile_item_blueprint_components' which is a copy.
 struct ItemBlueprintComponent {
     // A value between 0.1 -> 1.0
     1: double ratio; // i.e. for every 1 unit of this item, how much of the target item do we get?
     2: ItemId item_id;
 }
+
 // An ItemBlueprint contains the item id and the amount of that item required
 // to construct it, this is also used when recycling/breaking down an item
 // into its base components
+//@mysql_table('item_blueprints')
+//@info also represented in 'mobile_item_blueprints'
 struct ItemBlueprint {
     1: optional i64 id;
     2: map<ItemId, ItemBlueprintComponent> components;
@@ -180,11 +216,16 @@ struct ItemDb {
     1: list<Item> items;
 }
 
+//@mysql_table('inventory_entries')
+//@info mobile_item_id is optional becasue this may be an inventory owned by the game, in that case, we just reference the item_id, but once the item is moved into an inventory owned by a player's mobile, we need to copy over all the item data to the mobile_items and supporting tables to materialize an persistent version of the item in the game world.
 struct InventoryEntry {
     1: ItemId item_id;
     2: double quantity;
     3: bool is_max_stacked = false;
+    4: optional ItemId mobile_item_id;
 }
+
+//@mysql_table('inventories')
 struct Inventory {
     1: optional i64 id;
     2: i64 max_entries;
@@ -255,6 +296,7 @@ const map<GameError, string> INVERR2STRING = {
     GameError.DB_UNIQUE_CONSTRAINT_VIOLATION: "unique constraint violation",
 }
 
+//@mysql_table('mobiles')
 struct Mobile {
     1: optional MobileId id;
     2: MobileType mobile_type;

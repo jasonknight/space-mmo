@@ -16,6 +16,7 @@ from game.ttypes import (
     MobileType,
     Owner,
 )
+from db_tables import get_table_sql
 
 logger = logging.getLogger(__name__)
 # Table names
@@ -42,15 +43,7 @@ class PlayerMixin:
     ) -> list[str]:
         return [
             f"CREATE DATABASE IF NOT EXISTS {database};",
-            f"""CREATE TABLE IF NOT EXISTS {database}.players (
-                id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                full_name VARCHAR(255) NOT NULL,
-                what_we_call_you VARCHAR(255) NOT NULL,
-                security_token VARCHAR(255) NOT NULL,
-                over_13 BOOLEAN NOT NULL,
-                year_of_birth BIGINT NOT NULL,
-                email VARCHAR(255) NOT NULL
-            );""",
+            get_table_sql("players", database),
         ]
 
     def create_player(

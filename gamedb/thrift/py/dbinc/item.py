@@ -20,6 +20,7 @@ from game.ttypes import (
 from game.constants import TABLE2STR
 
 from common import STR2TABLE
+from db_tables import get_table_sql
 
 # Note: is_ok and is_true are imported from common in the parent scope
 
@@ -33,13 +34,7 @@ class ItemMixin:
     ) -> list[str]:
         return [
             f"CREATE DATABASE IF NOT EXISTS {database};",
-            f"""CREATE TABLE IF NOT EXISTS {database}.items (
-                id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                internal_name VARCHAR(255) NOT NULL,
-                max_stack_size BIGINT,
-                item_type VARCHAR(50) NOT NULL,
-                blueprint_id BIGINT
-            );""",
+            get_table_sql("items", database),
         ]
 
     def get_item_blueprints_table_sql(
@@ -48,10 +43,7 @@ class ItemMixin:
     ) -> list[str]:
         return [
             f"CREATE DATABASE IF NOT EXISTS {database};",
-            f"""CREATE TABLE IF NOT EXISTS {database}.item_blueprints (
-                id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                bake_time_ms BIGINT NOT NULL
-            );""",
+            get_table_sql("item_blueprints", database),
         ]
 
     def get_item_blueprint_components_table_sql(
@@ -60,13 +52,7 @@ class ItemMixin:
     ) -> list[str]:
         return [
             f"CREATE DATABASE IF NOT EXISTS {database};",
-            f"""CREATE TABLE IF NOT EXISTS {database}.item_blueprint_components (
-                id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                item_blueprint_id BIGINT NOT NULL,
-                component_item_id BIGINT NOT NULL,
-                ratio DOUBLE NOT NULL,
-                FOREIGN KEY (item_blueprint_id) REFERENCES {database}.item_blueprints(id)
-            );""",
+            get_table_sql("item_blueprint_components", database),
         ]
 
     def get_mobile_items_table_sql(
@@ -75,14 +61,7 @@ class ItemMixin:
     ) -> list[str]:
         return [
             f"CREATE DATABASE IF NOT EXISTS {database};",
-            f"""CREATE TABLE IF NOT EXISTS {database}.mobile_items (
-                id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                mobile_id BIGINT NOT NULL,
-                internal_name VARCHAR(255) NOT NULL,
-                max_stack_size BIGINT,
-                item_type VARCHAR(50) NOT NULL,
-                blueprint_id BIGINT
-            );""",
+            get_table_sql("mobile_items", database),
         ]
 
     def get_mobile_item_blueprints_table_sql(
@@ -91,10 +70,7 @@ class ItemMixin:
     ) -> list[str]:
         return [
             f"CREATE DATABASE IF NOT EXISTS {database};",
-            f"""CREATE TABLE IF NOT EXISTS {database}.mobile_item_blueprints (
-                id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                bake_time_ms BIGINT NOT NULL
-            );""",
+            get_table_sql("mobile_item_blueprints", database),
         ]
 
     def get_mobile_item_blueprint_components_table_sql(
@@ -103,13 +79,7 @@ class ItemMixin:
     ) -> list[str]:
         return [
             f"CREATE DATABASE IF NOT EXISTS {database};",
-            f"""CREATE TABLE IF NOT EXISTS {database}.mobile_item_blueprint_components (
-                id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                item_blueprint_id BIGINT NOT NULL,
-                component_item_id BIGINT NOT NULL,
-                ratio DOUBLE NOT NULL,
-                FOREIGN KEY (item_blueprint_id) REFERENCES {database}.mobile_item_blueprints(id)
-            );""",
+            get_table_sql("mobile_item_blueprint_components", database),
         ]
 
     def get_mobile_item_attributes_table_sql(
@@ -118,20 +88,7 @@ class ItemMixin:
     ) -> list[str]:
         return [
             f"CREATE DATABASE IF NOT EXISTS {database};",
-            f"""CREATE TABLE IF NOT EXISTS {database}.mobile_item_attributes (
-                id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                mobile_item_id BIGINT NOT NULL,
-                internal_name VARCHAR(255) NOT NULL,
-                visible BOOLEAN NOT NULL,
-                attribute_type VARCHAR(50) NOT NULL,
-                bool_value BOOLEAN,
-                double_value DOUBLE,
-                vector3_x DOUBLE,
-                vector3_y DOUBLE,
-                vector3_z DOUBLE,
-                asset_id BIGINT,
-                FOREIGN KEY (mobile_item_id) REFERENCES {database}.mobile_items(id)
-            );""",
+            get_table_sql("mobile_item_attributes", database),
         ]
 
     def get_item_sql(
@@ -274,7 +231,6 @@ class ItemMixin:
         obj: Item,
         table: Optional[str] = None,
     ) -> list[GameResult]:
-
         try:
             self.connect()
             cursor = self.connection.cursor()
@@ -355,7 +311,6 @@ class ItemMixin:
         obj: Item,
         table: Optional[str] = None,
     ) -> list[GameResult]:
-
         try:
             if obj.id is None:
                 return [
@@ -403,11 +358,13 @@ class ItemMixin:
                 f"item_type = '{item_type_name}'",
                 f"blueprint_id = {blueprint_val}",
             ]
-            sql = f"UPDATE {database}.{item_table} SET " + ",".join(kv_pairs) + f" WHERE id = {obj.id};"
-            print(sql)
-            cursor.execute(
-                sql
+            sql = (
+                f"UPDATE {database}.{item_table} SET "
+                + ",".join(kv_pairs)
+                + f" WHERE id = {obj.id};"
             )
+            print(sql)
+            cursor.execute(sql)
 
             # Delete existing attributes
             # First get the attribute IDs
@@ -427,7 +384,6 @@ class ItemMixin:
                 cursor.execute(
                     f"DELETE FROM {database}.{attributes_table} WHERE id IN ({attr_ids_str});"
                 )
-            
 
             # Insert new attributes
             if obj.attributes:
@@ -610,7 +566,7 @@ class ItemMixin:
                         owner = Owner(asset_id=owner_row["asset_id"])
                     elif owner_row["player_id"]:
                         owner = Owner(player_id=owner_row["player_id"])
-                
+
                 # Import AttributeType enum
                 from game.ttypes import AttributeType, Attribute
 
@@ -1211,13 +1167,13 @@ class ItemMixin:
                     owner = None
                     if owner_row:
                         if owner_row["mobile_id"]:
-                            owner = owner_row["mobile_id"]
+                            owner = Owner(mobile_id=owner_row["mobile_id"])
                         elif owner_row["item_id"]:
-                            owner = owner_row["item_id"]
+                            owner = Owner(item_id=owner_row["item_id"])
                         elif owner_row["asset_id"]:
-                            owner = owner_row["asset_id"]
+                            owner = Owner(asset_id=owner_row["asset_id"])
                         elif owner_row["player_id"]:
-                            owner = owner_row["player_id"]
+                            owner = Owner(player_id=owner_row["player_id"])
 
                     # Import AttributeType enum
                     from game.ttypes import AttributeType, Attribute

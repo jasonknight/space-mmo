@@ -1,6 +1,18 @@
+#!/usr/bin/env python3
+"""
+Auto-generated test suite for all models.
+Generated from database schema - do not modify manually.
+"""
+
+import sys
+import os
+
+# Add Thrift generated code to path
+thrift_gen_path = '/vagrant/gamedb/thrift/gen-py'
+if thrift_gen_path not in sys.path:
+    sys.path.insert(0, thrift_gen_path)
 import unittest
 import mysql.connector
-import os
 import uuid
 from dotenv import load_dotenv
 from models import AttributeOwner, Attribute, Inventory, InventoryEntry, InventoryOwner, ItemBlueprintComponent, ItemBlueprint, Item, MobileItemAttribute, MobileItemBlueprintComponent, MobileItemBlueprint, MobileItem, Mobile, Player
@@ -555,6 +567,10 @@ class TestAttributeRelationships(unittest.TestCase):
         model.save()
         self.assertFalse(model._dirty)
 
+    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
+    # TODO: Add Owner union tests for tables with owner fields
+    # TODO: Add AttributeValue union tests for attributes table
+
 
 
 class TestInventoryRelationships(unittest.TestCase):
@@ -733,6 +749,10 @@ class TestInventoryRelationships(unittest.TestCase):
         # Save again without changes
         model.save()
         self.assertFalse(model._dirty)
+
+    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
+    # TODO: Add Owner union tests for tables with owner fields
+    # TODO: Add AttributeValue union tests for attributes table
 
 
 
@@ -937,6 +957,10 @@ class TestInventoryEntryRelationships(unittest.TestCase):
         self.assertIsNotNone(related.get_id())
         self.assertFalse(parent._dirty)
         self.assertFalse(related._dirty)
+
+    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
+    # TODO: Add Owner union tests for tables with owner fields
+    # TODO: Add AttributeValue union tests for attributes table
 
 
 
@@ -1273,6 +1297,10 @@ class TestItemBlueprintComponentRelationships(unittest.TestCase):
         self.assertFalse(parent._dirty)
         self.assertFalse(related._dirty)
 
+    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
+    # TODO: Add Owner union tests for tables with owner fields
+    # TODO: Add AttributeValue union tests for attributes table
+
 
 
 class TestItemBlueprintRelationships(unittest.TestCase):
@@ -1371,6 +1399,10 @@ class TestItemBlueprintRelationships(unittest.TestCase):
         # Save again without changes
         model.save()
         self.assertFalse(model._dirty)
+
+    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
+    # TODO: Add Owner union tests for tables with owner fields
+    # TODO: Add AttributeValue union tests for attributes table
 
 
 
@@ -1763,6 +1795,10 @@ class TestItemRelationships(unittest.TestCase):
         # Save again without changes
         model.save()
         self.assertFalse(model._dirty)
+
+    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
+    # TODO: Add Owner union tests for tables with owner fields
+    # TODO: Add AttributeValue union tests for attributes table
 
 
 
@@ -2416,6 +2452,10 @@ class TestMobileItemRelationships(unittest.TestCase):
         self.assertFalse(parent._dirty)
         self.assertFalse(related._dirty)
 
+    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
+    # TODO: Add Owner union tests for tables with owner fields
+    # TODO: Add AttributeValue union tests for attributes table
+
 
 
 class TestMobileRelationships(unittest.TestCase):
@@ -2875,6 +2915,10 @@ class TestMobileRelationships(unittest.TestCase):
         self.assertFalse(parent._dirty)
         self.assertFalse(related._dirty)
 
+    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
+    # TODO: Add Owner union tests for tables with owner fields
+    # TODO: Add AttributeValue union tests for attributes table
+
 
 
 class TestPlayerRelationships(unittest.TestCase):
@@ -3040,8 +3084,8 @@ class TestPlayerRelationships(unittest.TestCase):
         self.assertIsInstance(results_list[0], InventoryOwner)
 
 
-    def test_has_many_mobiles_basic(self):
-        """Test mobiles relationship basic getter."""
+    def test_has_many_mobile_basic(self):
+        """Test mobile relationship basic getter."""
         # Create parent
         parent = Player()
         parent.set_full_name('test_full_name')
@@ -3062,50 +3106,22 @@ class TestPlayerRelationships(unittest.TestCase):
         child2 = Mobile()
         child2.set_mobile_type('test_mobile_type_2')
         child2.set_what_we_call_you('test_what_we_call_you_2')
-        child2.save()
+        child1.save()
 
-        # Test getter (eager mode)
-        results = parent.get_mobiles(lazy=False)
-        self.assertIsInstance(results, list)
-        self.assertEqual(len(results), 2)
+        # Test getter (1-to-1 relationship)
+        result = parent.get_mobile()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, Mobile)
+        self.assertEqual(result.get_owner_player_id(), parent.get_id())
 
         # Test caching
-        results2 = parent.get_mobiles(lazy=False)
-        self.assertIs(results, results2)
+        result2 = parent.get_mobile()
+        self.assertIs(result, result2)
 
         # Test reload
-        results3 = parent.get_mobiles(reload=True)
-        self.assertIsNot(results, results3)
-        self.assertEqual(len(results3), 2)
-
-
-    def test_has_many_mobiles_lazy(self):
-        """Test mobiles relationship lazy loading."""
-        # Create parent with children
-        parent = Player()
-        parent.set_full_name('test_full_name')
-        parent.set_what_we_call_you('test_what_we_call_you')
-        parent.set_security_token('test_security_token')
-        parent.set_over_13(1)
-        parent.set_year_of_birth(1)
-        parent.set_email('test_email')
-        parent.save()
-
-
-        # Create child
-        child = Mobile()
-        child.set_mobile_type('test_mobile_type')
-        child.set_what_we_call_you('test_what_we_call_you')
-        child.save()
-
-        # Test lazy mode
-        results_iter = parent.get_mobiles(lazy=True)
-        self.assertFalse(isinstance(results_iter, list))
-
-        # Consume iterator
-        results_list = list(results_iter)
-        self.assertEqual(len(results_list), 1)
-        self.assertIsInstance(results_list[0], Mobile)
+        result3 = parent.get_mobile(reload=True)
+        self.assertIsNotNone(result3)
+        self.assertEqual(result3.get_owner_player_id(), parent.get_id())
 
     def test_dirty_tracking_new_model(self):
         """Test that new models are marked dirty."""
@@ -3154,6 +3170,10 @@ class TestPlayerRelationships(unittest.TestCase):
         # Save again without changes
         model.save()
         self.assertFalse(model._dirty)
+
+    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
+    # TODO: Add Owner union tests for tables with owner fields
+    # TODO: Add AttributeValue union tests for attributes table
 
 
 

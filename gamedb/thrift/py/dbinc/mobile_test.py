@@ -1,10 +1,11 @@
 import sys
 import os
+import mysql.connector
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../gen-py"))
 
-from db import DB
+from models.mobile_model import MobileModel
 from game.ttypes import (
     Mobile,
     MobileType,
@@ -15,65 +16,63 @@ from game.ttypes import (
     GameError,
 )
 from common import is_ok, is_true
+from db_tables import get_table_sql
 
 
-def setup_database(db: DB, database_name: str):
+def setup_database(host: str, user: str, password: str, database_name: str):
     """Create all necessary tables for testing."""
-    db.connect()
-    cursor = db.connection.cursor()
+    connection = mysql.connector.connect(
+        host=host,
+        user=user,
+        password=password,
+        auth_plugin="mysql_native_password",
+        ssl_disabled=True,
+        use_pure=True,
+    )
+    cursor = connection.cursor()
 
     # Create database
     cursor.execute(f"DROP DATABASE IF EXISTS {database_name};")
     cursor.execute(f"CREATE DATABASE {database_name};")
 
-    # Create all tables
-    for stmt in db.get_item_blueprints_table_sql(database_name):
-        cursor.execute(stmt)
+    # Create tables using centralized schemas
+    cursor.execute(get_table_sql("mobiles", database_name))
+    cursor.execute(get_table_sql("attributes", database_name))
+    cursor.execute(get_table_sql("attribute_owners", database_name))
 
-    for stmt in db.get_item_blueprint_components_table_sql(database_name):
-        cursor.execute(stmt)
-
-    for stmt in db.get_items_table_sql(database_name):
-        cursor.execute(stmt)
-
-    for stmt in db.get_attributes_table_sql(database_name):
-        cursor.execute(stmt)
-
-    for stmt in db.get_attribute_owners_table_sql(database_name):
-        cursor.execute(stmt)
-
-    for stmt in db.get_inventories_table_sql(database_name):
-        cursor.execute(stmt)
-
-    for stmt in db.get_inventory_entries_table_sql(database_name):
-        cursor.execute(stmt)
-
-    for stmt in db.get_inventory_owners_table_sql(database_name):
-        cursor.execute(stmt)
-
-    for stmt in db.get_mobiles_table_sql(database_name):
-        cursor.execute(stmt)
-
-    for stmt in db.get_players_table_sql(database_name):
-        cursor.execute(stmt)
-
-    db.connection.commit()
+    connection.commit()
     cursor.close()
+    connection.close()
 
 
-def teardown_database(db: DB, database_name: str):
+def teardown_database(host: str, user: str, password: str, database_name: str):
     """Delete the test database."""
-    db.connect()
-    cursor = db.connection.cursor()
+    connection = mysql.connector.connect(
+        host=host,
+        user=user,
+        password=password,
+        auth_plugin="mysql_native_password",
+        ssl_disabled=True,
+        use_pure=True,
+    )
+    cursor = connection.cursor()
     cursor.execute(f"DROP DATABASE IF EXISTS {database_name};")
-    db.connection.commit()
+    connection.commit()
     cursor.close()
-    db.disconnect()
+    connection.close()
 
 
-def test_mobile(db: DB, database_name: str):
+def test_mobile(
+    host: str,
+    user: str,
+    password: str,
+    database_name: str,
+):
     """Test Mobile save and load."""
     print("Testing Mobile...")
+
+    # Create mobile model
+    mobile_model = MobileModel(host, user, password, database_name)
 
     # Create mobile with attributes and owner
     attributes = {
@@ -157,12 +156,12 @@ def test_mobile(db: DB, database_name: str):
     )
 
     # Save mobile
-    save_results = db.save_mobile(database_name, mobile)
+    save_results = mobile_model.save(mobile)
     assert is_ok(save_results), f"Failed to save Mobile: {save_results[0].message}"
     print(f"  ✓ Saved: {save_results[0].message}")
 
     # Load mobile
-    load_result, loaded_mobile = db.load_mobile(database_name, mobile.id)
+    load_result, loaded_mobile = mobile_model.load(mobile.id)
     assert is_true(load_result), f"Failed to load Mobile: {load_result.message}"
     print(f"  ✓ Loaded: {load_result.message}")
 
@@ -209,14 +208,14 @@ def test_mobile(db: DB, database_name: str):
         x=500.0, y=600.0, z=700.0
     )
 
-    update_results = db.save_mobile(database_name, loaded_mobile)
+    update_results = mobile_model.save(loaded_mobile)
     assert is_ok(update_results), (
         f"Failed to update Mobile: {update_results[0].message}"
     )
     print(f"  ✓ Updated: {update_results[0].message}")
 
     # Load again and verify updates
-    load_result2, updated_mobile = db.load_mobile(database_name, loaded_mobile.id)
+    load_result2, updated_mobile = mobile_model.load(loaded_mobile.id)
     assert is_true(load_result2), (
         f"Failed to load updated Mobile: {load_result2.message}"
     )
@@ -225,14 +224,14 @@ def test_mobile(db: DB, database_name: str):
 
     # Test destroy
     print("  Testing destroy...")
-    destroy_results = db.destroy_mobile(database_name, loaded_mobile.id)
+    destroy_results = mobile_model.destroy(loaded_mobile.id)
     assert is_ok(destroy_results), (
         f"Failed to destroy Mobile: {destroy_results[0].message}"
     )
     print(f"  ✓ Destroyed: {destroy_results[0].message}")
 
     # Verify load fails after destroy
-    load_result3, destroyed_mobile = db.load_mobile(database_name, loaded_mobile.id)
+    load_result3, destroyed_mobile = mobile_model.load(loaded_mobile.id)
     assert not is_true(load_result3), "Load should fail after destroy"
     assert destroyed_mobile is None, "Destroyed mobile should be None"
     assert load_result3.error_code == GameError.DB_RECORD_NOT_FOUND, (
@@ -241,6 +240,9 @@ def test_mobile(db: DB, database_name: str):
     print("  ✓ Destroy verified: load failed with DB_RECORD_NOT_FOUND")
 
     print("  ✓ All assertions passed for Mobile\n")
+
+    # Disconnect
+    mobile_model.disconnect()
 
 
 def main():
@@ -256,17 +258,14 @@ def main():
     print("=" * 60)
     print()
 
-    # Initialize database connection
-    db = DB(host, user, password)
-
     try:
         # Setup database and tables
         print("Setting up test database...")
-        setup_database(db, database_name)
+        setup_database(host, user, password, database_name)
         print("✓ Database setup complete\n")
 
         # Run tests
-        test_mobile(db, database_name)
+        test_mobile(host, user, password, database_name)
 
         print("=" * 60)
         print("All tests passed successfully!")
@@ -281,7 +280,7 @@ def main():
     finally:
         # Teardown database
         print("\nCleaning up test database...")
-        teardown_database(db, database_name)
+        teardown_database(host, user, password, database_name)
         print("✓ Cleanup complete")
 
 

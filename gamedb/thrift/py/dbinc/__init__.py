@@ -2,11 +2,13 @@
 from .item import ItemMixin
 from .inventory import InventoryMixin
 from .mobile import MobileMixin
+from .mobile_item import MobileItemMixin
 from .player import PlayerMixin
 
 __all__ = [
-    'ItemMixin',
-    'InventoryMixin',
-    'MobileMixin',
-    'PlayerMixin',
+    "ItemMixin",
+    "InventoryMixin",
+    "MobileMixin",
+    "MobileItemMixin",
+    "PlayerMixin",
 ]

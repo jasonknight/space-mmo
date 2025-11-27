@@ -12,3 +12,5 @@ SDL3/
 *.pdb
 *.pyc
 *.bin
+.env
+env.md

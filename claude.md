@@ -51,3 +51,5 @@ When generating code, minimize dependencies. Prefer pulling functions or code in
 
 When writing code, prefer to be explicit.
 
+ALWAYS RUN TESTS UNLESS INSTRUCTED OTHERWISE!
+ALWAYS RUN TESTS UNLESS INSTRUCTED OTHERWISE!

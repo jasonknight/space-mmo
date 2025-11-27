@@ -13,6 +13,7 @@ from game.ttypes import (
     Inventory,
     InventoryEntry,
 )
+from db_tables import get_table_sql
 
 # Configure logging
 logger = logging.getLogger(__name__)

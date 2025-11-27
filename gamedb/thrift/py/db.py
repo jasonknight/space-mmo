@@ -16,6 +16,7 @@ from game.ttypes import (
     ItemVector3,
     Attribute,
     Item,
+    MobileItem,
     ItemBlueprintComponent,
     ItemBlueprint,
     ItemDb,
@@ -24,8 +25,9 @@ from game.ttypes import (
     Mobile,
     Player,
 )
+from game.constants import *
 from common import is_ok, is_true
-from dbinc import ItemMixin, InventoryMixin, MobileMixin, PlayerMixin
+from dbinc import ItemMixin, InventoryMixin, MobileMixin, PlayerMixin, MobileItemMixin
 
 
 # ============================================================================
@@ -120,6 +122,7 @@ def attribute_value_to_sql_fields(attribute: Attribute) -> dict:
 TYPE_REGISTRY = {
     "Attribute": Attribute,
     "Item": Item,
+    "MobileItem": MobileItem,
     "ItemBlueprint": ItemBlueprint,
     "Inventory": Inventory,
     "Mobile": Mobile,
@@ -127,7 +130,7 @@ TYPE_REGISTRY = {
 }
 
 
-class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
+class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin, MobileItemMixin):
     def __init__(self, host: str, user: str, password: str):
         self.host = host
         self.user = user
@@ -215,37 +218,22 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         self,
         database: str,
     ) -> list[str]:
+        from db_tables import get_table_sql
+
         return [
             f"CREATE DATABASE IF NOT EXISTS {database};",
-            f"""CREATE TABLE IF NOT EXISTS {database}.attributes (
-                id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                internal_name VARCHAR(255) NOT NULL,
-                visible BOOLEAN NOT NULL,
-                attribute_type VARCHAR(50) NOT NULL,
-                bool_value BOOLEAN,
-                double_value DOUBLE,
-                vector3_x DOUBLE,
-                vector3_y DOUBLE,
-                vector3_z DOUBLE,
-                asset_id BIGINT
-            );""",
+            get_table_sql("attributes", database),
         ]
 
     def get_attribute_owners_table_sql(
         self,
         database: str,
     ) -> list[str]:
+        from db_tables import get_table_sql
+
         return [
             f"CREATE DATABASE IF NOT EXISTS {database};",
-            f"""CREATE TABLE IF NOT EXISTS {database}.attribute_owners (
-                id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                attribute_id BIGINT NOT NULL,
-                mobile_id BIGINT,
-                item_id BIGINT,
-                asset_id BIGINT,
-                player_id BIGINT,
-                FOREIGN KEY (attribute_id) REFERENCES {database}.attributes(id)
-            );""",
+            get_table_sql("attribute_owners", database),
         ]
 
     def get_attribute_sql(
@@ -754,6 +742,7 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         dispatch_map = {
             "Attribute": self.save_attribute,
             "Item": self.save_item,
+            "MobileItem": self.save_mobile_item,
             "ItemBlueprint": self.save_item_blueprint,
             "Inventory": self.save_inventory,
             "Mobile": self.save_mobile,
@@ -784,8 +773,10 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         based on object type.
         """
         type_name = get_struct_type_name(obj)
-        obj_id = getattr(obj, 'id', None) if hasattr(obj, 'id') else None
-        logger.info(f"=== CREATE (dispatch): type={type_name}, id={obj_id}, database={database}")
+        obj_id = getattr(obj, "id", None) if hasattr(obj, "id") else None
+        logger.info(
+            f"=== CREATE (dispatch): type={type_name}, id={obj_id}, database={database}"
+        )
 
         dispatch_map = {
             "Attribute": self.create_attribute,
@@ -818,8 +809,10 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         based on object type.
         """
         type_name = get_struct_type_name(obj)
-        obj_id = getattr(obj, 'id', None) if hasattr(obj, 'id') else None
-        logger.info(f"=== UPDATE (dispatch): type={type_name}, id={obj_id}, database={database}")
+        obj_id = getattr(obj, "id", None) if hasattr(obj, "id") else None
+        logger.info(
+            f"=== UPDATE (dispatch): type={type_name}, id={obj_id}, database={database}"
+        )
 
         dispatch_map = {
             "Attribute": self.update_attribute,
@@ -853,7 +846,9 @@ class DB(ItemMixin, InventoryMixin, MobileMixin, PlayerMixin):
         Can accept either an object (will use its id) or an id with obj_type specified.
         """
         # If obj_or_id is an object, extract its type and id
-        logger.info(f"=== DESTROY (dispatch): obj_or_id={obj_or_id}, obj_type={obj_type}, database={database}")
+        logger.info(
+            f"=== DESTROY (dispatch): obj_or_id={obj_or_id}, obj_type={obj_type}, database={database}"
+        )
         if hasattr(obj_or_id, "__class__") and hasattr(obj_or_id, "id"):
             type_name = get_struct_type_name(obj_or_id)
             obj_id = obj_or_id.id

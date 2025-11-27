@@ -40,7 +40,8 @@ from game.ttypes import (
     FieldEnumMapping,
 )
 from game.InventoryService import Iface as InventoryServiceIface
-from db import DB
+from models.inventory_model import InventoryModel
+from models.item_model import ItemModel
 from inventory import split_stack, transfer_item
 from common import is_ok
 from services.lru_cache import LRUCache
@@ -50,13 +51,21 @@ from services.base_service import BaseServiceHandler
 class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
     """
     Implementation of the InventoryService thrift interface.
-    Handles inventory operations using the DB layer and inventory.py functions.
+    Handles inventory operations using the InventoryModel layer and inventory.py functions.
     Includes an LRU cache to reduce database queries for frequently accessed inventories.
     """
 
-    def __init__(self, db: DB, database: str, cache_size: int = 1000):
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        password: str,
+        database: str,
+        cache_size: int = 1000,
+    ):
         BaseServiceHandler.__init__(self, InventoryServiceHandler)
-        self.db = db
+        self.inventory_model = InventoryModel(host, user, password, database)
+        self.item_model = ItemModel(host, user, password, database)
         self.database = database
         self.cache = LRUCache(max_size=cache_size)
 
@@ -104,10 +113,7 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             logger.debug(
                 f"Cache miss, loading from DATABASE for inventory_id={inventory_id}"
             )
-            result, inventory = self.db.load_inventory(
-                self.database,
-                inventory_id,
-            )
+            result, inventory = self.inventory_model.load(inventory_id)
 
             if inventory:
                 logger.info(
