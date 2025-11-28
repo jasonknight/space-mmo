@@ -13,7 +13,7 @@ if thrift_gen_path not in sys.path:
     sys.path.insert(0, thrift_gen_path)
 
 from dotenv import load_dotenv
-from game.ttypes import GameResult as ThriftGameResult, StatusType as ThriftStatusType, GameError as ThriftGameError, Owner as ThriftOwner, AttributeValue as ThriftAttributeValue, AttributeType as ThriftAttributeType, ItemType as ThriftItemType, ItemVector3 as ThriftItemVector3, Attribute as ThriftAttribute, Item as ThriftItem, Mobile as ThriftMobile, Player as ThriftPlayer, MobileItem as ThriftMobileItem, Inventory as ThriftInventory, InventoryEntry as ThriftInventoryEntry, ItemBlueprint as ThriftItemBlueprint, ItemBlueprintComponent as ThriftItemBlueprintComponent
+from game.ttypes import GameResult as ThriftGameResult, StatusType as ThriftStatusType, GameError as ThriftGameError, Owner as ThriftOwner, AttributeValue as ThriftAttributeValue, AttributeType as ThriftAttributeType, ItemType as ThriftItemType, MobileType as ThriftMobileType, ItemVector3 as ThriftItemVector3, Attribute as ThriftAttribute, Item as ThriftItem, Mobile as ThriftMobile, Player as ThriftPlayer, MobileItem as ThriftMobileItem, Inventory as ThriftInventory, InventoryEntry as ThriftInventoryEntry, ItemBlueprint as ThriftItemBlueprint, ItemBlueprintComponent as ThriftItemBlueprintComponent
 from typing import Dict, List, Optional, Any, Iterator, Union, Tuple
 import mysql.connector
 
@@ -45,7 +45,7 @@ class AttributeOwner:
           PRIMARY KEY (`id`),
           KEY `attribute_id` (`attribute_id`),
           CONSTRAINT `attribute_owners_ibfk_1` FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1523 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1618 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -679,7 +679,7 @@ class Attribute:
           `vector3_z` double DEFAULT NULL,
           `asset_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1809 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1928 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -723,7 +723,7 @@ class Attribute:
 
     def get_attribute_type(self) -> ThriftAttributeType:
         value = self._data.get('attribute_type')
-        return getattr(ThriftAttributeType, value) if value is not None else None
+        return ThriftAttributeType._NAMES_TO_VALUES[value] if value is not None else None
 
     def get_bool_value(self) -> Optional[int]:
         return self._data.get('bool_value')
@@ -793,19 +793,11 @@ class Attribute:
         """
         if value is not None and not isinstance(value, int):
             raise TypeError(f"{value} must be an integer (Thrift enum), got {type(value).__name__}")
-        # Convert enum integer to string name for storage
+        # Convert enum integer to string name for storage using _VALUES_TO_NAMES map
         if value is not None:
-            # Reverse lookup: find the name for this enum value
-            enum_name = None
-            for attr_name in dir(ThriftAttributeType):
-                if not attr_name.startswith('_'):
-                    attr_val = getattr(ThriftAttributeType, attr_name)
-                    if isinstance(attr_val, int) and attr_val == value:
-                        enum_name = attr_name
-                        break
-            if enum_name is None:
+            if value not in ThriftAttributeType._VALUES_TO_NAMES:
                 raise ValueError(f"{value} is not a valid ThriftAttributeType enum value")
-            self._data['attribute_type'] = enum_name
+            self._data['attribute_type'] = ThriftAttributeType._VALUES_TO_NAMES[value]
         else:
             self._data['attribute_type'] = None
         self._dirty = True
@@ -956,7 +948,11 @@ class Attribute:
             thrift_params['id'] = self._data.get('id')
             thrift_params['internal_name'] = self._data.get('internal_name')
             thrift_params['visible'] = self._data.get('visible')
-            thrift_params['attribute_type'] = getattr(ThriftAttributeType, self._data.get('attribute_type')) if self._data.get('attribute_type') is not None else None
+            attribute_type_value = self._data.get('attribute_type')
+            if attribute_type_value is not None:
+                thrift_params['attribute_type'] = ThriftAttributeType._NAMES_TO_VALUES[attribute_type_value]
+            else:
+                thrift_params['attribute_type'] = None
 
             # Convert flattened database columns to ThriftAttributeValue union
             # Priority: vector3 -> asset_id -> double_value -> bool_value (default)
@@ -1228,7 +1224,7 @@ class Inventory:
           `max_volume` double NOT NULL,
           `last_calculated_volume` double DEFAULT '0',
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=511 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=575 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1767,7 +1763,7 @@ class InventoryEntry:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_entries_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=540 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=616 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2349,7 +2345,7 @@ class InventoryOwner:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_owners_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=803 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=859 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2979,7 +2975,7 @@ class ItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=325 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=369 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3396,7 +3392,7 @@ class ItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=623 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=707 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3875,7 +3871,7 @@ class Item:
           `item_type` varchar(50) NOT NULL,
           `blueprint_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=3225 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=3414 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3919,7 +3915,7 @@ class Item:
 
     def get_item_type(self) -> ThriftItemType:
         value = self._data.get('item_type')
-        return getattr(ThriftItemType, value) if value is not None else None
+        return ThriftItemType._NAMES_TO_VALUES[value] if value is not None else None
 
     def get_blueprint_id(self) -> Optional[int]:
         return self._data.get('blueprint_id')
@@ -3974,19 +3970,11 @@ class Item:
         """
         if value is not None and not isinstance(value, int):
             raise TypeError(f"{value} must be an integer (Thrift enum), got {type(value).__name__}")
-        # Convert enum integer to string name for storage
+        # Convert enum integer to string name for storage using _VALUES_TO_NAMES map
         if value is not None:
-            # Reverse lookup: find the name for this enum value
-            enum_name = None
-            for attr_name in dir(ThriftItemType):
-                if not attr_name.startswith('_'):
-                    attr_val = getattr(ThriftItemType, attr_name)
-                    if isinstance(attr_val, int) and attr_val == value:
-                        enum_name = attr_name
-                        break
-            if enum_name is None:
+            if value not in ThriftItemType._VALUES_TO_NAMES:
                 raise ValueError(f"{value} is not a valid ThriftItemType enum value")
-            self._data['item_type'] = enum_name
+            self._data['item_type'] = ThriftItemType._VALUES_TO_NAMES[value]
         else:
             self._data['item_type'] = None
         self._dirty = True
@@ -4699,7 +4687,11 @@ class Item:
             thrift_params['id'] = self._data.get('id')
             thrift_params['internal_name'] = self._data.get('internal_name')
             thrift_params['max_stack_size'] = self._data.get('max_stack_size')
-            thrift_params['item_type'] = getattr(ThriftItemType, self._data.get('item_type')) if self._data.get('item_type') is not None else None
+            item_type_value = self._data.get('item_type')
+            if item_type_value is not None:
+                thrift_params['item_type'] = ThriftItemType._NAMES_TO_VALUES[item_type_value]
+            else:
+                thrift_params['item_type'] = None
 
             # Load attributes via pivot table and convert to map<AttributeType, Attribute>
             attributes_map = {}
@@ -5114,7 +5106,7 @@ class MobileItemAttribute:
           PRIMARY KEY (`id`),
           KEY `mobile_item_id` (`mobile_item_id`),
           CONSTRAINT `mobile_item_attributes_ibfk_1` FOREIGN KEY (`mobile_item_id`) REFERENCES `mobile_items` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=219 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=239 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5525,7 +5517,7 @@ class MobileItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `mobile_item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `mobile_item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=295 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=339 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5876,7 +5868,7 @@ class MobileItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=495 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=535 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -6176,7 +6168,7 @@ class MobileItem:
           `blueprint_id` bigint DEFAULT NULL,
           `item_id` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=787 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=837 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -6223,7 +6215,7 @@ class MobileItem:
 
     def get_item_type(self) -> ThriftItemType:
         value = self._data.get('item_type')
-        return getattr(ThriftItemType, value) if value is not None else None
+        return ThriftItemType._NAMES_TO_VALUES[value] if value is not None else None
 
     def get_blueprint_id(self) -> Optional[int]:
         return self._data.get('blueprint_id')
@@ -6286,19 +6278,11 @@ class MobileItem:
         """
         if value is not None and not isinstance(value, int):
             raise TypeError(f"{value} must be an integer (Thrift enum), got {type(value).__name__}")
-        # Convert enum integer to string name for storage
+        # Convert enum integer to string name for storage using _VALUES_TO_NAMES map
         if value is not None:
-            # Reverse lookup: find the name for this enum value
-            enum_name = None
-            for attr_name in dir(ThriftItemType):
-                if not attr_name.startswith('_'):
-                    attr_val = getattr(ThriftItemType, attr_name)
-                    if isinstance(attr_val, int) and attr_val == value:
-                        enum_name = attr_name
-                        break
-            if enum_name is None:
+            if value not in ThriftItemType._VALUES_TO_NAMES:
                 raise ValueError(f"{value} is not a valid ThriftItemType enum value")
-            self._data['item_type'] = enum_name
+            self._data['item_type'] = ThriftItemType._VALUES_TO_NAMES[value]
         else:
             self._data['item_type'] = None
         self._dirty = True
@@ -6638,7 +6622,11 @@ class MobileItem:
             thrift_params['id'] = self._data.get('id')
             thrift_params['internal_name'] = self._data.get('internal_name')
             thrift_params['max_stack_size'] = self._data.get('max_stack_size')
-            thrift_params['item_type'] = getattr(ThriftItemType, self._data.get('item_type')) if self._data.get('item_type') is not None else None
+            item_type_value = self._data.get('item_type')
+            if item_type_value is not None:
+                thrift_params['item_type'] = ThriftItemType._NAMES_TO_VALUES[item_type_value]
+            else:
+                thrift_params['item_type'] = None
 
             # Load attributes via pivot table and convert to map<AttributeType, Attribute>
             attributes_map = {}
@@ -6995,7 +6983,7 @@ class Mobile:
           `owner_player_id` bigint DEFAULT NULL,
           `what_we_call_you` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=2213 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=2267 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -7031,8 +7019,9 @@ class Mobile:
     def get_id(self) -> int:
         return self._data.get('id')
 
-    def get_mobile_type(self) -> str:
-        return self._data.get('mobile_type')
+    def get_mobile_type(self) -> ThriftMobileType:
+        value = self._data.get('mobile_type')
+        return ThriftMobileType._NAMES_TO_VALUES[value] if value is not None else None
 
     def get_owner_mobile_id(self) -> Optional[int]:
         return self._data.get('owner_mobile_id')
@@ -7054,8 +7043,48 @@ class Mobile:
         self._dirty = True
         return self
 
-    def set_mobile_type(self, value: str) -> 'self.__class__':
-        self._data['mobile_type'] = value
+    def set_mobile_type(self, value: int) -> 'self.__class__':
+        """
+        Set the mobile_type field value.
+
+        Python Thrift Enum Implementation Note:
+        ----------------------------------------
+        In Python, Thrift enums are implemented as integer constants on a class, not
+        as a separate enum type. For example:
+            - ThriftAttributeType.STRENGTH is just an int (e.g., 0)
+            - ThriftAttributeType.DEXTERITY is just an int (e.g., 1)
+
+        This is different from languages like Java or C++ where enums are distinct types.
+        Python Thrift enums are essentially namespaced integer constants.
+
+        Why this method accepts int:
+        - Thrift enums in Python ARE ints, not a distinct type
+        - Using isinstance(value, ThriftAttributeType) would fail (it's not a class you can instantiate)
+        - Type checkers understand this: passing ThriftAttributeType.STRENGTH satisfies int type hint
+        - This validates the value is a legitimate enum constant, rejecting invalid integers
+
+        The method validates the integer is a valid enum value by reverse-lookup against
+        the Thrift enum class constants, then stores the enum name as a string in the database.
+
+        Args:
+            value: Integer value of a ThriftMobileType enum constant (e.g., ThriftMobileType.STRENGTH)
+
+        Returns:
+            self for method chaining
+
+        Raises:
+            TypeError: If value is not an integer
+            ValueError: If value is not a valid ThriftMobileType enum constant
+        """
+        if value is not None and not isinstance(value, int):
+            raise TypeError(f"{value} must be an integer (Thrift enum), got {type(value).__name__}")
+        # Convert enum integer to string name for storage using _VALUES_TO_NAMES map
+        if value is not None:
+            if value not in ThriftMobileType._VALUES_TO_NAMES:
+                raise ValueError(f"{value} is not a valid ThriftMobileType enum value")
+            self._data['mobile_type'] = ThriftMobileType._VALUES_TO_NAMES[value]
+        else:
+            self._data['mobile_type'] = None
         self._dirty = True
         return self
 
@@ -7816,7 +7845,10 @@ class Mobile:
         if hasattr(thrift_obj, 'id'):
             self._data['id'] = thrift_obj.id
         if hasattr(thrift_obj, 'mobile_type'):
-            self._data['mobile_type'] = thrift_obj.mobile_type
+            if thrift_obj.mobile_type is not None:
+                self._data['mobile_type'] = ThriftMobileType._VALUES_TO_NAMES[thrift_obj.mobile_type]
+            else:
+                self._data['mobile_type'] = None
         if hasattr(thrift_obj, 'what_we_call_you'):
             self._data['what_we_call_you'] = thrift_obj.what_we_call_you
 
@@ -7870,7 +7902,11 @@ class Mobile:
             thrift_params = {}
 
             thrift_params['id'] = self._data.get('id')
-            thrift_params['mobile_type'] = self._data.get('mobile_type')
+            mobile_type_value = self._data.get('mobile_type')
+            if mobile_type_value is not None:
+                thrift_params['mobile_type'] = ThriftMobileType._NAMES_TO_VALUES[mobile_type_value]
+            else:
+                thrift_params['mobile_type'] = None
             thrift_params['what_we_call_you'] = self._data.get('what_we_call_you')
 
             # Convert database owner_* columns to ThriftOwner union
@@ -8319,7 +8355,7 @@ class Player:
           `year_of_birth` bigint NOT NULL,
           `email` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=898 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=965 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):

@@ -376,7 +376,7 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             items = []
             for row in rows:
                 item = Item()
-                item._populate_from_dict(row)
+                item._data = row
                 _, thrift_item = item.into_thrift()
                 items.append(thrift_item)
 

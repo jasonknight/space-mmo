@@ -1162,6 +1162,7 @@ def generate_getters(columns: List[Dict[str, Any]], table_name: str = None) -> s
         'attributes.attribute_type': 'ThriftAttributeType',
         'items.item_type': 'ThriftItemType',
         'mobile_items.item_type': 'ThriftItemType',
+        'mobiles.mobile_type': 'ThriftMobileType',
     }
 
     for col in columns:
@@ -1176,10 +1177,10 @@ def generate_getters(columns: List[Dict[str, Any]], table_name: str = None) -> s
             enum_type = enum_fields[field_key]
             optional_type = f"Optional[{enum_type}]" if col["is_nullable"] else enum_type
 
-            # Convert string from _data to enum type
+            # Convert string from _data to enum integer using _NAMES_TO_VALUES map
             getter = f"""    def get_{col["name"]}(self) -> {optional_type}:
         value = self._data.get('{col["name"]}')
-        return getattr({enum_type}, value) if value is not None else None"""
+        return {enum_type}._NAMES_TO_VALUES[value] if value is not None else None"""
         else:
             optional_type = (
                 f"Optional[{python_type}]" if col["is_nullable"] else python_type
@@ -1251,6 +1252,7 @@ def generate_setters(columns: List[Dict[str, Any]], table_name: str = None) -> s
         'attributes.attribute_type': 'ThriftAttributeType',
         'items.item_type': 'ThriftItemType',
         'mobile_items.item_type': 'ThriftItemType',
+        'mobiles.mobile_type': 'ThriftMobileType',
     }
 
     for col in columns:
@@ -1306,19 +1308,11 @@ def generate_setters(columns: List[Dict[str, Any]], table_name: str = None) -> s
         \"\"\"
         if value is not None and not isinstance(value, int):
             raise TypeError(f"{{value}} must be an integer (Thrift enum), got {{type(value).__name__}}")
-        # Convert enum integer to string name for storage
+        # Convert enum integer to string name for storage using _VALUES_TO_NAMES map
         if value is not None:
-            # Reverse lookup: find the name for this enum value
-            enum_name = None
-            for attr_name in dir({enum_type}):
-                if not attr_name.startswith('_'):
-                    attr_val = getattr({enum_type}, attr_name)
-                    if isinstance(attr_val, int) and attr_val == value:
-                        enum_name = attr_name
-                        break
-            if enum_name is None:
+            if value not in {enum_type}._VALUES_TO_NAMES:
                 raise ValueError(f"{{value}} is not a valid {enum_type} enum value")
-            self._data['{col["name"]}'] = enum_name
+            self._data['{col["name"]}'] = {enum_type}._VALUES_TO_NAMES[value]
         else:
             self._data['{col["name"]}'] = None
         self._dirty = True
@@ -1427,6 +1421,7 @@ def generate_imports(columns: List[Dict[str, Any]], has_relationships: bool = Fa
         imports.append("    AttributeValue as ThriftAttributeValue,")
         imports.append("    AttributeType as ThriftAttributeType,")
         imports.append("    ItemType as ThriftItemType,")
+        imports.append("    MobileType as ThriftMobileType,")
         imports.append("    ItemVector3 as ThriftItemVector3,")
         imports.append("    Attribute as ThriftAttribute,")
         imports.append("    Item as ThriftItem,")
@@ -1602,6 +1597,7 @@ def generate_from_thrift_method(
         'attributes.attribute_type': 'ThriftAttributeType',
         'items.item_type': 'ThriftItemType',
         'mobile_items.item_type': 'ThriftItemType',
+        'mobiles.mobile_type': 'ThriftMobileType',
     }
 
     # Map simple fields (non-FK, non-union fields)
@@ -1741,6 +1737,7 @@ def generate_into_thrift_method(
         'attributes.attribute_type': 'ThriftAttributeType',
         'items.item_type': 'ThriftItemType',
         'mobile_items.item_type': 'ThriftItemType',
+        'mobiles.mobile_type': 'ThriftMobileType',
     }
 
     # Get list of belongs-to foreign key columns to skip (except owner union which is handled specially)
@@ -1771,8 +1768,12 @@ def generate_into_thrift_method(
         field_key = f"{table_name}.{col_name}"
         if field_key in enum_fields:
             enum_type = enum_fields[field_key]
-            # For enum fields, convert string back to enum integer
-            method_code += f"            thrift_params['{col_name}'] = getattr({enum_type}, self._data.get('{col_name}')) if self._data.get('{col_name}') is not None else None\n"
+            # For enum fields, convert string name to enum integer using _NAMES_TO_VALUES map
+            method_code += f"            {col_name}_value = self._data.get('{col_name}')\n"
+            method_code += f"            if {col_name}_value is not None:\n"
+            method_code += f"                thrift_params['{col_name}'] = {enum_type}._NAMES_TO_VALUES[{col_name}_value]\n"
+            method_code += f"            else:\n"
+            method_code += f"                thrift_params['{col_name}'] = None\n"
         else:
             method_code += f"            thrift_params['{col_name}'] = self._data.get('{col_name}')\n"
 
@@ -1993,6 +1994,14 @@ def create_seed_data():
     # Create base records without foreign keys first
 '''
 
+    # Enum field mapping for test data generation
+    enum_fields = {
+        'attributes.attribute_type': ('ThriftAttributeType', 'QUANTITY'),  # (enum_class, default_value)
+        'items.item_type': ('ThriftItemType', 'WEAPON'),
+        'mobile_items.item_type': ('ThriftItemType', 'WEAPON'),
+        'mobiles.mobile_type': ('ThriftMobileType', 'PLAYER'),
+    }
+
     # Group models by dependency (those without FKs first, then those with FKs)
     models_without_fks = []
     models_with_fks = []
@@ -2009,6 +2018,7 @@ def create_seed_data():
 
     # Create base models first (no foreign keys)
     for model in models_without_fks:
+        table_name = model['table_name']
         class_name = model['class_name']
         columns = model['columns']
 
@@ -2025,15 +2035,21 @@ def create_seed_data():
             if col['name'] == 'id' or col['name'].endswith('_id'):
                 continue
             if not col['is_nullable']:
-                python_type = TypeMapper.get_python_type(col['data_type'])
-                if python_type == 'str':
-                    code += f"    seed['{class_name.lower()}1'].set_{col['name']}('test_{col['name']}_1')\n"
-                elif python_type == 'int':
-                    code += f"    seed['{class_name.lower()}1'].set_{col['name']}(1)\n"
-                elif python_type == 'bool':
-                    code += f"    seed['{class_name.lower()}1'].set_{col['name']}(True)\n"
-                elif python_type == 'float':
-                    code += f"    seed['{class_name.lower()}1'].set_{col['name']}(1.0)\n"
+                # Check if this is an enum field
+                field_key = f"{table_name}.{col['name']}"
+                if field_key in enum_fields:
+                    enum_type, enum_value = enum_fields[field_key]
+                    code += f"    seed['{class_name.lower()}1'].set_{col['name']}({enum_type}.{enum_value})\n"
+                else:
+                    python_type = TypeMapper.get_python_type(col['data_type'])
+                    if python_type == 'str':
+                        code += f"    seed['{class_name.lower()}1'].set_{col['name']}('test_{col['name']}_1')\n"
+                    elif python_type == 'int':
+                        code += f"    seed['{class_name.lower()}1'].set_{col['name']}(1)\n"
+                    elif python_type == 'bool':
+                        code += f"    seed['{class_name.lower()}1'].set_{col['name']}(True)\n"
+                    elif python_type == 'float':
+                        code += f"    seed['{class_name.lower()}1'].set_{col['name']}(1.0)\n"
 
         code += f"    seed['{class_name.lower()}1'].save()\n\n"
 
@@ -2043,20 +2059,31 @@ def create_seed_data():
             if col['name'] == 'id' or col['name'].endswith('_id'):
                 continue
             if not col['is_nullable']:
-                python_type = TypeMapper.get_python_type(col['data_type'])
-                if python_type == 'str':
-                    code += f"    seed['{class_name.lower()}2'].set_{col['name']}('test_{col['name']}_2')\n"
-                elif python_type == 'int':
-                    code += f"    seed['{class_name.lower()}2'].set_{col['name']}(2)\n"
-                elif python_type == 'bool':
-                    code += f"    seed['{class_name.lower()}2'].set_{col['name']}(True)\n"
-                elif python_type == 'float':
-                    code += f"    seed['{class_name.lower()}2'].set_{col['name']}(2.0)\n"
+                # Check if this is an enum field
+                field_key = f"{table_name}.{col['name']}"
+                if field_key in enum_fields:
+                    enum_type, enum_value = enum_fields[field_key]
+                    # Use NPC for second instance if it's mobile_type
+                    if field_key == 'mobiles.mobile_type':
+                        code += f"    seed['{class_name.lower()}2'].set_{col['name']}({enum_type}.NPC)\n"
+                    else:
+                        code += f"    seed['{class_name.lower()}2'].set_{col['name']}({enum_type}.{enum_value})\n"
+                else:
+                    python_type = TypeMapper.get_python_type(col['data_type'])
+                    if python_type == 'str':
+                        code += f"    seed['{class_name.lower()}2'].set_{col['name']}('test_{col['name']}_2')\n"
+                    elif python_type == 'int':
+                        code += f"    seed['{class_name.lower()}2'].set_{col['name']}(2)\n"
+                    elif python_type == 'bool':
+                        code += f"    seed['{class_name.lower()}2'].set_{col['name']}(True)\n"
+                    elif python_type == 'float':
+                        code += f"    seed['{class_name.lower()}2'].set_{col['name']}(2.0)\n"
 
         code += f"    seed['{class_name.lower()}2'].save()\n\n"
 
     # Create models with foreign keys
     for model in models_with_fks:
+        table_name = model['table_name']
         class_name = model['class_name']
         columns = model['columns']
         belongs_to_rels = model.get('relationships', {}).get('belongs_to', [])
@@ -2085,15 +2112,21 @@ def create_seed_data():
                             code += f"        seed['{class_name.lower()}1'].set_{col['name']}(seed['{seed_key}'].get_id())\n"
                 continue
             if not col['is_nullable']:
-                python_type = TypeMapper.get_python_type(col['data_type'])
-                if python_type == 'str':
-                    code += f"    seed['{class_name.lower()}1'].set_{col['name']}('test_{col['name']}_1')\n"
-                elif python_type == 'int':
-                    code += f"    seed['{class_name.lower()}1'].set_{col['name']}(1)\n"
-                elif python_type == 'bool':
-                    code += f"    seed['{class_name.lower()}1'].set_{col['name']}(True)\n"
-                elif python_type == 'float':
-                    code += f"    seed['{class_name.lower()}1'].set_{col['name']}(1.0)\n"
+                # Check if this is an enum field
+                field_key = f"{table_name}.{col['name']}"
+                if field_key in enum_fields:
+                    enum_type, enum_value = enum_fields[field_key]
+                    code += f"    seed['{class_name.lower()}1'].set_{col['name']}({enum_type}.{enum_value})\n"
+                else:
+                    python_type = TypeMapper.get_python_type(col['data_type'])
+                    if python_type == 'str':
+                        code += f"    seed['{class_name.lower()}1'].set_{col['name']}('test_{col['name']}_1')\n"
+                    elif python_type == 'int':
+                        code += f"    seed['{class_name.lower()}1'].set_{col['name']}(1)\n"
+                    elif python_type == 'bool':
+                        code += f"    seed['{class_name.lower()}1'].set_{col['name']}(True)\n"
+                    elif python_type == 'float':
+                        code += f"    seed['{class_name.lower()}1'].set_{col['name']}(1.0)\n"
 
         code += f"    seed['{class_name.lower()}1'].save()\n\n"
 
@@ -2135,6 +2168,7 @@ def set_required_fields_for_model(
         'attributes.attribute_type': ('ThriftAttributeType', 'STRENGTH'),
         'items.item_type': ('ThriftItemType', 'WEAPON'),
         'mobile_items.item_type': ('ThriftItemType', 'WEAPON'),
+        'mobiles.mobile_type': ('ThriftMobileType', 'PLAYER'),
     }
 
     table_name = model['table_name']
@@ -2210,6 +2244,7 @@ def create_prerequisite_for_fk_column(
         'attributes.attribute_type': ('ThriftAttributeType', 'STRENGTH'),
         'items.item_type': ('ThriftItemType', 'WEAPON'),
         'mobile_items.item_type': ('ThriftItemType', 'WEAPON'),
+        'mobiles.mobile_type': ('ThriftMobileType', 'PLAYER'),
     }
 
     # Set required fields for prerequisite
@@ -2406,6 +2441,7 @@ def generate_has_many_tests(model: Dict[str, Any], all_models: List[Dict[str, An
                         'attributes.attribute_type': ('ThriftAttributeType', 'STRENGTH'),
                         'items.item_type': ('ThriftItemType', 'WEAPON'),
                         'mobile_items.item_type': ('ThriftItemType', 'WEAPON'),
+                        'mobiles.mobile_type': ('ThriftMobileType', 'PLAYER'),
                     }
 
                     # Set required fields for prerequisite
@@ -2558,6 +2594,7 @@ def get_test_value_for_column(table_name: str, col: Dict[str, Any]) -> str:
         'attributes.attribute_type': ('ThriftAttributeType', 'STRENGTH'),
         'items.item_type': ('ThriftItemType', 'WEAPON'),
         'mobile_items.item_type': ('ThriftItemType', 'WEAPON'),
+        'mobiles.mobile_type': ('ThriftMobileType', 'PLAYER'),
     }
 
     field_key = f"{table_name}.{col['name']}"
@@ -2599,20 +2636,41 @@ def generate_dirty_tracking_tests(model: Dict[str, Any], all_models: List[Dict[s
     if not test_col:
         return ""
 
+    # Enum field mapping
+    enum_fields = {
+        'attributes.attribute_type': ('ThriftAttributeType', 'STRENGTH'),
+        'items.item_type': ('ThriftItemType', 'WEAPON'),
+        'mobile_items.item_type': ('ThriftItemType', 'WEAPON'),
+        'mobiles.mobile_type': ('ThriftMobileType', 'PLAYER'),
+    }
+
     # Get test values using helper
     test_value1 = get_test_value_for_column(table_name, test_col)
     # For second value, try to make it different
-    python_type = TypeMapper.get_python_type(test_col['data_type'])
-    if python_type == 'str':
-        test_value2 = "'test_value_2'"
-    elif python_type == 'int':
-        test_value2 = "2"
-    elif python_type == 'bool':
-        test_value2 = "False"
-    elif python_type == 'float':
-        test_value2 = "2.0"
+    field_key = f"{table_name}.{test_col['name']}"
+    if field_key in enum_fields:
+        enum_type, _ = enum_fields[field_key]
+        # Use different enum value for second test
+        if field_key == 'mobiles.mobile_type':
+            test_value2 = f"{enum_type}.NPC"
+        elif field_key == 'attributes.attribute_type':
+            test_value2 = f"{enum_type}.DEXTERITY"
+        elif field_key == 'items.item_type' or field_key == 'mobile_items.item_type':
+            test_value2 = f"{enum_type}.CONTAINER"
+        else:
+            test_value2 = test_value1
     else:
-        test_value2 = test_value1
+        python_type = TypeMapper.get_python_type(test_col['data_type'])
+        if python_type == 'str':
+            test_value2 = "'test_value_2'"
+        elif python_type == 'int':
+            test_value2 = "2"
+        elif python_type == 'bool':
+            test_value2 = "False"
+        elif python_type == 'float':
+            test_value2 = "2.0"
+        else:
+            test_value2 = test_value1
 
     tests_list = []
     tests_list.append(f'''
@@ -3044,7 +3102,7 @@ def generate_tests(models: List[Dict[str, Any]]) -> str:
         "import mysql.connector",
         "import uuid",
         "from dotenv import load_dotenv",
-        "from game.ttypes import AttributeType as ThriftAttributeType, ItemType as ThriftItemType",
+        "from game.ttypes import AttributeType as ThriftAttributeType, ItemType as ThriftItemType, MobileType as ThriftMobileType",
     ]
 
     # Import all models from the single models.py file
@@ -3321,7 +3379,7 @@ def main():
         # Check if any model has Thrift conversion (needs Thrift imports)
         needs_thrift = any(has_thrift_mapping(table) for table in tables)
         if needs_thrift:
-            all_imports.add("from game.ttypes import GameResult as ThriftGameResult, StatusType as ThriftStatusType, GameError as ThriftGameError, Owner as ThriftOwner, AttributeValue as ThriftAttributeValue, AttributeType as ThriftAttributeType, ItemType as ThriftItemType, ItemVector3 as ThriftItemVector3, Attribute as ThriftAttribute, Item as ThriftItem, Mobile as ThriftMobile, Player as ThriftPlayer, MobileItem as ThriftMobileItem, Inventory as ThriftInventory, InventoryEntry as ThriftInventoryEntry, ItemBlueprint as ThriftItemBlueprint, ItemBlueprintComponent as ThriftItemBlueprintComponent")
+            all_imports.add("from game.ttypes import GameResult as ThriftGameResult, StatusType as ThriftStatusType, GameError as ThriftGameError, Owner as ThriftOwner, AttributeValue as ThriftAttributeValue, AttributeType as ThriftAttributeType, ItemType as ThriftItemType, MobileType as ThriftMobileType, ItemVector3 as ThriftItemVector3, Attribute as ThriftAttribute, Item as ThriftItem, Mobile as ThriftMobile, Player as ThriftPlayer, MobileItem as ThriftMobileItem, Inventory as ThriftInventory, InventoryEntry as ThriftInventoryEntry, ItemBlueprint as ThriftItemBlueprint, ItemBlueprintComponent as ThriftItemBlueprintComponent")
 
         # Add header
         models_output.append("#!/usr/bin/env python3")

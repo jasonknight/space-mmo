@@ -10,6 +10,7 @@ sys.path.append("../py")
 
 import json
 import logging
+import os
 from bottle import (
     Bottle,
     request,
@@ -61,14 +62,15 @@ from game.ttypes import (
     Player,
     Mobile,
     MobileType,
+    GameResult,
 )
 from game.constants import TABLE2STR
 from game.ItemService import Client as ItemServiceClient
 from game.InventoryService import Client as InventoryServiceClient
 from game.PlayerService import Client as PlayerServiceClient
 
-# Import DB adapter
-from db import DB
+# Import ActiveRecord models
+from db_models.models import Mobile as MobileModel
 
 # Configure logging
 logging.basicConfig(
@@ -93,9 +95,6 @@ DB_HOST = "localhost"
 DB_USER = "admin"
 DB_PASSWORD = "minda"
 DB_NAME = "gamedb"
-
-# Database instance (will be initialized after arg parsing)
-db_instance = None
 
 
 # ============================================================================
@@ -1622,14 +1621,24 @@ def delete_player(player_id):
 @app.route("/api/mobiles", method="GET")
 def list_mobiles():
     """List NPC mobiles with pagination and search."""
+    import mysql.connector
+
     try:
         page = int(request.params.get("page", 0))
         per_page = int(request.params.get("per_page", 10))
         search = request.params.get("search", "")
 
-        # Query database directly
-        db_instance.connect()
-        cursor = db_instance.connection.cursor(dictionary=True)
+        # Connect to database directly
+        connection = mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+        cursor = connection.cursor(dictionary=True)
 
         try:
             mobiles_table = TABLE2STR[BackingTable.MOBILES]
@@ -1638,7 +1647,7 @@ def list_mobiles():
             if search:
                 query = f"""
                     SELECT id, what_we_call_you, mobile_type
-                    FROM {DB_NAME}.{mobiles_table}
+                    FROM {mobiles_table}
                     WHERE mobile_type = 'NPC'
                     AND what_we_call_you LIKE %s
                     ORDER BY id DESC
@@ -1648,7 +1657,7 @@ def list_mobiles():
             else:
                 query = f"""
                     SELECT id, what_we_call_you, mobile_type
-                    FROM {DB_NAME}.{mobiles_table}
+                    FROM {mobiles_table}
                     WHERE mobile_type = 'NPC'
                     ORDER BY id DESC
                     LIMIT %s OFFSET %s
@@ -1661,7 +1670,7 @@ def list_mobiles():
             if search:
                 count_query = f"""
                     SELECT COUNT(*) as count
-                    FROM {DB_NAME}.{mobiles_table}
+                    FROM {mobiles_table}
                     WHERE mobile_type = 'NPC'
                     AND what_we_call_you LIKE %s
                 """
@@ -1669,7 +1678,7 @@ def list_mobiles():
             else:
                 count_query = f"""
                     SELECT COUNT(*) as count
-                    FROM {DB_NAME}.{mobiles_table}
+                    FROM {mobiles_table}
                     WHERE mobile_type = 'NPC'
                 """
                 cursor.execute(count_query)
@@ -1698,6 +1707,7 @@ def list_mobiles():
             )
         finally:
             cursor.close()
+            connection.close()
 
     except Exception as e:
         logger.error(f"Error listing mobiles: {e}", exc_info=True)
@@ -1714,26 +1724,37 @@ def list_mobiles():
 def get_mobile(mobile_id):
     """Get a single mobile by ID."""
     try:
-        # Load mobile using db layer
-        result, mobile = db_instance.load_mobile(DB_NAME, mobile_id)
+        # Load mobile using ActiveRecord model
+        mobile_model = MobileModel.find(mobile_id)
 
-        if result.status == StatusType.SUCCESS:
-            mobile_dict = thrift_to_dict(mobile)
+        if mobile_model:
+            results, mobile_thrift = mobile_model.into_thrift()
 
-            response.content_type = "application/json"
-            return json.dumps(
-                {
-                    "success": True,
-                    "mobile": mobile_dict,
-                }
-            )
+            if mobile_thrift and results[0].status == StatusType.SUCCESS:
+                mobile_dict = thrift_to_dict(mobile_thrift)
+
+                response.content_type = "application/json"
+                return json.dumps(
+                    {
+                        "success": True,
+                        "mobile": mobile_dict,
+                    }
+                )
+            else:
+                error_msg = results[0].message if results else "Failed to convert mobile to Thrift"
+                response.status = 500
+                return json.dumps(
+                    {
+                        "success": False,
+                        "error": error_msg,
+                    }
+                )
         else:
-            error_msg = result.message if result else "Unknown error"
             response.status = 404
             return json.dumps(
                 {
                     "success": False,
-                    "error": error_msg,
+                    "error": f"Mobile {mobile_id} not found",
                 }
             )
 
@@ -1763,13 +1784,18 @@ def create_mobile():
                 }
             )
 
-        mobile = dict_to_mobile(data)
+        mobile_thrift = dict_to_mobile(data)
 
-        # Create the mobile using db layer
-        results = db_instance.create_mobile(DB_NAME, mobile)
+        # Create mobile using ActiveRecord model
+        mobile_model = MobileModel()
+        mobile_model.from_thrift(mobile_thrift)
+        mobile_model.save()
 
-        if results and results[0].status == StatusType.SUCCESS:
-            created_mobile = thrift_to_dict(mobile)
+        # Convert back to dict for response
+        results, saved_mobile_thrift = mobile_model.into_thrift()
+
+        if saved_mobile_thrift and results[0].status == StatusType.SUCCESS:
+            created_mobile = thrift_to_dict(saved_mobile_thrift)
 
             response.content_type = "application/json"
             return json.dumps(
@@ -1779,7 +1805,7 @@ def create_mobile():
                 }
             )
         else:
-            error_msg = results[0].message if results else "Unknown error"
+            error_msg = results[0].message if results else "Failed to convert mobile to Thrift"
             response.status = 500
             return json.dumps(
                 {
@@ -1814,15 +1840,30 @@ def update_mobile(mobile_id):
                 }
             )
 
-        # Ensure the ID is set
+        # Load existing mobile
+        mobile_model = MobileModel.find(mobile_id)
+        if not mobile_model:
+            response.status = 404
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": f"Mobile {mobile_id} not found",
+                }
+            )
+
+        # Ensure the ID is set in data
         data["id"] = mobile_id
-        mobile = dict_to_mobile(data)
+        mobile_thrift = dict_to_mobile(data)
 
-        # Update the mobile using db layer
-        results = db_instance.update_mobile(DB_NAME, mobile)
+        # Update the mobile using ActiveRecord model
+        mobile_model.from_thrift(mobile_thrift)
+        mobile_model.save()
 
-        if results and results[0].status == StatusType.SUCCESS:
-            updated_mobile = thrift_to_dict(mobile)
+        # Convert back to dict for response
+        results, updated_mobile_thrift = mobile_model.into_thrift()
+
+        if updated_mobile_thrift and results[0].status == StatusType.SUCCESS:
+            updated_mobile = thrift_to_dict(updated_mobile_thrift)
 
             response.content_type = "application/json"
             return json.dumps(
@@ -1832,7 +1873,7 @@ def update_mobile(mobile_id):
                 }
             )
         else:
-            error_msg = results[0].message if results else "Unknown error"
+            error_msg = results[0].message if results else "Failed to convert mobile to Thrift"
             response.status = 500
             return json.dumps(
                 {
@@ -1855,11 +1896,37 @@ def update_mobile(mobile_id):
 @app.route("/api/mobiles/<mobile_id:int>", method="DELETE")
 def delete_mobile(mobile_id):
     """Delete an NPC mobile."""
-    try:
-        # Delete the mobile using db layer
-        results = db_instance.destroy_mobile(DB_NAME, mobile_id)
+    import mysql.connector
 
-        if results and results[0].status == StatusType.SUCCESS:
+    try:
+        # Check if mobile exists first
+        mobile_model = MobileModel.find(mobile_id)
+        if not mobile_model:
+            response.status = 404
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": f"Mobile {mobile_id} not found",
+                }
+            )
+
+        # Delete using raw SQL
+        connection = mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+        cursor = connection.cursor()
+
+        try:
+            mobiles_table = TABLE2STR[BackingTable.MOBILES]
+            cursor.execute(f"DELETE FROM {mobiles_table} WHERE id = %s", (mobile_id,))
+            connection.commit()
+
             response.content_type = "application/json"
             return json.dumps(
                 {
@@ -1867,15 +1934,9 @@ def delete_mobile(mobile_id):
                     "message": f"Mobile {mobile_id} deleted successfully",
                 }
             )
-        else:
-            error_msg = results[0].message if results else "Unknown error"
-            response.status = 500
-            return json.dumps(
-                {
-                    "success": False,
-                    "error": error_msg,
-                }
-            )
+        finally:
+            cursor.close()
+            connection.close()
 
     except Exception as e:
         logger.error(f"Error deleting mobile {mobile_id}: {e}", exc_info=True)
@@ -1891,6 +1952,8 @@ def delete_mobile(mobile_id):
 @app.route("/api/mobiles/search", method="GET")
 def search_mobiles():
     """Search mobiles by what_we_call_you field."""
+    import mysql.connector
+
     response.content_type = "application/json"
 
     try:
@@ -1909,14 +1972,22 @@ def search_mobiles():
         # Get mobiles table name from TABLE2STR
         mobiles_table = TABLE2STR[BackingTable.MOBILES]
 
-        # Query database directly
-        db_instance.connect()
-        cursor = db_instance.connection.cursor(dictionary=True)
+        # Connect to database directly
+        connection = mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME,
+            auth_plugin='mysql_native_password',
+            ssl_disabled=True,
+            use_pure=True,
+        )
+        cursor = connection.cursor(dictionary=True)
 
         try:
             query = f"""
                 SELECT id, what_we_call_you, mobile_type
-                FROM {DB_NAME}.{mobiles_table}
+                FROM {mobiles_table}
                 WHERE what_we_call_you LIKE %s
                 ORDER BY what_we_call_you
                 LIMIT %s
@@ -1941,6 +2012,7 @@ def search_mobiles():
             )
         finally:
             cursor.close()
+            connection.close()
 
     except Exception as e:
         logger.error(f"Error searching mobiles: {e}", exc_info=True)
@@ -2039,41 +2111,27 @@ def get_owner_info(owner_type, owner_id):
                 transport.close()
 
         elif owner_type == "mobile_id":
-            # Get mobile info from database
-            mobiles_table = TABLE2STR[BackingTable.MOBILES]
+            # Get mobile info using ActiveRecord model
+            mobile_model = MobileModel.find(owner_id)
 
-            db_instance.connect()
-            cursor = db_instance.connection.cursor(dictionary=True)
-
-            try:
-                query = f"""
-                    SELECT id, what_we_call_you, mobile_type
-                    FROM {DB_NAME}.{mobiles_table}
-                    WHERE id = %s
-                """
-                cursor.execute(query, (owner_id,))
-                row = cursor.fetchone()
-
-                if row:
-                    return json.dumps(
-                        {
-                            "success": True,
-                            "owner": {
-                                "id": row["id"],
-                                "name": row["what_we_call_you"],
-                                "type": "Mobile",
-                            },
-                        }
-                    )
-                else:
-                    return json.dumps(
-                        {
-                            "success": False,
-                            "error": "Mobile not found",
-                        }
-                    )
-            finally:
-                cursor.close()
+            if mobile_model:
+                return json.dumps(
+                    {
+                        "success": True,
+                        "owner": {
+                            "id": mobile_model.get_id(),
+                            "name": mobile_model.get_what_we_call_you(),
+                            "type": "Mobile",
+                        },
+                    }
+                )
+            else:
+                return json.dumps(
+                    {
+                        "success": False,
+                        "error": "Mobile not found",
+                    }
+                )
 
         elif owner_type == "asset_id":
             # Assets don't have a service, so just return the ID
@@ -2239,12 +2297,11 @@ if __name__ == "__main__":
     DB_PASSWORD = args.db_password
     DB_NAME = args.db_name
 
-    # Initialize database instance
-    db_instance = DB(
-        host=DB_HOST,
-        user=DB_USER,
-        password=DB_PASSWORD,
-    )
+    # Set environment variables for ActiveRecord models
+    os.environ['DB_HOST'] = DB_HOST
+    os.environ['DB_USER'] = DB_USER
+    os.environ['DB_PASSWORD'] = DB_PASSWORD
+    os.environ['DB_DATABASE'] = DB_NAME
 
     logger.info(f"Starting Control Panel on {args.host}:{args.port}")
     logger.info(f"Connecting to ItemService at {ITEM_SERVICE_HOST}:{ITEM_SERVICE_PORT}")

@@ -81,7 +81,7 @@ def run_inventory_service(config: Dict[str, Any]):
     transport = TSocket.TServerSocket(host=config['host'], port=config['port'])
     tfactory = TTransport.TBufferedTransportFactory()
     pfactory = TBinaryProtocol.TBinaryProtocolFactory()
-    server = TServer.TSimpleServer(processor, transport, tfactory, pfactory)
+    server = TServer.TThreadPoolServer(processor, transport, tfactory, pfactory)
 
     # Print startup banner
     print_prefixed(service_name, "=" * 60)
@@ -111,7 +111,7 @@ def run_item_service(config: Dict[str, Any]):
     transport = TSocket.TServerSocket(host=config['host'], port=config['port'])
     tfactory = TTransport.TBufferedTransportFactory()
     pfactory = TBinaryProtocol.TBinaryProtocolFactory()
-    server = TServer.TSimpleServer(processor, transport, tfactory, pfactory)
+    server = TServer.TThreadPoolServer(processor, transport, tfactory, pfactory)
 
     # Print startup banner
     print_prefixed(service_name, "=" * 60)
@@ -141,7 +141,7 @@ def run_player_service(config: Dict[str, Any]):
     transport = TSocket.TServerSocket(host=config['host'], port=config['port'])
     tfactory = TTransport.TBufferedTransportFactory()
     pfactory = TBinaryProtocol.TBinaryProtocolFactory()
-    server = TServer.TSimpleServer(processor, transport, tfactory, pfactory)
+    server = TServer.TThreadPoolServer(processor, transport, tfactory, pfactory)
 
     # Print startup banner
     print_prefixed(service_name, "=" * 60)

@@ -20,7 +20,7 @@ import unittest
 import mysql.connector
 import uuid
 from dotenv import load_dotenv
-from game.ttypes import AttributeType as ThriftAttributeType, ItemType as ThriftItemType
+from game.ttypes import AttributeType as ThriftAttributeType, ItemType as ThriftItemType, MobileType as ThriftMobileType
 from models import AttributeOwner, Attribute, Inventory, InventoryEntry, InventoryOwner, ItemBlueprintComponent, ItemBlueprint, Item, MobileItemAttribute, MobileItemBlueprintComponent, MobileItemBlueprint, MobileItem, Mobile, Player
 from datetime import datetime
 # Load environment variables
@@ -128,13 +128,13 @@ def create_seed_data():
     seed['attribute1'] = Attribute()
     seed['attribute1'].set_internal_name('test_internal_name_1')
     seed['attribute1'].set_visible(1)
-    seed['attribute1'].set_attribute_type('test_attribute_type_1')
+    seed['attribute1'].set_attribute_type(ThriftAttributeType.QUANTITY)
     seed['attribute1'].save()
 
     seed['attribute2'] = Attribute()
     seed['attribute2'].set_internal_name('test_internal_name_2')
     seed['attribute2'].set_visible(2)
-    seed['attribute2'].set_attribute_type('test_attribute_type_2')
+    seed['attribute2'].set_attribute_type(ThriftAttributeType.QUANTITY)
     seed['attribute2'].save()
 
     # Create Inventory records
@@ -195,7 +195,7 @@ def create_seed_data():
     # Create Item records with relationships
     seed['item1'] = Item()
     seed['item1'].set_internal_name('test_internal_name_1')
-    seed['item1'].set_item_type('test_item_type_1')
+    seed['item1'].set_item_type(ThriftItemType.WEAPON)
     seed['item1'].save()
 
     # Create MobileItemBlueprintComponent records with relationships
@@ -210,14 +210,14 @@ def create_seed_data():
     if 'mobile1' in seed:
         seed['mobileitem1'].set_mobile_id(seed['mobile1'].get_id())
     seed['mobileitem1'].set_internal_name('test_internal_name_1')
-    seed['mobileitem1'].set_item_type('test_item_type_1')
+    seed['mobileitem1'].set_item_type(ThriftItemType.WEAPON)
     if 'item1' in seed:
         seed['mobileitem1'].set_item_id(seed['item1'].get_id())
     seed['mobileitem1'].save()
 
     # Create Mobile records with relationships
     seed['mobile1'] = Mobile()
-    seed['mobile1'].set_mobile_type('test_mobile_type_1')
+    seed['mobile1'].set_mobile_type(ThriftMobileType.PLAYER)
     seed['mobile1'].set_what_we_call_you('test_what_we_call_you_1')
     seed['mobile1'].save()
 
@@ -306,7 +306,7 @@ class TestAttributeOwnerRelationships(unittest.TestCase):
         """Test mobile relationship basic getter."""
         # Create related model
         related = Mobile()
-        related.set_mobile_type('test_mobile_type')
+        related.set_mobile_type(ThriftMobileType.PLAYER)
         related.set_what_we_call_you('test_what_we_call_you')
         related.save()
 
@@ -344,7 +344,7 @@ class TestAttributeOwnerRelationships(unittest.TestCase):
         """Test mobile relationship setter."""
         # Create related models
         related1 = Mobile()
-        related1.set_mobile_type('test_mobile_type')
+        related1.set_mobile_type(ThriftMobileType.PLAYER)
         related1.set_what_we_call_you('test_what_we_call_you')
         related1.save()
 
@@ -1282,7 +1282,7 @@ class TestInventoryEntryRelationships(unittest.TestCase):
 
         mobile_prereq_basic = Mobile()
 
-        mobile_prereq_basic.set_mobile_type('test_prereq_basic')
+        mobile_prereq_basic.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_basic.set_what_we_call_you('test_prereq_basic')
 
@@ -1344,7 +1344,7 @@ class TestInventoryEntryRelationships(unittest.TestCase):
 
         mobile_prereq_setter = Mobile()
 
-        mobile_prereq_setter.set_mobile_type('test_prereq_setter')
+        mobile_prereq_setter.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_setter.set_what_we_call_you('test_prereq_setter')
 
@@ -1529,7 +1529,7 @@ class TestInventoryOwnerRelationships(unittest.TestCase):
         """Test mobile relationship basic getter."""
         # Create related model
         related = Mobile()
-        related.set_mobile_type('test_mobile_type')
+        related.set_mobile_type(ThriftMobileType.PLAYER)
         related.set_what_we_call_you('test_what_we_call_you')
         related.save()
 
@@ -1554,7 +1554,7 @@ class TestInventoryOwnerRelationships(unittest.TestCase):
         """Test mobile relationship setter."""
         # Create related models
         related1 = Mobile()
-        related1.set_mobile_type('test_mobile_type')
+        related1.set_mobile_type(ThriftMobileType.PLAYER)
         related1.set_what_we_call_you('test_what_we_call_you')
         related1.save()
 
@@ -1983,7 +1983,7 @@ class TestItemBlueprintRelationships(unittest.TestCase):
 
         mobile_prereq = Mobile()
 
-        mobile_prereq.set_mobile_type('test_prereq')
+        mobile_prereq.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq.set_what_we_call_you('test_prereq')
 
@@ -2008,7 +2008,7 @@ class TestItemBlueprintRelationships(unittest.TestCase):
 
         mobile_prereq_child1 = Mobile()
 
-        mobile_prereq_child1.set_mobile_type('test_prereq_child1')
+        mobile_prereq_child1.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_child1.set_what_we_call_you('test_prereq_child1')
 
@@ -2038,7 +2038,7 @@ class TestItemBlueprintRelationships(unittest.TestCase):
 
         mobile_prereq_child2 = Mobile()
 
-        mobile_prereq_child2.set_mobile_type('test_prereq_child2')
+        mobile_prereq_child2.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_child2.set_what_we_call_you('test_prereq_child2')
 
@@ -2089,7 +2089,7 @@ class TestItemBlueprintRelationships(unittest.TestCase):
 
         mobile_prereq_lazy = Mobile()
 
-        mobile_prereq_lazy.set_mobile_type('test_mobile_type')
+        mobile_prereq_lazy.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_lazy.set_what_we_call_you('test_what_we_call_you')
 
@@ -2114,7 +2114,7 @@ class TestItemBlueprintRelationships(unittest.TestCase):
 
         mobile_prereq_child_lazy = Mobile()
 
-        mobile_prereq_child_lazy.set_mobile_type('test_prereq_child_lazy')
+        mobile_prereq_child_lazy.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_child_lazy.set_what_we_call_you('test_prereq_child_lazy')
 
@@ -2581,7 +2581,7 @@ class TestItemRelationships(unittest.TestCase):
 
         mobile_prereq = Mobile()
 
-        mobile_prereq.set_mobile_type('test_prereq')
+        mobile_prereq.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq.set_what_we_call_you('test_prereq')
 
@@ -2595,7 +2595,7 @@ class TestItemRelationships(unittest.TestCase):
 
         mobile_prereq_child1 = Mobile()
 
-        mobile_prereq_child1.set_mobile_type('test_prereq_child1')
+        mobile_prereq_child1.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_child1.set_what_we_call_you('test_prereq_child1')
 
@@ -2613,7 +2613,7 @@ class TestItemRelationships(unittest.TestCase):
 
         mobile_prereq_child2 = Mobile()
 
-        mobile_prereq_child2.set_mobile_type('test_prereq_child2')
+        mobile_prereq_child2.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_child2.set_what_we_call_you('test_prereq_child2')
 
@@ -2653,7 +2653,7 @@ class TestItemRelationships(unittest.TestCase):
 
         mobile_prereq_lazy = Mobile()
 
-        mobile_prereq_lazy.set_mobile_type('test_mobile_type')
+        mobile_prereq_lazy.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_lazy.set_what_we_call_you('test_what_we_call_you')
 
@@ -2667,7 +2667,7 @@ class TestItemRelationships(unittest.TestCase):
 
         mobile_prereq_child_lazy = Mobile()
 
-        mobile_prereq_child_lazy.set_mobile_type('test_prereq_child_lazy')
+        mobile_prereq_child_lazy.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_child_lazy.set_what_we_call_you('test_prereq_child_lazy')
 
@@ -2701,13 +2701,13 @@ class TestItemRelationships(unittest.TestCase):
         # Create related records
         child1 = Mobile()
         child1.set_owner_item_id(parent.get_id())
-        child1.set_mobile_type('test_mobile_type')
+        child1.set_mobile_type(ThriftMobileType.PLAYER)
         child1.set_what_we_call_you('test_what_we_call_you')
         child1.save()
 
         child2 = Mobile()
         child2.set_owner_item_id(parent.get_id())
-        child2.set_mobile_type('test_mobile_type')
+        child2.set_mobile_type(ThriftMobileType.PLAYER)
         child2.set_what_we_call_you('test_what_we_call_you')
         child2.save()
 
@@ -2738,7 +2738,7 @@ class TestItemRelationships(unittest.TestCase):
         # Create child
         child = Mobile()
         child.set_owner_item_id(parent.get_id())
-        child.set_mobile_type('test_mobile_type')
+        child.set_mobile_type(ThriftMobileType.PLAYER)
         child.set_what_we_call_you('test_what_we_call_you')
         child.save()
 
@@ -2946,7 +2946,7 @@ class TestMobileItemAttributeRelationships(unittest.TestCase):
 
         mobile_prereq_basic = Mobile()
 
-        mobile_prereq_basic.set_mobile_type('test_prereq_basic')
+        mobile_prereq_basic.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_basic.set_what_we_call_you('test_prereq_basic')
 
@@ -2997,7 +2997,7 @@ class TestMobileItemAttributeRelationships(unittest.TestCase):
 
         mobile_prereq_setter = Mobile()
 
-        mobile_prereq_setter.set_mobile_type('test_prereq_setter')
+        mobile_prereq_setter.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_setter.set_what_we_call_you('test_prereq_setter')
 
@@ -3450,7 +3450,7 @@ class TestMobileItemRelationships(unittest.TestCase):
         """Test mobile relationship basic getter."""
         # Create related model
         related = Mobile()
-        related.set_mobile_type('test_mobile_type')
+        related.set_mobile_type(ThriftMobileType.PLAYER)
         related.set_what_we_call_you('test_what_we_call_you')
         related.save()
 
@@ -3488,7 +3488,7 @@ class TestMobileItemRelationships(unittest.TestCase):
         """Test mobile relationship setter."""
         # Create related models
         related1 = Mobile()
-        related1.set_mobile_type('test_mobile_type')
+        related1.set_mobile_type(ThriftMobileType.PLAYER)
         related1.set_what_we_call_you('test_what_we_call_you')
         related1.save()
 
@@ -3498,7 +3498,7 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         mobile_prereq_setter = Mobile()
 
-        mobile_prereq_setter.set_mobile_type('test_prereq_setter')
+        mobile_prereq_setter.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_setter.set_what_we_call_you('test_prereq_setter')
 
@@ -3547,7 +3547,7 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         mobile_prereq_basic = Mobile()
 
-        mobile_prereq_basic.set_mobile_type('test_prereq_basic')
+        mobile_prereq_basic.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_basic.set_what_we_call_you('test_prereq_basic')
 
@@ -3596,7 +3596,7 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         mobile_prereq_setter = Mobile()
 
-        mobile_prereq_setter.set_mobile_type('test_prereq_setter')
+        mobile_prereq_setter.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_setter.set_what_we_call_you('test_prereq_setter')
 
@@ -3646,7 +3646,7 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         mobile_prereq_basic = Mobile()
 
-        mobile_prereq_basic.set_mobile_type('test_prereq_basic')
+        mobile_prereq_basic.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_basic.set_what_we_call_you('test_prereq_basic')
 
@@ -3684,7 +3684,7 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         mobile_prereq_setter = Mobile()
 
-        mobile_prereq_setter.set_mobile_type('test_prereq_setter')
+        mobile_prereq_setter.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_setter.set_what_we_call_you('test_prereq_setter')
 
@@ -3727,7 +3727,7 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         mobile_prereq_parent = Mobile()
 
-        mobile_prereq_parent.set_mobile_type('test_prereq_parent')
+        mobile_prereq_parent.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_parent.set_what_we_call_you('test_prereq_parent')
 
@@ -3823,7 +3823,7 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         mobile_prereq_parent_lazy = Mobile()
 
-        mobile_prereq_parent_lazy.set_mobile_type('test_prereq_parent_lazy')
+        mobile_prereq_parent_lazy.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_parent_lazy.set_what_we_call_you('test_prereq_parent_lazy')
 
@@ -3896,7 +3896,7 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         mobile_prereq_parent = Mobile()
 
-        mobile_prereq_parent.set_mobile_type('test_prereq_parent')
+        mobile_prereq_parent.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_parent.set_what_we_call_you('test_prereq_parent')
 
@@ -3959,7 +3959,7 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         mobile_prereq_parent_lazy = Mobile()
 
-        mobile_prereq_parent_lazy.set_mobile_type('test_prereq_parent_lazy')
+        mobile_prereq_parent_lazy.set_mobile_type(ThriftMobileType.PLAYER)
 
         mobile_prereq_parent_lazy.set_what_we_call_you('test_prereq_parent_lazy')
 
@@ -4047,7 +4047,7 @@ class TestMobileItemRelationships(unittest.TestCase):
         """Test cascade save for belongs-to relationships."""
         # Create related model (unsaved)
         related = Mobile()
-        related.set_mobile_type('test_mobile_type')
+        related.set_mobile_type(ThriftMobileType.PLAYER)
         related.set_what_we_call_you('test_what_we_call_you')
         self.assertTrue(related._dirty)
         self.assertIsNone(related.get_id())
@@ -4213,13 +4213,13 @@ class TestMobileRelationships(unittest.TestCase):
         """Test owner_mobile relationship basic getter."""
         # Create related model
         related = Mobile()
-        related.set_mobile_type('test_mobile_type')
+        related.set_mobile_type(ThriftMobileType.PLAYER)
         related.set_what_we_call_you('test_what_we_call_you')
         related.save()
 
         # Create parent and set FK
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
         parent.set_owner_mobile_id(related.get_id())
         parent.save()
@@ -4239,13 +4239,13 @@ class TestMobileRelationships(unittest.TestCase):
         """Test owner_mobile relationship setter."""
         # Create related models
         related1 = Mobile()
-        related1.set_mobile_type('test_mobile_type')
+        related1.set_mobile_type(ThriftMobileType.PLAYER)
         related1.set_what_we_call_you('test_what_we_call_you')
         related1.save()
 
         # Create parent
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
 
         # Use setter
@@ -4271,7 +4271,7 @@ class TestMobileRelationships(unittest.TestCase):
 
         # Create parent and set FK
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
         parent.set_owner_item_id(related.get_id())
         parent.save()
@@ -4297,7 +4297,7 @@ class TestMobileRelationships(unittest.TestCase):
 
         # Create parent
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
 
         # Use setter
@@ -4327,7 +4327,7 @@ class TestMobileRelationships(unittest.TestCase):
 
         # Create parent and set FK
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
         parent.set_owner_player_id(related.get_id())
         parent.save()
@@ -4357,7 +4357,7 @@ class TestMobileRelationships(unittest.TestCase):
 
         # Create parent
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
 
         # Use setter
@@ -4376,7 +4376,7 @@ class TestMobileRelationships(unittest.TestCase):
         """Test attribute_owners relationship basic getter."""
         # Create parent
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
         parent.save()
 
@@ -4450,7 +4450,7 @@ class TestMobileRelationships(unittest.TestCase):
         """Test attribute_owners relationship lazy loading."""
         # Create parent with children
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
         parent.save()
 
@@ -4501,7 +4501,7 @@ class TestMobileRelationships(unittest.TestCase):
         """Test inventory_owners relationship basic getter."""
         # Create parent
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
         parent.save()
 
@@ -4536,7 +4536,7 @@ class TestMobileRelationships(unittest.TestCase):
         """Test inventory_owners relationship lazy loading."""
         # Create parent with children
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
         parent.save()
 
@@ -4561,7 +4561,7 @@ class TestMobileRelationships(unittest.TestCase):
         """Test mobile_items relationship basic getter."""
         # Create parent
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
         parent.save()
 
@@ -4633,7 +4633,7 @@ class TestMobileRelationships(unittest.TestCase):
         """Test mobile_items relationship lazy loading."""
         # Create parent with children
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
         parent.save()
 
@@ -4685,7 +4685,7 @@ class TestMobileRelationships(unittest.TestCase):
     def test_dirty_tracking_saved_model(self):
         """Test that saved models are marked clean."""
         model = Mobile()
-        model.set_mobile_type('test_mobile_type')
+        model.set_mobile_type(ThriftMobileType.PLAYER)
         model.set_what_we_call_you('test_what_we_call_you')
         model.save()
         self.assertFalse(model._dirty)
@@ -4693,18 +4693,18 @@ class TestMobileRelationships(unittest.TestCase):
     def test_dirty_tracking_setter(self):
         """Test that setters mark model dirty."""
         model = Mobile()
-        model.set_mobile_type('test_mobile_type')
+        model.set_mobile_type(ThriftMobileType.PLAYER)
         model.set_what_we_call_you('test_what_we_call_you')
         model.save()
         self.assertFalse(model._dirty)
 
-        model.set_mobile_type('test_value_2')
+        model.set_mobile_type(ThriftMobileType.NPC)
         self.assertTrue(model._dirty)
 
     def test_dirty_tracking_skip_save(self):
         """Test that clean models skip save operation."""
         model = Mobile()
-        model.set_mobile_type('test_mobile_type')
+        model.set_mobile_type(ThriftMobileType.PLAYER)
         model.set_what_we_call_you('test_what_we_call_you')
         model.save()
         self.assertFalse(model._dirty)
@@ -4717,14 +4717,14 @@ class TestMobileRelationships(unittest.TestCase):
         """Test cascade save for belongs-to relationships."""
         # Create related model (unsaved)
         related = Mobile()
-        related.set_mobile_type('test_mobile_type')
+        related.set_mobile_type(ThriftMobileType.PLAYER)
         related.set_what_we_call_you('test_what_we_call_you')
         self.assertTrue(related._dirty)
         self.assertIsNone(related.get_id())
 
         # Create parent (unsaved)
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
         parent.set_owner_mobile(related)
 
@@ -4741,7 +4741,7 @@ class TestMobileRelationships(unittest.TestCase):
         """Test cascade destroy for has-many relationships."""
         # Create parent
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
         parent.save()
         parent_id = parent.get_id()
@@ -4784,7 +4784,7 @@ class TestMobileRelationships(unittest.TestCase):
         """Test destroy without cascade leaves children intact."""
         # Create parent
         parent = Mobile()
-        parent.set_mobile_type('test_mobile_type')
+        parent.set_mobile_type(ThriftMobileType.PLAYER)
         parent.set_what_we_call_you('test_what_we_call_you')
         parent.save()
         parent_id = parent.get_id()
@@ -5044,13 +5044,13 @@ class TestPlayerRelationships(unittest.TestCase):
         # Create related records
         child1 = Mobile()
         child1.set_owner_player_id(parent.get_id())
-        child1.set_mobile_type('test_mobile_type')
+        child1.set_mobile_type(ThriftMobileType.PLAYER)
         child1.set_what_we_call_you('test_what_we_call_you')
         child1.save()
 
         child2 = Mobile()
         child2.set_owner_player_id(parent.get_id())
-        child2.set_mobile_type('test_mobile_type')
+        child2.set_mobile_type(ThriftMobileType.PLAYER)
         child2.set_what_we_call_you('test_what_we_call_you')
         child2.save()
 
