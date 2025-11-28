@@ -45,7 +45,7 @@ class AttributeOwner:
           PRIMARY KEY (`id`),
           KEY `attribute_id` (`attribute_id`),
           CONSTRAINT `attribute_owners_ibfk_1` FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1338 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1378 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -676,7 +676,7 @@ class Attribute:
           `vector3_z` double DEFAULT NULL,
           `asset_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1579 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1634 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1222,7 +1222,7 @@ class Inventory:
           `max_volume` double NOT NULL,
           `last_calculated_volume` double DEFAULT '0',
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=398 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=435 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1704,7 +1704,7 @@ class InventoryEntry:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_entries_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=395 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=430 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2310,7 +2310,7 @@ class InventoryOwner:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_owners_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=686 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=718 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2937,7 +2937,7 @@ class ItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=257 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=270 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3360,7 +3360,7 @@ class ItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=493 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=518 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3836,7 +3836,7 @@ class Item:
           `item_type` varchar(50) NOT NULL,
           `blueprint_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=2790 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=2878 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5079,7 +5079,7 @@ class MobileItemAttribute:
           PRIMARY KEY (`id`),
           KEY `mobile_item_id` (`mobile_item_id`),
           CONSTRAINT `mobile_item_attributes_ibfk_1` FOREIGN KEY (`mobile_item_id`) REFERENCES `mobile_items` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=171 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=179 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5487,7 +5487,7 @@ class MobileItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `mobile_item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `mobile_item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=229 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=240 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5910,7 +5910,7 @@ class MobileItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=435 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=445 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -6268,7 +6268,7 @@ class MobileItem:
           `blueprint_id` bigint DEFAULT NULL,
           `item_id` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=611 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=642 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -7076,7 +7076,7 @@ class Mobile:
           `owner_player_id` bigint DEFAULT NULL,
           `what_we_call_you` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1884 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1948 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -8395,7 +8395,7 @@ class Player:
           `year_of_birth` bigint NOT NULL,
           `email` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=786 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=815 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
