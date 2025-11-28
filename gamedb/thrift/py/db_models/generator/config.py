@@ -206,7 +206,11 @@ def has_thrift_mapping(table_name: str) -> bool:
 
 def needs_owner_conversion(columns: List[Dict[str, Any]]) -> bool:
     """
-    Check if a table has owner union fields (owner_player_id, owner_mobile_id, etc.).
+    Check if a table has owner union fields.
+
+    Supports two patterns:
+    1. Flattened: owner_player_id, owner_mobile_id, owner_item_id, owner_asset_id
+    2. Generic: owner_id + owner_type
 
     Args:
         columns: List of column definitions
@@ -215,7 +219,14 @@ def needs_owner_conversion(columns: List[Dict[str, Any]]) -> bool:
         True if table has owner fields, False otherwise
     """
     column_names = [col['name'] for col in columns]
-    return any(oc in column_names for oc in OWNER_COLUMNS)
+
+    # Check for flattened pattern
+    has_flattened = any(oc in column_names for oc in OWNER_COLUMNS)
+
+    # Check for generic pattern (owner_id + owner_type)
+    has_generic = 'owner_id' in column_names and 'owner_type' in column_names
+
+    return has_flattened or has_generic
 
 
 def needs_attribute_value_conversion(columns: List[Dict[str, Any]]) -> bool:

@@ -45,7 +45,7 @@ class AttributeOwner:
           PRIMARY KEY (`id`),
           KEY `attribute_id` (`attribute_id`),
           CONSTRAINT `attribute_owners_ibfk_1` FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1465 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1523 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -679,7 +679,7 @@ class Attribute:
           `vector3_z` double DEFAULT NULL,
           `asset_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1739 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1809 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1228,7 +1228,7 @@ class Inventory:
           `max_volume` double NOT NULL,
           `last_calculated_volume` double DEFAULT '0',
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=480 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=511 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1308,6 +1308,34 @@ class Inventory:
         self._data['last_calculated_volume'] = value
         self._dirty = True
         return self
+
+
+    def validate_owner(self) -> None:
+        """
+        Validate Owner union: exactly one owner must be set and must be valid type.
+
+        Raises:
+            ValueError: If validation fails
+        """
+        owner_fks = {
+            'player': self.get_owner_player_id(),
+            'mobile': self.get_owner_mobile_id(),
+            'item': self.get_owner_item_id(),
+            'asset': self.get_owner_asset_id(),
+        }
+
+        # Check exactly one is set
+        set_owners = [k for k, v in owner_fks.items() if v is not None]
+        if len(set_owners) == 0:
+            raise ValueError("Inventory must have exactly one owner (none set)")
+        if len(set_owners) > 1:
+            raise ValueError(f"Inventory must have exactly one owner (multiple set: {set_owners})")
+
+        # Check valid type for this table
+        valid_types = ['player', 'mobile', 'item', 'asset']
+        if set_owners[0] not in valid_types:
+            raise ValueError(f"Inventory cannot be owned by {set_owners[0]} (valid types: {valid_types})")
+
 
 
 
@@ -1398,16 +1426,29 @@ class Inventory:
         # Map simple fields from Thrift to Model
         if hasattr(thrift_obj, 'id'):
             self._data['id'] = thrift_obj.id
-        if hasattr(thrift_obj, 'owner_id'):
-            self._data['owner_id'] = thrift_obj.owner_id
-        if hasattr(thrift_obj, 'owner_type'):
-            self._data['owner_type'] = thrift_obj.owner_type
         if hasattr(thrift_obj, 'max_entries'):
             self._data['max_entries'] = thrift_obj.max_entries
         if hasattr(thrift_obj, 'max_volume'):
             self._data['max_volume'] = thrift_obj.max_volume
         if hasattr(thrift_obj, 'last_calculated_volume'):
             self._data['last_calculated_volume'] = thrift_obj.last_calculated_volume
+
+        # Convert ThriftOwner union to database owner_id and owner_type columns
+        if hasattr(thrift_obj, 'owner') and thrift_obj.owner is not None:
+            owner = thrift_obj.owner
+            # Determine owner_id and owner_type based on which union field is set
+            if hasattr(owner, 'player_id') and owner.player_id is not None:
+                self._data['owner_id'] = owner.player_id
+                self._data['owner_type'] = 'player'
+            elif hasattr(owner, 'mobile_id') and owner.mobile_id is not None:
+                self._data['owner_id'] = owner.mobile_id
+                self._data['owner_type'] = 'mobile'
+            elif hasattr(owner, 'item_id') and owner.item_id is not None:
+                self._data['owner_id'] = owner.item_id
+                self._data['owner_type'] = 'item'
+            elif hasattr(owner, 'asset_id') and owner.asset_id is not None:
+                self._data['owner_id'] = owner.asset_id
+                self._data['owner_type'] = 'asset'
 
         self._dirty = True
         return self
@@ -1429,11 +1470,24 @@ class Inventory:
             thrift_params = {}
 
             thrift_params['id'] = self._data.get('id')
-            thrift_params['owner_id'] = self._data.get('owner_id')
-            thrift_params['owner_type'] = self._data.get('owner_type')
             thrift_params['max_entries'] = self._data.get('max_entries')
             thrift_params['max_volume'] = self._data.get('max_volume')
             thrift_params['last_calculated_volume'] = self._data.get('last_calculated_volume')
+
+            # Convert database owner_id and owner_type to ThriftOwner union
+            owner = None
+            owner_id = self._data.get('owner_id')
+            owner_type = self._data.get('owner_type')
+            if owner_id is not None and owner_type is not None:
+                if owner_type == 'player':
+                    owner = ThriftOwner(player_id=owner_id)
+                elif owner_type == 'mobile':
+                    owner = ThriftOwner(mobile_id=owner_id)
+                elif owner_type == 'item':
+                    owner = ThriftOwner(item_id=owner_id)
+                elif owner_type == 'asset':
+                    owner = ThriftOwner(asset_id=owner_id)
+            thrift_params['owner'] = owner
 
             # Create Thrift object
             thrift_obj = ThriftInventory(**thrift_params)
@@ -1713,7 +1767,7 @@ class InventoryEntry:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_entries_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=496 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=540 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2295,7 +2349,7 @@ class InventoryOwner:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_owners_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=769 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=803 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2925,7 +2979,7 @@ class ItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=303 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=325 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3342,7 +3396,7 @@ class ItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=581 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=623 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3821,7 +3875,7 @@ class Item:
           `item_type` varchar(50) NOT NULL,
           `blueprint_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=3085 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=3225 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5060,7 +5114,7 @@ class MobileItemAttribute:
           PRIMARY KEY (`id`),
           KEY `mobile_item_id` (`mobile_item_id`),
           CONSTRAINT `mobile_item_attributes_ibfk_1` FOREIGN KEY (`mobile_item_id`) REFERENCES `mobile_items` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=203 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=219 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5471,7 +5525,7 @@ class MobileItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `mobile_item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `mobile_item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=273 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=295 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5822,7 +5876,7 @@ class MobileItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=475 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=495 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -6122,7 +6176,7 @@ class MobileItem:
           `blueprint_id` bigint DEFAULT NULL,
           `item_id` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=729 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=787 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -6941,7 +6995,7 @@ class Mobile:
           `owner_player_id` bigint DEFAULT NULL,
           `what_we_call_you` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=2107 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=2213 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -8265,7 +8319,7 @@ class Player:
           `year_of_birth` bigint NOT NULL,
           `email` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=863 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=898 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -8904,17 +8958,6 @@ class Player:
         if hasattr(thrift_obj, 'email'):
             self._data['email'] = thrift_obj.email
 
-        # Store attributes map for later conversion via set_attributes()
-        # The actual pivot table records will be created when save() is called
-        if hasattr(thrift_obj, 'attributes') and thrift_obj.attributes is not None:
-            # Convert thrift attributes to Attribute models
-            self._pending_attributes = []
-            for attr_type, attr_thrift in thrift_obj.attributes.items():
-                # Import Attribute model (assumes it's available)
-                attr_model = Attribute()
-                attr_model.from_thrift(attr_thrift)
-                self._pending_attributes.append((attr_type, attr_model))
-
         # Handle embedded mobile (1-to-1 relationship)
         if hasattr(thrift_obj, 'mobile') and thrift_obj.mobile is not None:
             mobile_obj = Mobile()
@@ -8950,19 +8993,6 @@ class Player:
             thrift_params['over_13'] = self._data.get('over_13')
             thrift_params['year_of_birth'] = self._data.get('year_of_birth')
             thrift_params['email'] = self._data.get('email')
-
-            # Load attributes via pivot table and convert to map<AttributeType, Attribute>
-            attributes_map = {}
-            if self.get_id() is not None:
-                # Get attributes through the pivot relationship
-                attribute_models = self.get_attributes(reload=True)
-                for attr_model in attribute_models:
-                    # Convert each attribute model to Thrift
-                    attr_results, attr_thrift = attr_model.into_thrift()
-                    if attr_thrift is not None:
-                        # Use attribute_type as the map key
-                        attributes_map[attr_thrift.attribute_type] = attr_thrift
-            thrift_params['attributes'] = attributes_map
 
             # Load embedded mobile (1-to-1 relationship)
             mobile_model = self.get_mobile()

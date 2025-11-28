@@ -1,75 +1,90 @@
 #!/usr/bin/env python3
-"""Simplified tests for InventoryService."""
+"""Tests for InventoryService using db_models."""
 
 import sys
+import os
+import uuid
 
-sys.path.append("../../gen-py")
-sys.path.append("..")
+thrift_gen_path = '/vagrant/gamedb/thrift/gen-py'
+if thrift_gen_path not in sys.path:
+    sys.path.insert(0, thrift_gen_path)
+
+py_path = '/vagrant/gamedb/thrift/py'
+if py_path not in sys.path:
+    sys.path.insert(0, py_path)
+
+from dotenv import load_dotenv
+load_dotenv()
 
 import mysql.connector
 from services.inventory_service import InventoryServiceHandler
-from models.inventory_model import InventoryModel
-from models.item_model import ItemModel
+from db_models.models import Inventory, InventoryEntry, Item, Attribute
 from game.ttypes import (
     InventoryRequest,
     InventoryRequestData,
     CreateInventoryRequestData,
     LoadInventoryRequestData,
     SaveInventoryRequestData,
-    Inventory,
-    InventoryEntry,
-    Item,
-    ItemType,
+    Inventory as ThriftInventory,
     Owner,
     StatusType,
 )
-from common import is_ok, is_true
-from db_tables import get_table_sql
+from common import is_ok
+
+TEST_DATABASE = None
 
 
-def setup_database(host, user, password, database_name):
-    """Create all necessary tables for testing."""
+def setUpModule():
+    """Create unique test database and tables."""
+    global TEST_DATABASE
+    TEST_DATABASE = f"gamedb_test_{uuid.uuid4().hex[:8]}"
+
     connection = mysql.connector.connect(
-        host=host,
-        user=user,
-        password=password,
+        host=os.environ.get('DB_HOST', 'localhost'),
+        user=os.environ.get('DB_USER', 'admin'),
+        password=os.environ.get('DB_PASSWORD', 'minda'),
         auth_plugin="mysql_native_password",
         ssl_disabled=True,
         use_pure=True,
     )
     cursor = connection.cursor()
 
-    cursor.execute(f"DROP DATABASE IF EXISTS {database_name}")
-    cursor.execute(f"CREATE DATABASE {database_name}")
+    cursor.execute(f"CREATE DATABASE `{TEST_DATABASE}`")
+    connection.database = TEST_DATABASE
 
-    # Create tables using centralized schemas
-    cursor.execute(get_table_sql("items", database_name))
-    cursor.execute(get_table_sql("attributes", database_name))
-    cursor.execute(get_table_sql("attribute_owners", database_name))
-    cursor.execute(get_table_sql("inventories", database_name))
-    cursor.execute(get_table_sql("inventory_entries", database_name))
-    cursor.execute(get_table_sql("inventory_owners", database_name))
+    cursor.execute("SET FOREIGN_KEY_CHECKS=0")
+    cursor.execute(Item.CREATE_TABLE_STATEMENT)
+    cursor.execute(Attribute.CREATE_TABLE_STATEMENT)
+    cursor.execute(Inventory.CREATE_TABLE_STATEMENT)
+    cursor.execute(InventoryEntry.CREATE_TABLE_STATEMENT)
+    cursor.execute("SET FOREIGN_KEY_CHECKS=1")
 
     connection.commit()
     cursor.close()
     connection.close()
 
+    os.environ['DB_DATABASE'] = TEST_DATABASE
+    print(f"✓ Test database created: {TEST_DATABASE}")
 
-def teardown_database(host, user, password, database_name):
-    """Delete the test database."""
-    connection = mysql.connector.connect(
-        host=host,
-        user=user,
-        password=password,
-        auth_plugin="mysql_native_password",
-        ssl_disabled=True,
-        use_pure=True,
-    )
-    cursor = connection.cursor()
-    cursor.execute(f"DROP DATABASE IF EXISTS {database_name}")
-    connection.commit()
-    cursor.close()
-    connection.close()
+
+def tearDownModule():
+    """Drop test database."""
+    global TEST_DATABASE
+    if TEST_DATABASE:
+        connection = mysql.connector.connect(
+            host=os.environ.get('DB_HOST', 'localhost'),
+            user=os.environ.get('DB_USER', 'admin'),
+            password=os.environ.get('DB_PASSWORD', 'minda'),
+            auth_plugin="mysql_native_password",
+            ssl_disabled=True,
+            use_pure=True,
+        )
+        cursor = connection.cursor()
+        cursor.execute(f"DROP DATABASE IF EXISTS `{TEST_DATABASE}`")
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print(f"✓ Test database dropped: {TEST_DATABASE}")
 
 
 def run_all_tests():
@@ -78,26 +93,14 @@ def run_all_tests():
     print("Running InventoryService Tests")
     print("=" * 60 + "\n")
 
-    host = "localhost"
-    user = "admin"
-    password = "minda"
-    database_name = "test_inventory_service_db"
-
-    print("Setting up test database...")
-    setup_database(host, user, password, database_name)
-    print("✓ Test database ready\n")
-
-    service = InventoryServiceHandler(
-        host, user, password, database_name, cache_size=1000
-    )
-    inventory_model = InventoryModel(host, user, password, database_name)
+    service = InventoryServiceHandler()
     print("✓ InventoryService handler created\n")
 
     try:
         # Test create
         print("Testing InventoryService.create()...")
         owner = Owner(mobile_id=100)
-        inventory = Inventory(
+        inventory = ThriftInventory(
             id=None,
             max_entries=10,
             max_volume=500.0,
@@ -120,8 +123,6 @@ def run_all_tests():
 
         # Test load
         print("Testing InventoryService.load()...")
-        service.cache.clear()
-
         load_request = InventoryRequest(
             data=InventoryRequestData(
                 load_inventory=LoadInventoryRequestData(
@@ -134,13 +135,7 @@ def run_all_tests():
         assert is_ok(response.results), f"Load failed: {response.results[0].message}"
         loaded_inventory = response.response_data.load_inventory.inventory
         assert loaded_inventory.id == created_inventory.id
-        print(f"  ✓ Loaded inventory (cache miss)\n")
-
-        # Test load from cache
-        response2 = service.load(load_request)
-        assert is_ok(response2.results)
-        assert "cache" in response2.results[0].message.lower()
-        print(f"  ✓ Loaded inventory (cache hit)\n")
+        print(f"  ✓ Loaded inventory\n")
 
         # Test save
         print("Testing InventoryService.save()...")
@@ -158,8 +153,10 @@ def run_all_tests():
         print(f"  ✓ Saved inventory\n")
 
         # Verify save
-        result, updated_inventory = inventory_model.load(created_inventory.id)
-        assert is_true(result)
+        updated_inventory_model = Inventory.find(created_inventory.id)
+        assert updated_inventory_model is not None
+        results, updated_inventory = updated_inventory_model.into_thrift()
+        assert is_ok(results)
         assert updated_inventory.max_entries == 20
         assert updated_inventory.max_volume == 1000.0
         print(f"  ✓ Verified updates in database\n")
@@ -168,11 +165,15 @@ def run_all_tests():
         print("✓ All InventoryService tests passed!")
         print("=" * 60)
 
-    finally:
-        print("\nCleaning up test database...")
-        teardown_database(host, user, password, database_name)
-        print("✓ Test database removed")
+    except Exception as e:
+        print(f"\n✗ Test failed with error:")
+        print(f"  {type(e).__name__}: {e}")
+        raise
 
 
 if __name__ == "__main__":
-    run_all_tests()
+    setUpModule()
+    try:
+        run_all_tests()
+    finally:
+        tearDownModule()

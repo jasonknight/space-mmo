@@ -40,37 +40,23 @@ from game.ttypes import (
     FieldEnumMapping,
 )
 from game.InventoryService import Iface as InventoryServiceIface
-from models.inventory_model import InventoryModel
-from models.item_model import ItemModel
+from db_models.models import Inventory, InventoryEntry, Item, MobileItem
 from inventory import split_stack, transfer_item
 from common import is_ok
-from services.lru_cache import LRUCache
 from services.base_service import BaseServiceHandler
 
 
 class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
     """
     Implementation of the InventoryService thrift interface.
-    Handles inventory operations using the InventoryModel layer and inventory.py functions.
-    Includes an LRU cache to reduce database queries for frequently accessed inventories.
+    Handles inventory operations using db_models and inventory.py functions.
     """
 
-    def __init__(
-        self,
-        host: str,
-        user: str,
-        password: str,
-        database: str,
-        cache_size: int = 1000,
-    ):
+    def __init__(self):
         BaseServiceHandler.__init__(self, InventoryServiceHandler)
-        self.inventory_model = InventoryModel(host, user, password, database)
-        self.item_model = ItemModel(host, user, password, database)
-        self.database = database
-        self.cache = LRUCache(max_size=cache_size)
 
     def load(self, request: InventoryRequest) -> InventoryResponse:
-        """Load an inventory by ID. Checks cache first before querying database."""
+        """Load an inventory by ID."""
         logger.info("=== LOAD inventory request ===")
         try:
             if not request.data.load_inventory:
@@ -90,53 +76,45 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             inventory_id = load_data.inventory_id
             logger.info(f"Loading inventory_id={inventory_id}")
 
-            # Check cache first
-            logger.debug("Checking cache...")
-            cached_inventory = self.cache.get(inventory_id)
-            if cached_inventory:
-                logger.info(f"SUCCESS: Loaded inventory_id={inventory_id} from CACHE")
-                result = GameResult(
-                    status=StatusType.SUCCESS,
-                    message=f"Successfully loaded inventory id={inventory_id} from cache",
-                )
-                response_data = InventoryResponseData(
-                    load_inventory=LoadInventoryResponseData(
-                        inventory=cached_inventory,
-                    ),
-                )
-                return InventoryResponse(
-                    results=[result],
-                    response_data=response_data,
-                )
-
-            # Cache miss - load from database
-            logger.debug(
-                f"Cache miss, loading from DATABASE for inventory_id={inventory_id}"
-            )
-            result, inventory = self.inventory_model.load(inventory_id)
+            # Load from database using ActiveRecord
+            inventory = Inventory.find(inventory_id)
 
             if inventory:
                 logger.info(
                     f"SUCCESS: Loaded inventory_id={inventory_id} from DATABASE"
                 )
-                # Store in cache for future requests
-                self.cache.put(inventory_id, inventory)
 
-                response_data = InventoryResponseData(
-                    load_inventory=LoadInventoryResponseData(
-                        inventory=inventory,
-                    ),
-                )
-                return InventoryResponse(
-                    results=[result],
-                    response_data=response_data,
-                )
+                # Convert to Thrift
+                results, thrift_inventory = inventory.into_thrift()
+
+                if thrift_inventory:
+                    response_data = InventoryResponseData(
+                        load_inventory=LoadInventoryResponseData(
+                            inventory=thrift_inventory,
+                        ),
+                    )
+                    return InventoryResponse(
+                        results=results,
+                        response_data=response_data,
+                    )
+                else:
+                    # Conversion failed
+                    return InventoryResponse(
+                        results=results,
+                        response_data=None,
+                    )
             else:
                 logger.warning(
                     f"FAILURE: Inventory_id={inventory_id} not found in database"
                 )
                 return InventoryResponse(
-                    results=[result],
+                    results=[
+                        GameResult(
+                            status=StatusType.FAILURE,
+                            message=f"Inventory {inventory_id} not found",
+                            error_code=GameError.DB_RECORD_NOT_FOUND,
+                        ),
+                    ],
                     response_data=None,
                 )
 
@@ -154,7 +132,7 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             )
 
     def create(self, request: InventoryRequest) -> InventoryResponse:
-        """Create a new inventory. Populates cache after successful creation."""
+        """Create a new inventory."""
         logger.info("=== CREATE inventory request ===")
         try:
             if not request.data.create_inventory:
@@ -174,24 +152,27 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             logger.info(
                 f"Creating inventory with max_entries={create_data.inventory.max_entries}, max_volume={create_data.inventory.max_volume}"
             )
-            logger.debug(f"Inventory has {len(create_data.inventory.entries)} entries")
+            entry_count = len(create_data.inventory.entries) if create_data.inventory.entries else 0
+            logger.debug(f"Inventory has {entry_count} entries")
 
-            results = self.db.create_inventory(
-                self.database,
-                create_data.inventory,
+            # Create model and populate from Thrift
+            inventory = Inventory()
+            inventory.from_thrift(create_data.inventory)
+
+            # Save to database
+            inventory.save()
+
+            logger.info(
+                f"SUCCESS: Created inventory with id={inventory.get_id()}"
             )
 
-            if is_ok(results):
-                logger.info(
-                    f"SUCCESS: Created inventory with id={create_data.inventory.id}"
-                )
-                # Add to cache after successful creation
-                if create_data.inventory.id is not None:
-                    self.cache.put(create_data.inventory.id, create_data.inventory)
+            # Convert back to Thrift
+            results, thrift_inventory = inventory.into_thrift()
 
+            if thrift_inventory:
                 response_data = InventoryResponseData(
                     create_inventory=CreateInventoryResponseData(
-                        inventory=create_data.inventory,
+                        inventory=thrift_inventory,
                     ),
                 )
                 return InventoryResponse(
@@ -199,9 +180,7 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                     response_data=response_data,
                 )
             else:
-                logger.warning(
-                    f"FAILURE: Could not create inventory - {results[0].message if results else 'unknown error'}"
-                )
+                # Conversion failed
                 return InventoryResponse(
                     results=results,
                     response_data=None,
@@ -221,7 +200,7 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             )
 
     def save(self, request: InventoryRequest) -> InventoryResponse:
-        """Save (create or update) an inventory. Updates cache after successful save."""
+        """Save (create or update) an inventory."""
         logger.info("=== SAVE inventory request ===")
         try:
             if not request.data.save_inventory:
@@ -240,22 +219,25 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             save_data = request.data.save_inventory
             inventory_id = save_data.inventory.id if save_data.inventory.id else "NEW"
             logger.info(f"Saving inventory_id={inventory_id}")
-            logger.debug(f"Inventory has {len(save_data.inventory.entries)} entries")
+            entry_count = len(save_data.inventory.entries) if save_data.inventory.entries else 0
+            logger.debug(f"Inventory has {entry_count} entries")
 
-            results = self.db.save_inventory(
-                self.database,
-                save_data.inventory,
-            )
+            # Create model and populate from Thrift
+            inventory = Inventory()
+            inventory.from_thrift(save_data.inventory)
 
-            if is_ok(results):
-                logger.info(f"SUCCESS: Saved inventory_id={save_data.inventory.id}")
-                # Update cache after successful save
-                if save_data.inventory.id is not None:
-                    self.cache.put(save_data.inventory.id, save_data.inventory)
+            # Save to database
+            inventory.save()
 
+            logger.info(f"SUCCESS: Saved inventory_id={inventory.get_id()}")
+
+            # Convert back to Thrift
+            results, thrift_inventory = inventory.into_thrift()
+
+            if thrift_inventory:
                 response_data = InventoryResponseData(
                     save_inventory=SaveInventoryResponseData(
-                        inventory=save_data.inventory,
+                        inventory=thrift_inventory,
                     ),
                 )
                 return InventoryResponse(
@@ -263,9 +245,7 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                     response_data=response_data,
                 )
             else:
-                logger.warning(
-                    f"FAILURE: Could not save inventory - {results[0].message if results else 'unknown error'}"
-                )
+                # Conversion failed
                 return InventoryResponse(
                     results=results,
                     response_data=None,
@@ -285,7 +265,7 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             )
 
     def split_stack(self, request: InventoryRequest) -> InventoryResponse:
-        """Split a stack of items within an inventory. Checks cache and updates it."""
+        """Split a stack of items within an inventory."""
         logger.info("=== SPLIT_STACK request ===")
         try:
             if not request.data.split_stack:
@@ -307,35 +287,33 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                 f"Splitting stack in inventory_id={inventory_id}, item_id={split_data.item_id}, quantity={split_data.quantity_to_split}"
             )
 
-            # Check cache first
-            logger.debug("Checking cache...")
-            inventory = self.cache.get(inventory_id)
-            result = None
+            # Load from database using ActiveRecord
+            logger.debug(f"Loading from DATABASE for inventory_id={inventory_id}")
+            inventory_model = Inventory.find(inventory_id)
 
-            if not inventory:
-                # Cache miss - load from database
-                logger.debug(
-                    f"Cache miss, loading from DATABASE for inventory_id={inventory_id}"
-                )
-                result, inventory = self.db.load_inventory(
-                    self.database,
-                    inventory_id,
+            if not inventory_model:
+                logger.error(f"Inventory_id={inventory_id} not found")
+                return InventoryResponse(
+                    results=[
+                        GameResult(
+                            status=StatusType.FAILURE,
+                            message=f"Inventory {inventory_id} not found",
+                            error_code=GameError.DB_RECORD_NOT_FOUND,
+                        ),
+                    ],
+                    response_data=None,
                 )
 
-                if not inventory:
-                    logger.error(f"Inventory_id={inventory_id} not found")
-                    return InventoryResponse(
-                        results=[result],
-                        response_data=None,
-                    )
+            # Convert to Thrift for inventory.py function
+            _, thrift_inventory = inventory_model.into_thrift()
 
             # Find the entry index that matches the item_id
             # inventory.split_stack expects entry_index, not item_id
             logger.debug(
-                f"Searching for item_id={split_data.item_id} in {len(inventory.entries)} entries"
+                f"Searching for item_id={split_data.item_id} in {len(thrift_inventory.entries)} entries"
             )
             entry_index = None
-            for idx, entry in enumerate(inventory.entries):
+            for idx, entry in enumerate(thrift_inventory.entries):
                 if entry.item_id == split_data.item_id:
                     entry_index = idx
                     logger.debug(
@@ -359,11 +337,12 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                 )
 
             # Perform the split - pass entry_index, not item_id
+            # Note: split_stack() from inventory.py mutates the thrift_inventory object
             logger.debug(
                 f"Calling split_stack() with entry_index={entry_index}, quantity={split_data.quantity_to_split}"
             )
             split_results = split_stack(
-                inventory,
+                thrift_inventory,
                 entry_index,
                 split_data.quantity_to_split,
             )
@@ -378,41 +357,31 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                 )
 
             logger.debug(
-                f"Split successful, now inventory has {len(inventory.entries)} entries"
+                f"Split successful, now inventory has {len(thrift_inventory.entries)} entries"
             )
 
-            # Save the updated inventory to database
+            # Convert modified Thrift back to model and save
             logger.debug("Saving updated inventory to database...")
-            save_results = self.db.save_inventory(
-                self.database,
-                inventory,
+            inventory_model.from_thrift(thrift_inventory)
+            inventory_model.save()
+
+            logger.info(
+                f"SUCCESS: Split stack completed for inventory_id={inventory_id}"
             )
 
-            if is_ok(save_results):
-                logger.info(
-                    f"SUCCESS: Split stack completed for inventory_id={inventory_id}"
-                )
-                # Update cache with modified inventory
-                self.cache.put(inventory_id, inventory)
+            # Convert final state back to Thrift for response
+            save_results, final_thrift_inventory = inventory_model.into_thrift()
 
-                response_data = InventoryResponseData(
-                    split_stack=SplitStackResponseData(
-                        inventory=inventory,
-                    ),
-                )
-                results = split_results + save_results
-                return InventoryResponse(
-                    results=results,
-                    response_data=response_data,
-                )
-            else:
-                logger.error(
-                    f"Failed to save inventory after split: {save_results[0].message if save_results else 'unknown'}"
-                )
-                return InventoryResponse(
-                    results=save_results,
-                    response_data=None,
-                )
+            response_data = InventoryResponseData(
+                split_stack=SplitStackResponseData(
+                    inventory=final_thrift_inventory,
+                ),
+            )
+            results = split_results + save_results
+            return InventoryResponse(
+                results=results,
+                response_data=response_data,
+            )
 
         except Exception as e:
             logger.error(f"EXCEPTION in split_stack: {type(e).__name__}: {str(e)}")
@@ -428,7 +397,7 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             )
 
     def transfer_item(self, request: InventoryRequest) -> InventoryResponse:
-        """Transfer items between inventories. Checks cache and updates both inventories."""
+        """Transfer items between inventories."""
         logger.info("=== TRANSFER_ITEM request ===")
         try:
             if not request.data.transfer_item:
@@ -451,65 +420,75 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                 f"Transferring item_id={transfer_data.item_id}, quantity={transfer_data.quantity} from inventory_id={source_id} to inventory_id={dest_id}"
             )
 
-            # Load the item from database - inventory.transfer_item needs Item object, not item_id
+            # Load the item from database using ActiveRecord
             logger.debug(f"Loading item_id={transfer_data.item_id} from database...")
-            item_result, item = self.db.load_item(
-                self.database,
-                transfer_data.item_id,
-            )
-            if not item:
+            item_model = Item.find(transfer_data.item_id)
+            if not item_model:
                 logger.error(f"Item_id={transfer_data.item_id} not found in database")
                 return InventoryResponse(
-                    results=[item_result],
+                    results=[
+                        GameResult(
+                            status=StatusType.FAILURE,
+                            message=f"Item {transfer_data.item_id} not found",
+                            error_code=GameError.DB_RECORD_NOT_FOUND,
+                        ),
+                    ],
                     response_data=None,
                 )
-            logger.debug(f"Loaded item: {item.internal_name}")
 
-            # Check cache for source inventory
+            # Convert item to Thrift for inventory.py function
+            _, thrift_item = item_model.into_thrift()
+            logger.debug(f"Loaded item: {thrift_item.internal_name}")
+
+            # Load source inventory using ActiveRecord
             logger.debug(f"Loading source inventory_id={source_id}...")
-            source_inv = self.cache.get(source_id)
-            if not source_inv:
-                # Cache miss - load from database
-                logger.debug(f"Cache miss, loading source from DATABASE")
-                result1, source_inv = self.db.load_inventory(
-                    self.database,
-                    source_id,
+            source_model = Inventory.find(source_id)
+            if not source_model:
+                logger.error(f"Source inventory_id={source_id} not found")
+                return InventoryResponse(
+                    results=[
+                        GameResult(
+                            status=StatusType.FAILURE,
+                            message=f"Source inventory {source_id} not found",
+                            error_code=GameError.DB_RECORD_NOT_FOUND,
+                        ),
+                    ],
+                    response_data=None,
                 )
-                if not source_inv:
-                    logger.error(f"Source inventory_id={source_id} not found")
-                    return InventoryResponse(
-                        results=[result1],
-                        response_data=None,
-                    )
 
-            # Check cache for destination inventory
+            # Convert source to Thrift
+            _, thrift_source_inv = source_model.into_thrift()
+
+            # Load destination inventory using ActiveRecord
             logger.debug(f"Loading destination inventory_id={dest_id}...")
-            dest_inv = self.cache.get(dest_id)
-            if not dest_inv:
-                # Cache miss - load from database
-                logger.debug(f"Cache miss, loading destination from DATABASE")
-                result2, dest_inv = self.db.load_inventory(
-                    self.database,
-                    dest_id,
+            dest_model = Inventory.find(dest_id)
+            if not dest_model:
+                logger.error(f"Destination inventory_id={dest_id} not found")
+                return InventoryResponse(
+                    results=[
+                        GameResult(
+                            status=StatusType.FAILURE,
+                            message=f"Destination inventory {dest_id} not found",
+                            error_code=GameError.DB_RECORD_NOT_FOUND,
+                        ),
+                    ],
+                    response_data=None,
                 )
-                if not dest_inv:
-                    logger.error(f"Destination inventory_id={dest_id} not found")
-                    return InventoryResponse(
-                        results=[result2],
-                        response_data=None,
-                    )
 
-            # Perform the transfer - pass Item object, not item_id
+            # Convert destination to Thrift
+            _, thrift_dest_inv = dest_model.into_thrift()
+
+            # Perform the transfer - inventory.py function mutates both Thrift inventories
             logger.debug(
                 f"Calling transfer_item() with quantity={transfer_data.quantity}"
             )
             logger.debug(
-                f"Source has {len(source_inv.entries)} entries, destination has {len(dest_inv.entries)} entries"
+                f"Source has {len(thrift_source_inv.entries)} entries, destination has {len(thrift_dest_inv.entries)} entries"
             )
             transfer_results = transfer_item(
-                source_inv,
-                dest_inv,
-                item,
+                thrift_source_inv,
+                thrift_dest_inv,
+                thrift_item,
                 transfer_data.quantity,
             )
 
@@ -523,44 +502,35 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
                 )
 
             logger.debug(
-                f"Transfer successful. Source now has {len(source_inv.entries)} entries, destination has {len(dest_inv.entries)} entries"
+                f"Transfer successful. Source now has {len(thrift_source_inv.entries)} entries, destination has {len(thrift_dest_inv.entries)} entries"
             )
 
-            # Save both inventories to database
+            # Convert modified Thrift objects back to models and save both
             logger.debug("Saving both inventories to database...")
-            save_results1 = self.db.save_inventory(
-                self.database,
-                source_inv,
-            )
-            save_results2 = self.db.save_inventory(
-                self.database,
-                dest_inv,
+            source_model.from_thrift(thrift_source_inv)
+            dest_model.from_thrift(thrift_dest_inv)
+
+            source_model.save()
+            dest_model.save()
+
+            logger.info(
+                f"SUCCESS: Transfer completed from inventory_id={source_id} to inventory_id={dest_id}"
             )
 
-            if is_ok(save_results1) and is_ok(save_results2):
-                logger.info(
-                    f"SUCCESS: Transfer completed from inventory_id={source_id} to inventory_id={dest_id}"
-                )
-                # Update both inventories in cache
-                self.cache.put(source_id, source_inv)
-                self.cache.put(dest_id, dest_inv)
+            # Convert final state back to Thrift for response
+            save_results1, final_source = source_model.into_thrift()
+            save_results2, final_dest = dest_model.into_thrift()
 
-                response_data = InventoryResponseData(
-                    transfer_item=TransferItemResponseData(
-                        source_inventory=source_inv,
-                        destination_inventory=dest_inv,
-                    ),
-                )
-                return InventoryResponse(
-                    results=transfer_results + save_results1 + save_results2,
-                    response_data=response_data,
-                )
-            else:
-                logger.error(f"Failed to save inventories after transfer")
-                return InventoryResponse(
-                    results=save_results1 + save_results2,
-                    response_data=None,
-                )
+            response_data = InventoryResponseData(
+                transfer_item=TransferItemResponseData(
+                    source_inventory=final_source,
+                    destination_inventory=final_dest,
+                ),
+            )
+            return InventoryResponse(
+                results=transfer_results + save_results1 + save_results2,
+                response_data=response_data,
+            )
 
         except Exception as e:
             logger.error(f"EXCEPTION in transfer_item: {type(e).__name__}: {str(e)}")
@@ -595,43 +565,60 @@ class InventoryServiceHandler(BaseServiceHandler, InventoryServiceIface):
             list_data = request.data.list_inventory
             page = max(0, list_data.page)
             results_per_page = list_data.results_per_page
-            search_string = (
-                list_data.search_string if hasattr(list_data, "search_string") else None
-            )
 
             logger.info(
-                f"Listing inventories: page={page}, results_per_page={results_per_page}, search_string={search_string}"
+                f"Listing inventories: page={page}, results_per_page={results_per_page}"
             )
 
-            result, inventories, total_count = self.db.list_inventory(
-                self.database,
-                page,
-                results_per_page,
-                search_string=search_string,
-            )
+            # Query with pagination
+            connection = Inventory._create_connection()
+            cursor = connection.cursor(dictionary=True)
 
-            if inventories is not None:
-                logger.info(
-                    f"SUCCESS: Listed {len(inventories)} inventories (total: {total_count})"
+            try:
+                # Get total count
+                cursor.execute("SELECT COUNT(*) as count FROM inventories")
+                total_count = cursor.fetchone()['count']
+
+                # Get paginated results
+                offset = page * results_per_page
+                cursor.execute(
+                    "SELECT * FROM inventories ORDER BY id LIMIT %s OFFSET %s",
+                    (results_per_page, offset),
                 )
+                rows = cursor.fetchall()
+
+                # Convert to models then to Thrift
+                thrift_inventories = []
+                for row in rows:
+                    inventory = Inventory()
+                    inventory._data = row
+                    _, thrift_inv = inventory.into_thrift()
+                    if thrift_inv:
+                        thrift_inventories.append(thrift_inv)
+
+                logger.info(
+                    f"SUCCESS: Listed {len(thrift_inventories)} inventories (total: {total_count})"
+                )
+
                 response_data = InventoryResponseData(
                     list_inventory=ListInventoryResponseData(
-                        inventories=inventories,
+                        inventories=thrift_inventories,
                         total_count=total_count,
                     ),
                 )
                 return InventoryResponse(
-                    results=[result],
+                    results=[
+                        GameResult(
+                            status=StatusType.SUCCESS,
+                            message=f"Successfully listed inventories",
+                        ),
+                    ],
                     response_data=response_data,
                 )
-            else:
-                logger.warning(
-                    f"FAILURE: Could not list inventories - {result.message}"
-                )
-                return InventoryResponse(
-                    results=[result],
-                    response_data=None,
-                )
+
+            finally:
+                cursor.close()
+                connection.close()
 
         except Exception as e:
             logger.error(f"EXCEPTION in list_records: {type(e).__name__}: {str(e)}")

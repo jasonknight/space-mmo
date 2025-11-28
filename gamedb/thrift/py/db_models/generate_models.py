@@ -50,7 +50,10 @@ def generate_owner_union_to_db_code(table_name: str, columns: List[Dict[str, Any
     Generate code to convert ThriftOwner union from Thrift to database columns.
 
     The ThriftOwner union in Thrift has one of: player_id, mobile_id, item_id, or asset_id set.
-    In the database, we store these as separate nullable columns: owner_player_id, owner_mobile_id, etc.
+
+    Supports two database storage patterns:
+    1. Flattened: owner_player_id, owner_mobile_id, owner_item_id, owner_asset_id
+    2. Generic: owner_id + owner_type (e.g., owner_id=123, owner_type='player')
 
     Args:
         table_name: Database table name
@@ -62,7 +65,35 @@ def generate_owner_union_to_db_code(table_name: str, columns: List[Dict[str, Any
     if not needs_owner_conversion(columns):
         return ""
 
-    code = '''
+    column_names = [col['name'] for col in columns]
+
+    # Determine which pattern to use
+    has_flattened = any(oc in column_names for oc in ['owner_player_id', 'owner_mobile_id', 'owner_item_id', 'owner_asset_id'])
+    has_generic = 'owner_id' in column_names and 'owner_type' in column_names
+
+    if has_generic:
+        # Generic pattern: owner_id + owner_type
+        code = '''
+        # Convert ThriftOwner union to database owner_id and owner_type columns
+        if hasattr(thrift_obj, 'owner') and thrift_obj.owner is not None:
+            owner = thrift_obj.owner
+            # Determine owner_id and owner_type based on which union field is set
+            if hasattr(owner, 'player_id') and owner.player_id is not None:
+                self._data['owner_id'] = owner.player_id
+                self._data['owner_type'] = 'player'
+            elif hasattr(owner, 'mobile_id') and owner.mobile_id is not None:
+                self._data['owner_id'] = owner.mobile_id
+                self._data['owner_type'] = 'mobile'
+            elif hasattr(owner, 'item_id') and owner.item_id is not None:
+                self._data['owner_id'] = owner.item_id
+                self._data['owner_type'] = 'item'
+            elif hasattr(owner, 'asset_id') and owner.asset_id is not None:
+                self._data['owner_id'] = owner.asset_id
+                self._data['owner_type'] = 'asset'
+'''
+    elif has_flattened:
+        # Flattened pattern: separate columns for each owner type
+        code = '''
         # Convert ThriftOwner union to database owner_* columns
         if hasattr(thrift_obj, 'owner') and thrift_obj.owner is not None:
             owner = thrift_obj.owner
@@ -82,12 +113,19 @@ def generate_owner_union_to_db_code(table_name: str, columns: List[Dict[str, Any
             elif hasattr(owner, 'asset_id') and owner.asset_id is not None:
                 self._data['owner_asset_id'] = owner.asset_id
 '''
+    else:
+        code = ""
+
     return code
 
 
 def generate_db_to_owner_union_code(table_name: str, columns: List[Dict[str, Any]]) -> str:
     """
-    Generate code to convert database owner_* columns to ThriftOwner union in Thrift.
+    Generate code to convert database owner columns to ThriftOwner union in Thrift.
+
+    Supports two database storage patterns:
+    1. Flattened: owner_player_id, owner_mobile_id, owner_item_id, owner_asset_id
+    2. Generic: owner_id + owner_type (e.g., owner_id=123, owner_type='player')
 
     Args:
         table_name: Database table name
@@ -99,7 +137,32 @@ def generate_db_to_owner_union_code(table_name: str, columns: List[Dict[str, Any
     if not needs_owner_conversion(columns):
         return ""
 
-    code = '''
+    column_names = [col['name'] for col in columns]
+
+    # Determine which pattern to use
+    has_flattened = any(oc in column_names for oc in ['owner_player_id', 'owner_mobile_id', 'owner_item_id', 'owner_asset_id'])
+    has_generic = 'owner_id' in column_names and 'owner_type' in column_names
+
+    if has_generic:
+        # Generic pattern: owner_id + owner_type
+        code = '''
+            # Convert database owner_id and owner_type to ThriftOwner union
+            owner = None
+            owner_id = self._data.get('owner_id')
+            owner_type = self._data.get('owner_type')
+            if owner_id is not None and owner_type is not None:
+                if owner_type == 'player':
+                    owner = ThriftOwner(player_id=owner_id)
+                elif owner_type == 'mobile':
+                    owner = ThriftOwner(mobile_id=owner_id)
+                elif owner_type == 'item':
+                    owner = ThriftOwner(item_id=owner_id)
+                elif owner_type == 'asset':
+                    owner = ThriftOwner(asset_id=owner_id)
+'''
+    elif has_flattened:
+        # Flattened pattern: separate columns for each owner type
+        code = '''
             # Convert database owner_* columns to ThriftOwner union
             owner = None
             if self._data.get('owner_player_id') is not None:
@@ -111,6 +174,9 @@ def generate_db_to_owner_union_code(table_name: str, columns: List[Dict[str, Any
             elif self._data.get('owner_asset_id') is not None:
                 owner = ThriftOwner(asset_id=self._data['owner_asset_id'])
 '''
+    else:
+        code = ""
+
     return code
 
 
@@ -583,10 +649,13 @@ def get_attribute_relationship_type(
         None - No attribute relationship
     """
     # Check if table is a pivot owner (has FK in attribute_owners)
+    # AND if Thrift struct actually has attribute map support
     pivot_rels = get_pivot_owner_relationships(table_name, table_columns, fk_constraints)
     for rel in pivot_rels:
         if rel['pivot_table'] == 'attribute_owners':
-            return 'pivot'
+            # Only return 'pivot' if Thrift config says this table has attribute map
+            if needs_attribute_map_conversion(table_name):
+                return 'pivot'
 
     # Check for direct attribute table pattern
     # Look for table named {singular}_attributes with FK back to this table
@@ -599,7 +668,9 @@ def get_attribute_relationship_type(
         fk_column = f"{singular_name}_id"
         for fk in attr_fks:
             if fk['column'] == fk_column and fk['referenced_table'] == table_name:
-                return 'direct'
+                # Only return 'direct' if Thrift config says this table has attribute map
+                if needs_attribute_map_conversion(table_name):
+                    return 'direct'
 
     return None
 
@@ -1538,7 +1609,11 @@ def generate_from_thrift_method(
         col_name = col['name']
 
         # Skip owner union fields - they're handled specially
+        # Flattened pattern
         if col_name in ['owner_player_id', 'owner_mobile_id', 'owner_item_id', 'owner_asset_id']:
+            continue
+        # Generic pattern
+        if col_name in ['owner_id', 'owner_type']:
             continue
 
         # Skip AttributeValue union fields - handled specially for attributes table
@@ -1677,7 +1752,11 @@ def generate_into_thrift_method(
         col_name = col['name']
 
         # Skip owner union fields - they're handled specially
+        # Flattened pattern
         if col_name in ['owner_player_id', 'owner_mobile_id', 'owner_item_id', 'owner_asset_id']:
+            continue
+        # Generic pattern
+        if col_name in ['owner_id', 'owner_type']:
             continue
 
         # Skip AttributeValue union fields - handled specially for attributes table
