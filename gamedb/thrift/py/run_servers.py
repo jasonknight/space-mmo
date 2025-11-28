@@ -5,12 +5,18 @@ Each service runs in a separate process on different ports.
 """
 
 import sys
-sys.path.append('../gen-py')
+import os
+
+# Add paths relative to this script's location
+script_dir = os.path.dirname(os.path.abspath(__file__))
+gen_py_path = os.path.join(script_dir, '..', 'gen-py')
+sys.path.insert(0, gen_py_path)
+sys.path.insert(0, script_dir)
 
 import signal
 import multiprocessing
 import logging
-from typing import Dict, Any, Callable
+from typing import Dict, Any
 
 from thrift.transport import TSocket
 from thrift.transport import TTransport
@@ -23,7 +29,6 @@ from game.PlayerService import Processor as PlayerProcessor
 from services.inventory_service import InventoryServiceHandler
 from services.item_service import ItemServiceHandler
 from services.player_service import PlayerServiceHandler
-from db import DB
 
 
 class PrefixedFormatter(logging.Formatter):
@@ -68,19 +73,8 @@ def run_inventory_service(config: Dict[str, Any]):
     service_name = config['name']
     setup_logging(service_name)
 
-    # Initialize database connection
-    db = DB(
-        host=config['db_host'],
-        user=config['db_user'],
-        password=config['db_password'],
-    )
-
-    # Create handler
-    handler = InventoryServiceHandler(
-        db=db,
-        database=config['database'],
-        cache_size=config.get('cache_size', 100),
-    )
+    # Create handler (uses db_models which load config from environment)
+    handler = InventoryServiceHandler()
 
     # Create processor and server
     processor = InventoryProcessor(handler)
@@ -94,8 +88,6 @@ def run_inventory_service(config: Dict[str, Any]):
     print_prefixed(service_name, f"Starting {service_name}...")
     print_prefixed(service_name, f"Host: {config['host']}")
     print_prefixed(service_name, f"Port: {config['port']}")
-    print_prefixed(service_name, f"Database: {config['database']}")
-    print_prefixed(service_name, f"Cache capacity: {config.get('cache_size', 100)}")
     print_prefixed(service_name, "=" * 60)
 
     try:
@@ -104,7 +96,6 @@ def run_inventory_service(config: Dict[str, Any]):
         pass
     finally:
         print_prefixed(service_name, "Shutting down...")
-        db.disconnect()
 
 
 def run_item_service(config: Dict[str, Any]):
@@ -112,18 +103,8 @@ def run_item_service(config: Dict[str, Any]):
     service_name = config['name']
     setup_logging(service_name)
 
-    # Initialize database connection
-    db = DB(
-        host=config['db_host'],
-        user=config['db_user'],
-        password=config['db_password'],
-    )
-
-    # Create handler
-    handler = ItemServiceHandler(
-        db=db,
-        database=config['database'],
-    )
+    # Create handler (uses db_models which load config from environment)
+    handler = ItemServiceHandler()
 
     # Create processor and server
     processor = ItemProcessor(handler)
@@ -137,7 +118,6 @@ def run_item_service(config: Dict[str, Any]):
     print_prefixed(service_name, f"Starting {service_name}...")
     print_prefixed(service_name, f"Host: {config['host']}")
     print_prefixed(service_name, f"Port: {config['port']}")
-    print_prefixed(service_name, f"Database: {config['database']}")
     print_prefixed(service_name, "=" * 60)
 
     try:
@@ -146,7 +126,6 @@ def run_item_service(config: Dict[str, Any]):
         pass
     finally:
         print_prefixed(service_name, "Shutting down...")
-        db.disconnect()
 
 
 def run_player_service(config: Dict[str, Any]):
@@ -154,19 +133,8 @@ def run_player_service(config: Dict[str, Any]):
     service_name = config['name']
     setup_logging(service_name)
 
-    # Initialize database connection
-    db = DB(
-        host=config['db_host'],
-        user=config['db_user'],
-        password=config['db_password'],
-    )
-
-    # Create handler
-    handler = PlayerServiceHandler(
-        db=db,
-        database=config['database'],
-        cache_size=config.get('cache_size', 1000),
-    )
+    # Create handler (uses db_models which load config from environment)
+    handler = PlayerServiceHandler()
 
     # Create processor and server
     processor = PlayerProcessor(handler)
@@ -180,8 +148,6 @@ def run_player_service(config: Dict[str, Any]):
     print_prefixed(service_name, f"Starting {service_name}...")
     print_prefixed(service_name, f"Host: {config['host']}")
     print_prefixed(service_name, f"Port: {config['port']}")
-    print_prefixed(service_name, f"Database: {config['database']}")
-    print_prefixed(service_name, f"Cache capacity: {config.get('cache_size', 1000)}")
     print_prefixed(service_name, "=" * 60)
 
     try:
@@ -190,10 +156,10 @@ def run_player_service(config: Dict[str, Any]):
         pass
     finally:
         print_prefixed(service_name, "Shutting down...")
-        db.disconnect()
 
 
 # Service configuration - add new services here
+# Database configuration is loaded from /vagrant/gamedb/thrift/py/db_models/.env
 SERVICES = [
     {
         'name': 'InventoryService',
@@ -202,11 +168,6 @@ SERVICES = [
             'name': 'InventoryService',
             'host': '0.0.0.0',
             'port': 9090,
-            'db_host': 'localhost',
-            'db_user': 'admin',
-            'db_password': 'minda',
-            'database': 'gamedb',
-            'cache_size': 100,
         },
     },
     {
@@ -216,10 +177,6 @@ SERVICES = [
             'name': 'ItemService',
             'host': '0.0.0.0',
             'port': 9091,
-            'db_host': 'localhost',
-            'db_user': 'admin',
-            'db_password': 'minda',
-            'database': 'gamedb',
         },
     },
     {
@@ -229,11 +186,6 @@ SERVICES = [
             'name': 'PlayerService',
             'host': '0.0.0.0',
             'port': 9092,
-            'db_host': 'localhost',
-            'db_user': 'admin',
-            'db_password': 'minda',
-            'database': 'gamedb',
-            'cache_size': 1000,
         },
     },
 ]
