@@ -17,15 +17,17 @@ load_dotenv()
 from generator import (
     TableNaming,
     TypeMapper,
+    OWNER_COLUMNS,
+    ATTRIBUTE_VALUE_COLUMNS,
+    PIVOT_TABLES,
+    TABLE_TO_THRIFT_MAPPING,
+)
+from generator.database import (
     get_table_columns,
     get_all_tables,
     get_create_table_statement,
     get_foreign_key_constraints,
     get_unique_constraints,
-    OWNER_COLUMNS,
-    ATTRIBUTE_VALUE_COLUMNS,
-    PIVOT_TABLES,
-    TABLE_TO_THRIFT_MAPPING,
 )
 from generator.config import (
     get_thrift_struct_name,
@@ -40,141 +42,7 @@ from generator.config import (
     validate_config,
 )
 
-
-# MySQL type to Python type mapping
-MYSQL_TO_PYTHON_TYPE = {
-    "int": "int",
-    "tinyint": "int",
-    "smallint": "int",
-    "mediumint": "int",
-    "bigint": "int",
-    "float": "float",
-    "double": "float",
-    "decimal": "float",
-    "char": "str",
-    "varchar": "str",
-    "text": "str",
-    "tinytext": "str",
-    "mediumtext": "str",
-    "longtext": "str",
-    "date": "datetime",
-    "datetime": "datetime",
-    "timestamp": "datetime",
-    "time": "datetime",
-    "year": "int",
-    "binary": "bytes",
-    "varbinary": "bytes",
-    "blob": "bytes",
-    "tinyblob": "bytes",
-    "mediumblob": "bytes",
-    "longblob": "bytes",
-    "enum": "str",
-    "set": "str",
-    "bool": "bool",
-    "boolean": "bool",
-    "json": "Any",
-}
-
-# Pivot table configuration
-# These tables manage many-to-many relationships and do NOT have direct Thrift equivalents
-# They are converted to/from Thrift maps or embedded relationships
-PIVOT_TABLES = [
-    'attribute_owners',  # Manages ownership of attributes (converts to Owner union in Thrift)
-    'inventory_owners',  # Manages ownership of inventories (converts to Owner union in Thrift)
-]
-
-# Table-to-Thrift struct mapping
-# Maps database table names to their corresponding Thrift struct names
-# Pivot tables and internal-only tables are excluded as they don't have 1:1 Thrift representations
-#
-# Field Mapping Notes:
-# - 'mobiles': Has owner_* fields (owner_player_id, owner_mobile_id, etc.) → Owner union in Thrift
-# - 'attributes': Has flattened AttributeValue fields (bool_value, double_value, vector3_x/y/z, asset_id) → AttributeValue union in Thrift
-# - 'items', 'mobile_items': Has attributes relationship via attribute_owners pivot → map<AttributeType, Attribute> in Thrift
-# - 'inventories': Has owner via inventory_owners pivot → Owner union in Thrift
-# - 'players': Has computed field 'over_13' derived from 'year_of_birth'
-# - All structs: May have optional 'backing_table' field in Thrift (might be removed in future)
-TABLE_TO_THRIFT_MAPPING = {
-    'players': 'Player',
-    'items': 'Item',
-    'mobiles': 'Mobile',
-    'inventories': 'Inventory',
-    'inventory_entries': 'InventoryEntry',
-    'attributes': 'Attribute',
-    'item_blueprints': 'ItemBlueprint',
-    'item_blueprint_components': 'ItemBlueprintComponent',
-    'mobile_items': 'MobileItem',
-    'mobile_item_blueprints': 'ItemBlueprint',  # Uses ItemBlueprint Thrift type, different table
-    'mobile_item_blueprint_components': 'ItemBlueprintComponent',  # Uses ItemBlueprintComponent Thrift type, different table
-}
-
-
-def get_thrift_struct_name(table_name: str) -> Optional[str]:
-    """
-    Get the Thrift struct name for a database table (with Thrift prefix to avoid name collisions).
-
-    Args:
-        table_name: Database table name (e.g., 'players', 'items')
-
-    Returns:
-        Thrift struct name with Thrift prefix if mapping exists, None otherwise
-    """
-    base_name = TABLE_TO_THRIFT_MAPPING.get(table_name)
-    return f"Thrift{base_name}" if base_name else None
-
-
-def has_thrift_mapping(table_name: str) -> bool:
-    """
-    Check if a table has a corresponding Thrift struct.
-
-    Args:
-        table_name: Database table name
-
-    Returns:
-        True if table has Thrift mapping, False otherwise
-    """
-    return table_name in TABLE_TO_THRIFT_MAPPING
-
-
-def needs_owner_conversion(columns: List[Dict[str, Any]]) -> bool:
-    """
-    Check if a table has owner union fields (owner_player_id, owner_mobile_id, etc.).
-
-    Args:
-        columns: List of column definitions
-
-    Returns:
-        True if table has owner fields, False otherwise
-    """
-    owner_columns = [
-        'owner_player_id',
-        'owner_mobile_id',
-        'owner_item_id',
-        'owner_asset_id',
-    ]
-    column_names = [col['name'] for col in columns]
-    return any(oc in column_names for oc in owner_columns)
-
-
-def needs_attribute_value_conversion(columns: List[Dict[str, Any]]) -> bool:
-    """
-    Check if a table stores AttributeValue union data (flattened columns).
-
-    Args:
-        columns: List of column definitions
-
-    Returns:
-        True if table has AttributeValue fields, False otherwise
-    """
-    attribute_value_columns = [
-        'bool_value',
-        'double_value',
-        'vector3_x',
-        'asset_id',
-    ]
-    column_names = [col['name'] for col in columns]
-    # Check if we have attribute value columns (typically in attributes table)
-    return all(avc in column_names for avc in ['bool_value', 'double_value', 'vector3_x'])
+# Additional configuration and utility functions below
 
 
 def generate_owner_union_to_db_code(table_name: str, columns: List[Dict[str, Any]]) -> str:
@@ -373,178 +241,7 @@ def generate_pivot_to_attribute_map_code() -> str:
     return code
 
 
-def get_python_type(mysql_type: str) -> str:
-    """Convert MySQL type to Python type annotation."""
-    # Extract base type (before parentheses or spaces)
-    base_type = mysql_type.split("(")[0].split(" ")[0].lower()
-    return MYSQL_TO_PYTHON_TYPE.get(base_type, "Any")
-
-
-def to_pascal_case(snake_str: str) -> str:
-    """Convert snake_case to PascalCase."""
-    return "".join(word.capitalize() for word in snake_str.split("_"))
-
-
-def singularize_table_name(table_name: str) -> str:
-    """
-    Convert plural table name to singular.
-    Simple implementation: removes trailing 's' if present.
-    Handles common cases like 'ies' -> 'y', 'sses' -> 'ss', 'ses' -> 's'.
-    """
-    if table_name.endswith("ies"):
-        # inventories -> inventory, entries -> entry
-        return table_name[:-3] + "y"
-    elif table_name.endswith("sses"):
-        # classes -> class, addresses -> address
-        return table_name[:-2]
-    elif table_name.endswith("ses"):
-        # cases -> case
-        return table_name[:-1]
-    elif table_name.endswith("s"):
-        # items -> item, players -> player
-        return table_name[:-1]
-    else:
-        # Already singular or special case
-        return table_name
-
-
-def get_table_columns(cursor, database: str, table_name: str) -> List[Dict[str, Any]]:
-    """Get column information for a table."""
-    cursor.execute(
-        f"""
-        SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_KEY, COLUMN_TYPE
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
-        ORDER BY ORDINAL_POSITION
-    """,
-        (database, table_name),
-    )
-
-    columns = []
-    for row in cursor.fetchall():
-        # Decode bytes to strings if necessary
-        def decode_if_bytes(val):
-            return val.decode("utf-8") if isinstance(val, bytes) else val
-
-        columns.append(
-            {
-                "name": decode_if_bytes(row[0]),
-                "data_type": decode_if_bytes(row[1]),
-                "is_nullable": decode_if_bytes(row[2]) == "YES",
-                "is_primary_key": decode_if_bytes(row[3]) == "PRI",
-                "column_type": decode_if_bytes(row[4]),
-            }
-        )
-    return columns
-
-
-def get_all_tables(cursor, database: str) -> List[str]:
-    """Get all table names in the database."""
-    cursor.execute(
-        f"""
-        SELECT TABLE_NAME
-        FROM INFORMATION_SCHEMA.TABLES
-        WHERE TABLE_SCHEMA = %s AND TABLE_TYPE = 'BASE TABLE'
-        ORDER BY TABLE_NAME
-    """,
-        (database,),
-    )
-
-    def decode_if_bytes(val):
-        return val.decode("utf-8") if isinstance(val, bytes) else val
-
-    return [decode_if_bytes(row[0]) for row in cursor.fetchall()]
-
-
-def get_create_table_statement(cursor, table_name: str) -> str:
-    """Get the CREATE TABLE statement for a table."""
-    cursor.execute(f"SHOW CREATE TABLE `{table_name}`")
-    result = cursor.fetchone()
-
-    def decode_if_bytes(val):
-        return val.decode("utf-8") if isinstance(val, bytes) else val
-
-    # Result is (table_name, create_statement)
-    create_statement = decode_if_bytes(result[1])
-    return create_statement
-
-
-def get_foreign_key_constraints(cursor, database: str) -> Dict[str, List[Dict[str, str]]]:
-    """Get all foreign key constraints from the database."""
-    cursor.execute(
-        """
-        SELECT
-            TABLE_NAME,
-            COLUMN_NAME,
-            REFERENCED_TABLE_NAME,
-            REFERENCED_COLUMN_NAME
-        FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-        WHERE TABLE_SCHEMA = %s
-        AND REFERENCED_TABLE_NAME IS NOT NULL
-        ORDER BY TABLE_NAME, COLUMN_NAME
-    """,
-        (database,),
-    )
-
-    def decode_if_bytes(val):
-        return val.decode("utf-8") if isinstance(val, bytes) else val
-
-    fk_constraints = {}
-    for row in cursor.fetchall():
-        table_name = decode_if_bytes(row[0])
-        column_name = decode_if_bytes(row[1])
-        ref_table = decode_if_bytes(row[2])
-        ref_column = decode_if_bytes(row[3])
-
-        if table_name not in fk_constraints:
-            fk_constraints[table_name] = []
-
-        fk_constraints[table_name].append(
-            {
-                "column": column_name,
-                "referenced_table": ref_table,
-                "referenced_column": ref_column,
-            }
-        )
-
-    return fk_constraints
-
-
-def get_unique_constraints(cursor, database: str) -> Dict[str, List[str]]:
-    """Get all unique constraints from the database."""
-    cursor.execute(
-        """
-        SELECT
-            TABLE_NAME,
-            COLUMN_NAME
-        FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-        WHERE TABLE_SCHEMA = %s
-        AND CONSTRAINT_NAME != 'PRIMARY'
-        AND CONSTRAINT_NAME IN (
-            SELECT CONSTRAINT_NAME
-            FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
-            WHERE CONSTRAINT_TYPE = 'UNIQUE'
-            AND TABLE_SCHEMA = %s
-        )
-        ORDER BY TABLE_NAME, COLUMN_NAME
-    """,
-        (database, database),
-    )
-
-    def decode_if_bytes(val):
-        return val.decode("utf-8") if isinstance(val, bytes) else val
-
-    unique_constraints = {}
-    for row in cursor.fetchall():
-        table_name = decode_if_bytes(row[0])
-        column_name = decode_if_bytes(row[1])
-
-        if table_name not in unique_constraints:
-            unique_constraints[table_name] = []
-
-        unique_constraints[table_name].append(column_name)
-
-    return unique_constraints
+# Utility functions using imported modules
 
 
 def detect_relationships_by_convention(
@@ -872,6 +569,102 @@ def get_pivot_owner_relationships(
     return relationships
 
 
+def get_attribute_relationship_type(
+    table_name: str,
+    table_columns: Dict[str, List[Dict[str, Any]]],
+    fk_constraints: Dict[str, List[Dict[str, str]]],
+) -> Optional[str]:
+    """
+    Determine how a table relates to attributes.
+
+    Returns:
+        'pivot' - Uses attribute_owners pivot table (items, mobiles)
+        'direct' - Has direct attribute table (mobile_items -> mobile_item_attributes)
+        None - No attribute relationship
+    """
+    # Check if table is a pivot owner (has FK in attribute_owners)
+    pivot_rels = get_pivot_owner_relationships(table_name, table_columns, fk_constraints)
+    for rel in pivot_rels:
+        if rel['pivot_table'] == 'attribute_owners':
+            return 'pivot'
+
+    # Check for direct attribute table pattern
+    # Look for table named {singular}_attributes with FK back to this table
+    singular_name = TableNaming.singularize(table_name)
+    attribute_table = f"{singular_name}_attributes"
+
+    if attribute_table in table_columns:
+        # Verify it has FK pointing back to this table
+        attr_fks = fk_constraints.get(attribute_table, [])
+        fk_column = f"{singular_name}_id"
+        for fk in attr_fks:
+            if fk['column'] == fk_column and fk['referenced_table'] == table_name:
+                return 'direct'
+
+    return None
+
+
+def generate_direct_attribute_methods(
+    table_name: str,
+    attribute_table: str,
+) -> str:
+    """
+    Generate get_attributes() method for tables with direct attribute tables.
+
+    For mobile_items -> mobile_item_attributes pattern.
+    Converts direct attribute records to standard Attribute objects for Thrift compatibility.
+    """
+    singular_name = TableNaming.singularize(table_name)
+    class_name = TableNaming.to_pascal_case(singular_name)
+    attr_class = TableNaming.to_pascal_case(TableNaming.singularize(attribute_table))
+    fk_column = f"{singular_name}_id"
+
+    code = f'''
+    def get_attributes(self, reload: bool = False) -> List['Attribute']:
+        """
+        Get all attributes for this {class_name} from {attribute_table} table.
+        Converts to standard Attribute objects for Thrift compatibility.
+
+        Args:
+            reload: If True, ignore cache and reload from database
+        """
+        # Check cache first
+        cache_key = '_attributes_cache'
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        # Fetch from database
+        my_id = self.get_id()
+        if my_id is None:
+            return []
+
+        # Get direct attribute records
+        direct_attrs = {attr_class}.find_by_{fk_column}(my_id)
+
+        # Convert to standard Attribute objects
+        attributes = []
+        for direct_attr in direct_attrs:
+            attr = Attribute()
+            attr._data['internal_name'] = direct_attr.get_internal_name()
+            attr._data['visible'] = direct_attr.get_visible()
+            attr._data['attribute_type'] = direct_attr.get_attribute_type()
+            attr._data['bool_value'] = direct_attr.get_bool_value()
+            attr._data['double_value'] = direct_attr.get_double_value()
+            attr._data['vector3_x'] = direct_attr.get_vector3_x()
+            attr._data['vector3_y'] = direct_attr.get_vector3_y()
+            attr._data['vector3_z'] = direct_attr.get_vector3_z()
+            attr._data['asset_id'] = direct_attr.get_asset_id()
+            attributes.append(attr)
+
+        # Cache results
+        setattr(self, cache_key, attributes)
+        return attributes
+'''
+    return code
+
+
 def generate_pivot_owner_methods(
     owner_table_name: str,
     pivot_table_name: str,
@@ -1054,8 +847,9 @@ def generate_pivot_owner_methods(
         self._connect()
 
         try:
-            # Start transaction for all operations
-            self._connection.start_transaction()
+            # Start transaction for all operations only if one isn't already active
+            if not self._connection.in_transaction:
+                self._connection.start_transaction()
 
             # Get existing {related_plural}
             existing = self.get_{related_plural}(reload=True)
@@ -1697,6 +1491,8 @@ def generate_from_thrift_method(
     columns: List[Dict[str, Any]],
     thrift_struct_name: str,
     relationships: Dict[str, Any],
+    table_columns: Dict[str, List[Dict[str, Any]]],
+    fk_constraints: Dict[str, List[Dict[str, str]]],
 ) -> str:
     """
     Generate from_thrift() method for converting Thrift object to Model.
@@ -1707,6 +1503,8 @@ def generate_from_thrift_method(
         columns: List of column definitions
         thrift_struct_name: Name of the Thrift struct
         relationships: Relationships metadata
+        table_columns: All table columns dict
+        fk_constraints: All FK constraints dict
 
     Returns:
         Generated method code as a string
@@ -1773,9 +1571,18 @@ def generate_from_thrift_method(
     if needs_attribute_value_conversion(columns):
         method_code += generate_attribute_value_to_db_code()
 
-    # Handle attribute map (for items, mobiles, etc. with attributes relationship)
-    if table_name in ['items', 'mobiles', 'mobile_items']:
+    # Handle attribute map (for tables with attributes relationship)
+    attr_rel_type = get_attribute_relationship_type(table_name, table_columns, fk_constraints)
+    if attr_rel_type == 'pivot':
         method_code += generate_attribute_map_to_pivot_code()
+    elif attr_rel_type == 'direct':
+        # Direct attribute tables handle conversion differently
+        # Store pending attributes for later save
+        method_code += '''
+        # Store attributes for direct table conversion
+        if hasattr(thrift_obj, 'attributes') and thrift_obj.attributes is not None:
+            self._pending_attributes = thrift_obj.attributes
+'''
 
     # Handle embedded 1-to-1 relationships (e.g., Player.mobile)
     has_many_rels = relationships.get('has_many', [])
@@ -1816,6 +1623,8 @@ def generate_into_thrift_method(
     columns: List[Dict[str, Any]],
     thrift_struct_name: str,
     relationships: Dict[str, Any],
+    table_columns: Dict[str, List[Dict[str, Any]]],
+    fk_constraints: Dict[str, List[Dict[str, str]]],
 ) -> str:
     """
     Generate into_thrift() method for converting Model to Thrift object.
@@ -1826,6 +1635,8 @@ def generate_into_thrift_method(
         columns: List of column definitions
         thrift_struct_name: Name of the Thrift struct
         relationships: Relationships metadata
+        table_columns: All table columns dict
+        fk_constraints: All FK constraints dict
 
     Returns:
         Generated method code as a string
@@ -1896,29 +1707,16 @@ def generate_into_thrift_method(
         method_code += generate_db_to_attribute_value_code()
         method_code += "            thrift_params['value'] = value\n"
 
-    # Handle attribute map loading (for items, mobiles, etc. with attributes relationship)
-    if table_name in ['items', 'mobiles', 'mobile_items']:
+    # Handle attribute map loading (for tables with attributes relationship)
+    attr_rel_type = get_attribute_relationship_type(table_name, table_columns, fk_constraints)
+    if attr_rel_type in ['pivot', 'direct']:
+        # Both patterns can use get_attributes() method (direct table converts internally)
         method_code += generate_pivot_to_attribute_map_code()
         method_code += "            thrift_params['attributes'] = attributes_map\n"
 
-    # Load belongs-to relationships
-    belongs_to_rels = relationships.get("belongs_to", [])
-    for rel in belongs_to_rels:
-        rel_name = TableNaming.column_to_relationship_name(rel["column"])
-        # Skip if it's part of an owner union
-        if rel["column"] in ['owner_player_id', 'owner_mobile_id', 'owner_item_id', 'owner_asset_id']:
-            continue
-
-        method_code += f'''
-            # Load {rel_name} relationship
-            {rel_name}_model = self.get_{rel_name}()
-            if {rel_name}_model is not None:
-                {rel_name}_results, {rel_name}_thrift = {rel_name}_model.into_thrift()
-                if {rel_name}_thrift is not None:
-                    thrift_params['{rel_name}'] = {rel_name}_thrift
-                else:
-                    results.extend({rel_name}_results)
-'''
+    # NOTE: Belongs-to relationships are NOT embedded in Thrift by default
+    # Foreign key IDs are included as direct column mappings above
+    # Only has-many/1-to-1 relationships configured for embedding are included
 
     # Load has-many/1-to-1 embedded relationships
     has_many_rels = relationships.get('has_many', [])
@@ -1947,7 +1745,7 @@ def generate_into_thrift_method(
     # Construct the Thrift object
     method_code += f'''
             # Create Thrift object
-            thrift_obj = {thrift_struct_name}(**thrift_params)
+            thrift_obj = Thrift{thrift_struct_name}(**thrift_params)
 
             results.append(ThriftGameResult(
                 status=ThriftStatusType.SUCCESS,
@@ -2010,6 +1808,14 @@ def generate_model(
             ))
         pivot_owner_methods = "\n".join(methods_list)
 
+    # Check for direct attribute relationship
+    attr_rel_type = get_attribute_relationship_type(table_name, table_columns, fk_constraints)
+    direct_attribute_methods = ""
+    if attr_rel_type == 'direct':
+        singular_name = TableNaming.singularize(table_name)
+        attribute_table = f"{singular_name}_attributes"
+        direct_attribute_methods = generate_direct_attribute_methods(table_name, attribute_table)
+
     # Check if this table has Thrift conversion
     has_thrift_conversion = has_thrift_mapping(table_name)
 
@@ -2051,6 +1857,8 @@ def generate_model(
             columns,
             thrift_struct_name,
             relationships,
+            table_columns,
+            fk_constraints,
         )
         into_thrift_method = generate_into_thrift_method(
             table_name,
@@ -2058,6 +1866,8 @@ def generate_model(
             columns,
             thrift_struct_name,
             relationships,
+            table_columns,
+            fk_constraints,
         )
         thrift_conversion_methods = from_thrift_method + "\n" + into_thrift_method
 
@@ -2083,6 +1893,7 @@ def generate_model(
         belongs_to_methods=belongs_to_methods,
         has_many_methods=has_many_methods,
         pivot_owner_methods=pivot_owner_methods,
+        direct_attribute_methods=direct_attribute_methods,
         cascade_save_belongs_to=cascade_save_belongs_to,
         cascade_save_has_many=cascade_save_has_many,
         cascade_destroy=cascade_destroy,
@@ -3115,8 +2926,10 @@ def generate_thrift_conversion_tests(model: Dict[str, Any]) -> str:
 
     tests += '''
 
-        # Clean up
-        loaded_model.destroy()
+        # Clean up - use fresh connection to avoid nested transaction
+        cleanup_conn = loaded_model._create_connection()
+        loaded_model.destroy(connection=cleanup_conn)
+        cleanup_conn.close()
 '''
 
     return tests

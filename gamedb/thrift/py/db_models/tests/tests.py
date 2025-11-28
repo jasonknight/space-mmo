@@ -807,8 +807,10 @@ class TestAttributeRelationships(unittest.TestCase):
         self.assertIsNotNone(thrift_obj_out, f"into_thrift failed: {results[0].message if results else 'unknown'}")
         self.assertEqual(thrift_obj_out.attribute_type, AttributeType.STRENGTH)
 
-        # Clean up
-        loaded_model.destroy()
+        # Clean up - use fresh connection to avoid nested transaction
+        cleanup_conn = loaded_model._create_connection()
+        loaded_model.destroy(connection=cleanup_conn)
+        cleanup_conn.close()
 
 
 
@@ -2922,8 +2924,10 @@ class TestItemRelationships(unittest.TestCase):
         self.assertIsNotNone(thrift_obj_out, f"into_thrift failed: {results[0].message if results else 'unknown'}")
         self.assertEqual(thrift_obj_out.item_type, ItemType.RAWMATERIAL)
 
-        # Clean up
-        loaded_model.destroy()
+        # Clean up - use fresh connection to avoid nested transaction
+        cleanup_conn = loaded_model._create_connection()
+        loaded_model.destroy(connection=cleanup_conn)
+        cleanup_conn.close()
 
 
 
@@ -3252,9 +3256,6 @@ class TestMobileItemBlueprintComponentRelationships(unittest.TestCase):
         self.assertFalse(parent._dirty)
         self.assertFalse(related._dirty)
 
-    # TODO: Add Owner union tests for tables with owner fields
-    # TODO: Add AttributeValue union tests for attributes table
-
 
 
 class TestMobileItemBlueprintRelationships(unittest.TestCase):
@@ -3435,9 +3436,6 @@ class TestMobileItemBlueprintRelationships(unittest.TestCase):
         except Exception as e:
             # Expected if DB has FK constraints with RESTRICT or NO ACTION
             pass
-
-    # TODO: Add Owner union tests for tables with owner fields
-    # TODO: Add AttributeValue union tests for attributes table
 
 
 
@@ -4197,8 +4195,10 @@ class TestMobileItemRelationships(unittest.TestCase):
         self.assertIsNotNone(thrift_obj_out, f"into_thrift failed: {results[0].message if results else 'unknown'}")
         self.assertEqual(thrift_obj_out.item_type, ItemType.RAWMATERIAL)
 
-        # Clean up
-        loaded_model.destroy()
+        # Clean up - use fresh connection to avoid nested transaction
+        cleanup_conn = loaded_model._create_connection()
+        loaded_model.destroy(connection=cleanup_conn)
+        cleanup_conn.close()
 
 
 

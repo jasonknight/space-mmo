@@ -60,6 +60,7 @@ class {class_name}:
 
 {has_many_methods}
 {pivot_owner_methods}
+{direct_attribute_methods}
 {thrift_conversion_methods}
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
@@ -77,8 +78,9 @@ class {class_name}:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -145,8 +147,9 @@ class {class_name}:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:

@@ -45,7 +45,7 @@ class AttributeOwner:
           PRIMARY KEY (`id`),
           KEY `attribute_id` (`attribute_id`),
           CONSTRAINT `attribute_owners_ibfk_1` FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1378 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1465 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -354,6 +354,7 @@ class AttributeOwner:
 
 
 
+
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
         Save the record to the database with transaction support and cascading saves.
@@ -369,8 +370,9 @@ class AttributeOwner:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -468,8 +470,9 @@ class AttributeOwner:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -676,7 +679,7 @@ class Attribute:
           `vector3_z` double DEFAULT NULL,
           `asset_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1634 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1739 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -876,15 +879,16 @@ class Attribute:
         return iter(results) if lazy else results
 
 
-    def from_thrift(self, thrift_obj: 'ThriftAttribute') -> 'Attribute':
+
+    def from_thrift(self, thrift_obj: 'Attribute') -> 'Attribute':
         """
-        Populate this Model instance from a Thrift ThriftAttribute object.
+        Populate this Model instance from a Thrift Attribute object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift ThriftAttribute instance
+            thrift_obj: Thrift Attribute instance
 
         Returns:
             self for method chaining
@@ -934,9 +938,9 @@ class Attribute:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftAttribute']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['Attribute']]:
         """
-        Convert this Model instance to a Thrift ThriftAttribute object.
+        Convert this Model instance to a Thrift Attribute object.
 
         Loads all relationships recursively and converts them to Thrift.
 
@@ -1010,8 +1014,9 @@ class Attribute:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -1085,8 +1090,9 @@ class Attribute:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -1222,7 +1228,7 @@ class Inventory:
           `max_volume` double NOT NULL,
           `last_calculated_volume` double DEFAULT '0',
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=435 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=480 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1375,15 +1381,16 @@ class Inventory:
         return iter(results) if lazy else results
 
 
-    def from_thrift(self, thrift_obj: 'ThriftInventory') -> 'Inventory':
+
+    def from_thrift(self, thrift_obj: 'Inventory') -> 'Inventory':
         """
-        Populate this Model instance from a Thrift ThriftInventory object.
+        Populate this Model instance from a Thrift Inventory object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift ThriftInventory instance
+            thrift_obj: Thrift Inventory instance
 
         Returns:
             self for method chaining
@@ -1406,9 +1413,9 @@ class Inventory:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftInventory']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['Inventory']]:
         """
-        Convert this Model instance to a Thrift ThriftInventory object.
+        Convert this Model instance to a Thrift Inventory object.
 
         Loads all relationships recursively and converts them to Thrift.
 
@@ -1464,8 +1471,9 @@ class Inventory:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -1547,8 +1555,9 @@ class Inventory:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -1704,7 +1713,7 @@ class InventoryEntry:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_entries_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=430 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=496 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1942,15 +1951,16 @@ class InventoryEntry:
 
 
 
-    def from_thrift(self, thrift_obj: 'ThriftInventoryEntry') -> 'InventoryEntry':
+
+    def from_thrift(self, thrift_obj: 'InventoryEntry') -> 'InventoryEntry':
         """
-        Populate this Model instance from a Thrift ThriftInventoryEntry object.
+        Populate this Model instance from a Thrift InventoryEntry object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift ThriftInventoryEntry instance
+            thrift_obj: Thrift InventoryEntry instance
 
         Returns:
             self for method chaining
@@ -1973,9 +1983,9 @@ class InventoryEntry:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftInventoryEntry']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['InventoryEntry']]:
         """
-        Convert this Model instance to a Thrift ThriftInventoryEntry object.
+        Convert this Model instance to a Thrift InventoryEntry object.
 
         Loads all relationships recursively and converts them to Thrift.
 
@@ -1991,33 +2001,6 @@ class InventoryEntry:
             thrift_params['id'] = self._data.get('id')
             thrift_params['quantity'] = self._data.get('quantity')
             thrift_params['is_max_stacked'] = self._data.get('is_max_stacked')
-
-            # Load inventory relationship
-            inventory_model = self.get_inventory()
-            if inventory_model is not None:
-                inventory_results, inventory_thrift = inventory_model.into_thrift()
-                if inventory_thrift is not None:
-                    thrift_params['inventory'] = inventory_thrift
-                else:
-                    results.extend(inventory_results)
-
-            # Load item relationship
-            item_model = self.get_item()
-            if item_model is not None:
-                item_results, item_thrift = item_model.into_thrift()
-                if item_thrift is not None:
-                    thrift_params['item'] = item_thrift
-                else:
-                    results.extend(item_results)
-
-            # Load mobile_item relationship
-            mobile_item_model = self.get_mobile_item()
-            if mobile_item_model is not None:
-                mobile_item_results, mobile_item_thrift = mobile_item_model.into_thrift()
-                if mobile_item_thrift is not None:
-                    thrift_params['mobile_item'] = mobile_item_thrift
-                else:
-                    results.extend(mobile_item_results)
 
             # Create Thrift object
             thrift_obj = ThriftInventoryEntry(**thrift_params)
@@ -2055,8 +2038,9 @@ class InventoryEntry:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -2146,8 +2130,9 @@ class InventoryEntry:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -2310,7 +2295,7 @@ class InventoryOwner:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_owners_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=718 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=769 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2619,6 +2604,7 @@ class InventoryOwner:
 
 
 
+
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
         Save the record to the database with transaction support and cascading saves.
@@ -2634,8 +2620,9 @@ class InventoryOwner:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -2733,8 +2720,9 @@ class InventoryOwner:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -2937,7 +2925,7 @@ class ItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=270 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=303 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3057,15 +3045,16 @@ class ItemBlueprintComponent:
 
 
 
-    def from_thrift(self, thrift_obj: 'ThriftItemBlueprintComponent') -> 'ItemBlueprintComponent':
+
+    def from_thrift(self, thrift_obj: 'ItemBlueprintComponent') -> 'ItemBlueprintComponent':
         """
-        Populate this Model instance from a Thrift ThriftItemBlueprintComponent object.
+        Populate this Model instance from a Thrift ItemBlueprintComponent object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift ThriftItemBlueprintComponent instance
+            thrift_obj: Thrift ItemBlueprintComponent instance
 
         Returns:
             self for method chaining
@@ -3084,9 +3073,9 @@ class ItemBlueprintComponent:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftItemBlueprintComponent']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ItemBlueprintComponent']]:
         """
-        Convert this Model instance to a Thrift ThriftItemBlueprintComponent object.
+        Convert this Model instance to a Thrift ItemBlueprintComponent object.
 
         Loads all relationships recursively and converts them to Thrift.
 
@@ -3102,15 +3091,6 @@ class ItemBlueprintComponent:
             thrift_params['id'] = self._data.get('id')
             thrift_params['component_item_id'] = self._data.get('component_item_id')
             thrift_params['ratio'] = self._data.get('ratio')
-
-            # Load item_blueprint relationship
-            item_blueprint_model = self.get_item_blueprint()
-            if item_blueprint_model is not None:
-                item_blueprint_results, item_blueprint_thrift = item_blueprint_model.into_thrift()
-                if item_blueprint_thrift is not None:
-                    thrift_params['item_blueprint'] = item_blueprint_thrift
-                else:
-                    results.extend(item_blueprint_results)
 
             # Create Thrift object
             thrift_obj = ThriftItemBlueprintComponent(**thrift_params)
@@ -3148,8 +3128,9 @@ class ItemBlueprintComponent:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -3223,8 +3204,9 @@ class ItemBlueprintComponent:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -3360,7 +3342,7 @@ class ItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=518 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=581 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3515,15 +3497,16 @@ class ItemBlueprint:
         return iter(results) if lazy else results
 
 
-    def from_thrift(self, thrift_obj: 'ThriftItemBlueprint') -> 'ItemBlueprint':
+
+    def from_thrift(self, thrift_obj: 'ItemBlueprint') -> 'ItemBlueprint':
         """
-        Populate this Model instance from a Thrift ThriftItemBlueprint object.
+        Populate this Model instance from a Thrift ItemBlueprint object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift ThriftItemBlueprint instance
+            thrift_obj: Thrift ItemBlueprint instance
 
         Returns:
             self for method chaining
@@ -3538,9 +3521,9 @@ class ItemBlueprint:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftItemBlueprint']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ItemBlueprint']]:
         """
-        Convert this Model instance to a Thrift ThriftItemBlueprint object.
+        Convert this Model instance to a Thrift ItemBlueprint object.
 
         Loads all relationships recursively and converts them to Thrift.
 
@@ -3592,8 +3575,9 @@ class ItemBlueprint:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -3683,8 +3667,9 @@ class ItemBlueprint:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -3836,7 +3821,7 @@ class Item:
           `item_type` varchar(50) NOT NULL,
           `blueprint_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=2878 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=3085 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -4338,8 +4323,9 @@ class Item:
         self._connect()
 
         try:
-            # Start transaction for all operations
-            self._connection.start_transaction()
+            # Start transaction for all operations only if one isn't already active
+            if not self._connection.in_transaction:
+                self._connection.start_transaction()
 
             # Get existing attributes
             existing = self.get_attributes(reload=True)
@@ -4546,8 +4532,9 @@ class Item:
         self._connect()
 
         try:
-            # Start transaction for all operations
-            self._connection.start_transaction()
+            # Start transaction for all operations only if one isn't already active
+            if not self._connection.in_transaction:
+                self._connection.start_transaction()
 
             # Get existing inventories
             existing = self.get_inventories(reload=True)
@@ -4596,15 +4583,16 @@ class Item:
             raise
 
 
-    def from_thrift(self, thrift_obj: 'ThriftItem') -> 'Item':
+
+    def from_thrift(self, thrift_obj: 'Item') -> 'Item':
         """
-        Populate this Model instance from a Thrift ThriftItem object.
+        Populate this Model instance from a Thrift Item object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift ThriftItem instance
+            thrift_obj: Thrift Item instance
 
         Returns:
             self for method chaining
@@ -4639,9 +4627,9 @@ class Item:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftItem']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['Item']]:
         """
-        Convert this Model instance to a Thrift ThriftItem object.
+        Convert this Model instance to a Thrift Item object.
 
         Loads all relationships recursively and converts them to Thrift.
 
@@ -4671,15 +4659,6 @@ class Item:
                         # Use attribute_type as the map key
                         attributes_map[attr_thrift.attribute_type] = attr_thrift
             thrift_params['attributes'] = attributes_map
-
-            # Load blueprint relationship
-            blueprint_model = self.get_blueprint()
-            if blueprint_model is not None:
-                blueprint_results, blueprint_thrift = blueprint_model.into_thrift()
-                if blueprint_thrift is not None:
-                    thrift_params['blueprint'] = blueprint_thrift
-                else:
-                    results.extend(blueprint_results)
 
             # Create Thrift object
             thrift_obj = ThriftItem(**thrift_params)
@@ -4717,8 +4696,9 @@ class Item:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -4831,8 +4811,9 @@ class Item:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -5079,7 +5060,7 @@ class MobileItemAttribute:
           PRIMARY KEY (`id`),
           KEY `mobile_item_id` (`mobile_item_id`),
           CONSTRAINT `mobile_item_attributes_ibfk_1` FOREIGN KEY (`mobile_item_id`) REFERENCES `mobile_items` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=179 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=203 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5256,6 +5237,7 @@ class MobileItemAttribute:
 
 
 
+
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
         """
         Save the record to the database with transaction support and cascading saves.
@@ -5271,8 +5253,9 @@ class MobileItemAttribute:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -5346,8 +5329,9 @@ class MobileItemAttribute:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -5487,7 +5471,7 @@ class MobileItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `mobile_item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `mobile_item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=240 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=273 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5607,80 +5591,6 @@ class MobileItemBlueprintComponent:
 
 
 
-    def from_thrift(self, thrift_obj: 'ThriftItemBlueprintComponent') -> 'MobileItemBlueprintComponent':
-        """
-        Populate this Model instance from a Thrift ThriftItemBlueprintComponent object.
-
-        This method performs pure data conversion without database queries.
-        Call save() after this to persist to the database.
-
-        Args:
-            thrift_obj: Thrift ThriftItemBlueprintComponent instance
-
-        Returns:
-            self for method chaining
-        """
-        # Map simple fields from Thrift to Model
-        if hasattr(thrift_obj, 'id'):
-            self._data['id'] = thrift_obj.id
-        if hasattr(thrift_obj, 'item_blueprint_id'):
-            self._data['item_blueprint_id'] = thrift_obj.item_blueprint_id
-        if hasattr(thrift_obj, 'component_item_id'):
-            self._data['component_item_id'] = thrift_obj.component_item_id
-        if hasattr(thrift_obj, 'ratio'):
-            self._data['ratio'] = thrift_obj.ratio
-
-        self._dirty = True
-        return self
-
-
-    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftItemBlueprintComponent']]:
-        """
-        Convert this Model instance to a Thrift ThriftItemBlueprintComponent object.
-
-        Loads all relationships recursively and converts them to Thrift.
-
-        Returns:
-            Tuple of (list[ThriftGameResult], Optional[Thrift object])
-        """
-        results = []
-
-        try:
-            # Build parameters for Thrift object constructor
-            thrift_params = {}
-
-            thrift_params['id'] = self._data.get('id')
-            thrift_params['component_item_id'] = self._data.get('component_item_id')
-            thrift_params['ratio'] = self._data.get('ratio')
-
-            # Load item_blueprint relationship
-            item_blueprint_model = self.get_item_blueprint()
-            if item_blueprint_model is not None:
-                item_blueprint_results, item_blueprint_thrift = item_blueprint_model.into_thrift()
-                if item_blueprint_thrift is not None:
-                    thrift_params['item_blueprint'] = item_blueprint_thrift
-                else:
-                    results.extend(item_blueprint_results)
-
-            # Create Thrift object
-            thrift_obj = ThriftItemBlueprintComponent(**thrift_params)
-
-            results.append(ThriftGameResult(
-                status=ThriftStatusType.SUCCESS,
-                message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
-            ))
-
-            return (results, thrift_obj)
-
-        except Exception as e:
-            return (
-                [ThriftGameResult(
-                    status=ThriftStatusType.FAILURE,
-                    message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
-                    error_code=ThriftGameError.DB_QUERY_FAILED,
-                )],
-                None,
-            )
 
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
@@ -5698,8 +5608,9 @@ class MobileItemBlueprintComponent:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -5773,8 +5684,9 @@ class MobileItemBlueprintComponent:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -5910,7 +5822,7 @@ class MobileItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=445 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=475 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5997,66 +5909,6 @@ class MobileItemBlueprint:
         return iter(results) if lazy else results
 
 
-    def from_thrift(self, thrift_obj: 'ThriftItemBlueprint') -> 'MobileItemBlueprint':
-        """
-        Populate this Model instance from a Thrift ThriftItemBlueprint object.
-
-        This method performs pure data conversion without database queries.
-        Call save() after this to persist to the database.
-
-        Args:
-            thrift_obj: Thrift ThriftItemBlueprint instance
-
-        Returns:
-            self for method chaining
-        """
-        # Map simple fields from Thrift to Model
-        if hasattr(thrift_obj, 'id'):
-            self._data['id'] = thrift_obj.id
-        if hasattr(thrift_obj, 'bake_time_ms'):
-            self._data['bake_time_ms'] = thrift_obj.bake_time_ms
-
-        self._dirty = True
-        return self
-
-
-    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftItemBlueprint']]:
-        """
-        Convert this Model instance to a Thrift ThriftItemBlueprint object.
-
-        Loads all relationships recursively and converts them to Thrift.
-
-        Returns:
-            Tuple of (list[ThriftGameResult], Optional[Thrift object])
-        """
-        results = []
-
-        try:
-            # Build parameters for Thrift object constructor
-            thrift_params = {}
-
-            thrift_params['id'] = self._data.get('id')
-            thrift_params['bake_time_ms'] = self._data.get('bake_time_ms')
-
-            # Create Thrift object
-            thrift_obj = ThriftItemBlueprint(**thrift_params)
-
-            results.append(ThriftGameResult(
-                status=ThriftStatusType.SUCCESS,
-                message=f"Successfully converted {self.__class__.__name__} id={self.get_id()} to Thrift",
-            ))
-
-            return (results, thrift_obj)
-
-        except Exception as e:
-            return (
-                [ThriftGameResult(
-                    status=ThriftStatusType.FAILURE,
-                    message=f"Failed to convert {self.__class__.__name__} to Thrift: {str(e)}",
-                    error_code=ThriftGameError.DB_QUERY_FAILED,
-                )],
-                None,
-            )
 
 
     def save(self, connection: Optional[mysql.connector.connection.MySQLConnection] = None, cascade: bool = True) -> None:
@@ -6074,8 +5926,9 @@ class MobileItemBlueprint:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -6149,8 +6002,9 @@ class MobileItemBlueprint:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -6268,7 +6122,7 @@ class MobileItem:
           `blueprint_id` bigint DEFAULT NULL,
           `item_id` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=642 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=729 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -6629,15 +6483,58 @@ class MobileItem:
         return iter(results) if lazy else results
 
 
-    def from_thrift(self, thrift_obj: 'ThriftMobileItem') -> 'MobileItem':
+    def get_attributes(self, reload: bool = False) -> List['Attribute']:
         """
-        Populate this Model instance from a Thrift ThriftMobileItem object.
+        Get all attributes for this MobileItem from mobile_item_attributes table.
+        Converts to standard Attribute objects for Thrift compatibility.
+
+        Args:
+            reload: If True, ignore cache and reload from database
+        """
+        # Check cache first
+        cache_key = '_attributes_cache'
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                return cached
+
+        # Fetch from database
+        my_id = self.get_id()
+        if my_id is None:
+            return []
+
+        # Get direct attribute records
+        direct_attrs = MobileItemAttribute.find_by_mobile_item_id(my_id)
+
+        # Convert to standard Attribute objects
+        attributes = []
+        for direct_attr in direct_attrs:
+            attr = Attribute()
+            attr._data['internal_name'] = direct_attr.get_internal_name()
+            attr._data['visible'] = direct_attr.get_visible()
+            attr._data['attribute_type'] = direct_attr.get_attribute_type()
+            attr._data['bool_value'] = direct_attr.get_bool_value()
+            attr._data['double_value'] = direct_attr.get_double_value()
+            attr._data['vector3_x'] = direct_attr.get_vector3_x()
+            attr._data['vector3_y'] = direct_attr.get_vector3_y()
+            attr._data['vector3_z'] = direct_attr.get_vector3_z()
+            attr._data['asset_id'] = direct_attr.get_asset_id()
+            attributes.append(attr)
+
+        # Cache results
+        setattr(self, cache_key, attributes)
+        return attributes
+
+
+    def from_thrift(self, thrift_obj: 'MobileItem') -> 'MobileItem':
+        """
+        Populate this Model instance from a Thrift MobileItem object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift ThriftMobileItem instance
+            thrift_obj: Thrift MobileItem instance
 
         Returns:
             self for method chaining
@@ -6661,24 +6558,17 @@ class MobileItem:
         if hasattr(thrift_obj, 'item_id'):
             self._data['item_id'] = thrift_obj.item_id
 
-        # Store attributes map for later conversion via set_attributes()
-        # The actual pivot table records will be created when save() is called
+        # Store attributes for direct table conversion
         if hasattr(thrift_obj, 'attributes') and thrift_obj.attributes is not None:
-            # Convert thrift attributes to Attribute models
-            self._pending_attributes = []
-            for attr_type, attr_thrift in thrift_obj.attributes.items():
-                # Import Attribute model (assumes it's available)
-                attr_model = Attribute()
-                attr_model.from_thrift(attr_thrift)
-                self._pending_attributes.append((attr_type, attr_model))
+            self._pending_attributes = thrift_obj.attributes
 
         self._dirty = True
         return self
 
 
-    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftMobileItem']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['MobileItem']]:
         """
-        Convert this Model instance to a Thrift ThriftMobileItem object.
+        Convert this Model instance to a Thrift MobileItem object.
 
         Loads all relationships recursively and converts them to Thrift.
 
@@ -6708,33 +6598,6 @@ class MobileItem:
                         # Use attribute_type as the map key
                         attributes_map[attr_thrift.attribute_type] = attr_thrift
             thrift_params['attributes'] = attributes_map
-
-            # Load mobile relationship
-            mobile_model = self.get_mobile()
-            if mobile_model is not None:
-                mobile_results, mobile_thrift = mobile_model.into_thrift()
-                if mobile_thrift is not None:
-                    thrift_params['mobile'] = mobile_thrift
-                else:
-                    results.extend(mobile_results)
-
-            # Load blueprint relationship
-            blueprint_model = self.get_blueprint()
-            if blueprint_model is not None:
-                blueprint_results, blueprint_thrift = blueprint_model.into_thrift()
-                if blueprint_thrift is not None:
-                    thrift_params['blueprint'] = blueprint_thrift
-                else:
-                    results.extend(blueprint_results)
-
-            # Load item relationship
-            item_model = self.get_item()
-            if item_model is not None:
-                item_results, item_thrift = item_model.into_thrift()
-                if item_thrift is not None:
-                    thrift_params['item'] = item_thrift
-                else:
-                    results.extend(item_results)
 
             # Create Thrift object
             thrift_obj = ThriftMobileItem(**thrift_params)
@@ -6772,8 +6635,9 @@ class MobileItem:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -6878,8 +6742,9 @@ class MobileItem:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -7076,7 +6941,7 @@ class Mobile:
           `owner_player_id` bigint DEFAULT NULL,
           `what_we_call_you` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1948 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=2107 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -7619,8 +7484,9 @@ class Mobile:
         self._connect()
 
         try:
-            # Start transaction for all operations
-            self._connection.start_transaction()
+            # Start transaction for all operations only if one isn't already active
+            if not self._connection.in_transaction:
+                self._connection.start_transaction()
 
             # Get existing attributes
             existing = self.get_attributes(reload=True)
@@ -7827,8 +7693,9 @@ class Mobile:
         self._connect()
 
         try:
-            # Start transaction for all operations
-            self._connection.start_transaction()
+            # Start transaction for all operations only if one isn't already active
+            if not self._connection.in_transaction:
+                self._connection.start_transaction()
 
             # Get existing inventories
             existing = self.get_inventories(reload=True)
@@ -7877,15 +7744,16 @@ class Mobile:
             raise
 
 
-    def from_thrift(self, thrift_obj: 'ThriftMobile') -> 'Mobile':
+
+    def from_thrift(self, thrift_obj: 'Mobile') -> 'Mobile':
         """
-        Populate this Model instance from a Thrift ThriftMobile object.
+        Populate this Model instance from a Thrift Mobile object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift ThriftMobile instance
+            thrift_obj: Thrift Mobile instance
 
         Returns:
             self for method chaining
@@ -7932,9 +7800,9 @@ class Mobile:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftMobile']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['Mobile']]:
         """
-        Convert this Model instance to a Thrift ThriftMobile object.
+        Convert this Model instance to a Thrift Mobile object.
 
         Loads all relationships recursively and converts them to Thrift.
 
@@ -8012,8 +7880,9 @@ class Mobile:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -8126,8 +7995,9 @@ class Mobile:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -8395,7 +8265,7 @@ class Player:
           `year_of_birth` bigint NOT NULL,
           `email` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=815 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=863 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -8744,8 +8614,9 @@ class Player:
         self._connect()
 
         try:
-            # Start transaction for all operations
-            self._connection.start_transaction()
+            # Start transaction for all operations only if one isn't already active
+            if not self._connection.in_transaction:
+                self._connection.start_transaction()
 
             # Get existing attributes
             existing = self.get_attributes(reload=True)
@@ -8952,8 +8823,9 @@ class Player:
         self._connect()
 
         try:
-            # Start transaction for all operations
-            self._connection.start_transaction()
+            # Start transaction for all operations only if one isn't already active
+            if not self._connection.in_transaction:
+                self._connection.start_transaction()
 
             # Get existing inventories
             existing = self.get_inventories(reload=True)
@@ -9002,15 +8874,16 @@ class Player:
             raise
 
 
-    def from_thrift(self, thrift_obj: 'ThriftPlayer') -> 'Player':
+
+    def from_thrift(self, thrift_obj: 'Player') -> 'Player':
         """
-        Populate this Model instance from a Thrift ThriftPlayer object.
+        Populate this Model instance from a Thrift Player object.
 
         This method performs pure data conversion without database queries.
         Call save() after this to persist to the database.
 
         Args:
-            thrift_obj: Thrift ThriftPlayer instance
+            thrift_obj: Thrift Player instance
 
         Returns:
             self for method chaining
@@ -9031,6 +8904,17 @@ class Player:
         if hasattr(thrift_obj, 'email'):
             self._data['email'] = thrift_obj.email
 
+        # Store attributes map for later conversion via set_attributes()
+        # The actual pivot table records will be created when save() is called
+        if hasattr(thrift_obj, 'attributes') and thrift_obj.attributes is not None:
+            # Convert thrift attributes to Attribute models
+            self._pending_attributes = []
+            for attr_type, attr_thrift in thrift_obj.attributes.items():
+                # Import Attribute model (assumes it's available)
+                attr_model = Attribute()
+                attr_model.from_thrift(attr_thrift)
+                self._pending_attributes.append((attr_type, attr_model))
+
         # Handle embedded mobile (1-to-1 relationship)
         if hasattr(thrift_obj, 'mobile') and thrift_obj.mobile is not None:
             mobile_obj = Mobile()
@@ -9044,9 +8928,9 @@ class Player:
         return self
 
 
-    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['ThriftPlayer']]:
+    def into_thrift(self) -> Tuple[list[ThriftGameResult], Optional['Player']]:
         """
-        Convert this Model instance to a Thrift ThriftPlayer object.
+        Convert this Model instance to a Thrift Player object.
 
         Loads all relationships recursively and converts them to Thrift.
 
@@ -9066,6 +8950,19 @@ class Player:
             thrift_params['over_13'] = self._data.get('over_13')
             thrift_params['year_of_birth'] = self._data.get('year_of_birth')
             thrift_params['email'] = self._data.get('email')
+
+            # Load attributes via pivot table and convert to map<AttributeType, Attribute>
+            attributes_map = {}
+            if self.get_id() is not None:
+                # Get attributes through the pivot relationship
+                attribute_models = self.get_attributes(reload=True)
+                for attr_model in attribute_models:
+                    # Convert each attribute model to Thrift
+                    attr_results, attr_thrift = attr_model.into_thrift()
+                    if attr_thrift is not None:
+                        # Use attribute_type as the map key
+                        attributes_map[attr_thrift.attribute_type] = attr_thrift
+            thrift_params['attributes'] = attributes_map
 
             # Load embedded mobile (1-to-1 relationship)
             mobile_model = self.get_mobile()
@@ -9112,8 +9009,9 @@ class Player:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:
@@ -9203,8 +9101,9 @@ class Player:
         if owns_connection:
             self._connect()
             connection = self._connection
-            # Start transaction
-            connection.start_transaction()
+            # Start transaction only if one isn't already active
+            if not connection.in_transaction:
+                connection.start_transaction()
 
         cursor = None
         try:

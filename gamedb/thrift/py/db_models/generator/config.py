@@ -5,6 +5,22 @@ This module defines mappings between database tables and Thrift structs,
 union field configurations, validation rules for Owner unions, and 1-to-1
 relationship specifications.
 
+ATTRIBUTE RELATIONSHIP PATTERNS:
+--------------------------------
+Tables can relate to attributes in two ways:
+
+1. PIVOT PATTERN (items, mobiles):
+   - Uses attribute_owners pivot table
+   - attribute_owners has FK to table (item_id, mobile_id)
+   - attribute_owners has FK to attributes (attribute_id)
+   - Generates: get_attributes(), add_attribute(), remove_attribute(), set_attributes()
+
+2. DIRECT PATTERN (mobile_items):
+   - Has dedicated table: {table_singular}_attributes
+   - Direct FK from attribute table to parent (mobile_item_id)
+   - Attribute data stored denormalized (not referencing attributes table)
+   - Generates: get_attributes() that converts to Attribute objects for Thrift
+
 ADDING NEW TABLE MAPPINGS:
 --------------------------
 When adding a new table that should have Thrift conversion support:
@@ -139,7 +155,8 @@ THRIFT_CONVERSION_CONFIG = {
         'has_attribute_map': True,
     },
     'mobile_items': {
-        'has_attribute_map': True,
+        'has_attribute_map': True,  # Via direct mobile_item_attributes table, not pivot
+        'attribute_relationship': 'direct',  # Distinguishes from pivot pattern
     },
     'players': {
         'has_embedded_mobile': True,  # Player.mobile is embedded in Thrift
