@@ -37,34 +37,22 @@ from game.ttypes import (
     FieldEnumMapping,
 )
 from game.PlayerService import Iface as PlayerServiceIface
-from models.player_model import PlayerModel
+from db_models.models import Player
 from common import is_ok
-from services.lru_cache import LRUCache
 from services.base_service import BaseServiceHandler
 
 
 class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
     """
     Implementation of the PlayerService thrift interface.
-    Handles player operations using the PlayerModel layer.
-    Includes an LRU cache to reduce database queries for frequently accessed players.
+    Handles player operations using the db_models layer.
     """
 
-    def __init__(
-        self,
-        host: str,
-        user: str,
-        password: str,
-        database: str,
-        cache_size: int = 1000,
-    ):
+    def __init__(self):
         BaseServiceHandler.__init__(self, PlayerServiceHandler)
-        self.player_model = PlayerModel(host, user, password, database)
-        self.database = database
-        self.cache = LRUCache(max_size=cache_size)
 
     def load(self, request: PlayerRequest) -> PlayerResponse:
-        """Load a player by ID. Checks cache first before querying database."""
+        """Load a player by ID."""
         logger.info("=== LOAD player request ===")
         try:
             if not request.data.load_player:
@@ -84,45 +72,27 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
             player_id = load_data.player_id
             logger.info(f"Loading player_id={player_id}")
 
-            # Check cache first
-            logger.debug("Checking cache...")
-            cached_player = self.cache.get(player_id)
-            if cached_player:
-                logger.info(f"SUCCESS: Loaded player_id={player_id} from CACHE")
-                result = GameResult(
-                    status=StatusType.SUCCESS,
-                    message=f"Successfully loaded Player id={player_id} from cache",
-                )
-                response_data = PlayerResponseData(
-                    load_player=LoadPlayerResponseData(
-                        player=cached_player,
-                    ),
-                )
-                return PlayerResponse(
-                    results=[result],
-                    response_data=response_data,
-                )
-
-            # Cache miss - load from database
-            logger.debug(f"Cache miss, loading from DATABASE for player_id={player_id}")
-            result, player = self.player_model.load(player_id)
+            player = Player.find(player_id)
 
             if player:
-                logger.info(f"SUCCESS: Loaded player_id={player_id} from DATABASE")
-                # Store in cache for future requests
-                self.cache.put(player_id, player)
-
+                logger.info(f"SUCCESS: Loaded player_id={player_id}")
+                results, thrift_player = player.into_thrift()
                 response_data = PlayerResponseData(
                     load_player=LoadPlayerResponseData(
-                        player=player,
+                        player=thrift_player,
                     ),
                 )
                 return PlayerResponse(
-                    results=[result],
+                    results=results,
                     response_data=response_data,
                 )
             else:
-                logger.warning(f"FAILURE: Player_id={player_id} not found in database")
+                logger.warning(f"FAILURE: Player_id={player_id} not found")
+                result = GameResult(
+                    status=StatusType.FAILURE,
+                    message=f"Player id={player_id} not found",
+                    error_code=GameError.DB_RECORD_NOT_FOUND,
+                )
                 return PlayerResponse(
                     results=[result],
                     response_data=None,
@@ -142,7 +112,7 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
             )
 
     def create(self, request: PlayerRequest) -> PlayerResponse:
-        """Create a new player. Populates cache after successful creation."""
+        """Create a new player."""
         logger.info("=== CREATE player request ===")
         try:
             if not request.data.create_player:
@@ -159,34 +129,26 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
                 )
 
             create_data = request.data.create_player
-            logger.info(f"Creating player: {create_data.player.what_we_call_you}")
-            logger.debug(f"Full name: {create_data.player.full_name}")
+            thrift_player = create_data.player
+            logger.info(f"Creating player: {thrift_player.what_we_call_you}")
+            logger.debug(f"Full name: {thrift_player.full_name}")
 
-            results = self.player_model.create(create_data.player)
+            player = Player()
+            player.from_thrift(thrift_player)
+            player.save()
 
-            if is_ok(results):
-                logger.info(f"SUCCESS: Created player with id={create_data.player.id}")
-                # Add to cache after successful creation
-                if create_data.player.id is not None:
-                    self.cache.put(create_data.player.id, create_data.player)
+            logger.info(f"SUCCESS: Created player with id={player.get_id()}")
 
-                response_data = PlayerResponseData(
-                    create_player=CreatePlayerResponseData(
-                        player=create_data.player,
-                    ),
-                )
-                return PlayerResponse(
-                    results=results,
-                    response_data=response_data,
-                )
-            else:
-                logger.warning(
-                    f"FAILURE: Could not create player - {results[0].message if results else 'unknown error'}"
-                )
-                return PlayerResponse(
-                    results=results,
-                    response_data=None,
-                )
+            results, created_thrift_player = player.into_thrift()
+            response_data = PlayerResponseData(
+                create_player=CreatePlayerResponseData(
+                    player=created_thrift_player,
+                ),
+            )
+            return PlayerResponse(
+                results=results,
+                response_data=response_data,
+            )
 
         except Exception as e:
             logger.error(f"EXCEPTION in create: {type(e).__name__}: {str(e)}")
@@ -202,7 +164,7 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
             )
 
     def save(self, request: PlayerRequest) -> PlayerResponse:
-        """Save (create or update) a player. Updates cache after successful save."""
+        """Save (create or update) a player."""
         logger.info("=== SAVE player request ===")
         try:
             if not request.data.save_player:
@@ -219,35 +181,27 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
                 )
 
             save_data = request.data.save_player
-            player_id = save_data.player.id if save_data.player.id else "NEW"
+            thrift_player = save_data.player
+            player_id = thrift_player.id if thrift_player.id else "NEW"
             logger.info(f"Saving player_id={player_id}")
-            logger.debug(f"Player name: {save_data.player.what_we_call_you}")
+            logger.debug(f"Player name: {thrift_player.what_we_call_you}")
 
-            results = self.player_model.save(save_data.player)
+            player = Player()
+            player.from_thrift(thrift_player)
+            player.save()
 
-            if is_ok(results):
-                logger.info(f"SUCCESS: Saved player_id={save_data.player.id}")
-                # Update cache after successful save
-                if save_data.player.id is not None:
-                    self.cache.put(save_data.player.id, save_data.player)
+            logger.info(f"SUCCESS: Saved player_id={player.get_id()}")
 
-                response_data = PlayerResponseData(
-                    save_player=SavePlayerResponseData(
-                        player=save_data.player,
-                    ),
-                )
-                return PlayerResponse(
-                    results=results,
-                    response_data=response_data,
-                )
-            else:
-                logger.warning(
-                    f"FAILURE: Could not save player - {results[0].message if results else 'unknown error'}"
-                )
-                return PlayerResponse(
-                    results=results,
-                    response_data=None,
-                )
+            results, saved_thrift_player = player.into_thrift()
+            response_data = PlayerResponseData(
+                save_player=SavePlayerResponseData(
+                    player=saved_thrift_player,
+                ),
+            )
+            return PlayerResponse(
+                results=results,
+                response_data=response_data,
+            )
 
         except Exception as e:
             logger.error(f"EXCEPTION in save: {type(e).__name__}: {str(e)}")
@@ -256,14 +210,14 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
                     GameResult(
                         status=StatusType.FAILURE,
                         message=f"Failed to save player: {str(e)}",
-                        error_code=GameError.DB_INSERT_FAILED,
+                        error_code=GameError.DB_UPDATE_FAILED,
                     ),
                 ],
                 response_data=None,
             )
 
     def delete(self, request: PlayerRequest) -> PlayerResponse:
-        """Delete a player by ID. Invalidates cache after successful deletion."""
+        """Delete a player by ID."""
         logger.info("=== DELETE player request ===")
         try:
             if not request.data.delete_player:
@@ -283,30 +237,37 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
             player_id = delete_data.player_id
             logger.info(f"Deleting player_id={player_id}")
 
-            results = self.player_model.destroy(player_id)
+            player = Player.find(player_id)
 
-            if is_ok(results):
-                logger.info(f"SUCCESS: Deleted player_id={player_id}")
-                # Invalidate cache after successful deletion
-                self.cache.invalidate(player_id)
-
-                response_data = PlayerResponseData(
-                    delete_player=DeletePlayerResponseData(
-                        player_id=player_id,
-                    ),
+            if not player:
+                logger.warning(f"FAILURE: Player_id={player_id} not found")
+                result = GameResult(
+                    status=StatusType.FAILURE,
+                    message=f"Player id={player_id} not found",
+                    error_code=GameError.DB_RECORD_NOT_FOUND,
                 )
                 return PlayerResponse(
-                    results=results,
-                    response_data=response_data,
-                )
-            else:
-                logger.warning(
-                    f"FAILURE: Could not delete player - {results[0].message if results else 'unknown error'}"
-                )
-                return PlayerResponse(
-                    results=results,
+                    results=[result],
                     response_data=None,
                 )
+
+            player._disconnect()
+            player.destroy()
+            logger.info(f"SUCCESS: Deleted player_id={player_id}")
+
+            response_data = PlayerResponseData(
+                delete_player=DeletePlayerResponseData(
+                    player_id=player_id,
+                ),
+            )
+            result = GameResult(
+                status=StatusType.SUCCESS,
+                message=f"Successfully deleted Player id={player_id}",
+            )
+            return PlayerResponse(
+                results=[result],
+                response_data=response_data,
+            )
 
         except Exception as e:
             logger.error(f"EXCEPTION in delete: {type(e).__name__}: {str(e)}")
@@ -324,6 +285,7 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
     def list_records(self, request: PlayerRequest) -> PlayerResponse:
         """List players with pagination and optional search."""
         logger.info("=== LIST player records request ===")
+        connection = None
         try:
             if not request.data.list_player:
                 logger.error("Request data missing list_player field")
@@ -349,32 +311,67 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
                 f"Listing players: page={page}, results_per_page={results_per_page}, search_string={search_string}"
             )
 
-            result, players, total_count = self.player_model.search(
-                page,
-                results_per_page,
-                search_string=search_string,
-            )
+            connection = Player._create_connection()
+            cursor = connection.cursor(dictionary=True)
 
-            if players is not None:
-                logger.info(
-                    f"SUCCESS: Listed {len(players)} players (total: {total_count})"
-                )
-                response_data = PlayerResponseData(
-                    list_player=ListPlayerResponseData(
-                        players=players,
-                        total_count=total_count,
-                    ),
-                )
-                return PlayerResponse(
-                    results=[result],
-                    response_data=response_data,
+            offset = page * results_per_page
+
+            if search_string:
+                count_query = """
+                    SELECT COUNT(*) as total
+                    FROM players
+                    WHERE full_name LIKE %s OR what_we_call_you LIKE %s
+                """
+                search_param = f"%{search_string}%"
+                cursor.execute(count_query, (search_param, search_param))
+                total_count = cursor.fetchone()["total"]
+
+                query = """
+                    SELECT *
+                    FROM players
+                    WHERE full_name LIKE %s OR what_we_call_you LIKE %s
+                    ORDER BY id
+                    LIMIT %s OFFSET %s
+                """
+                cursor.execute(
+                    query,
+                    (search_param, search_param, results_per_page, offset),
                 )
             else:
-                logger.warning(f"FAILURE: Could not list players - {result.message}")
-                return PlayerResponse(
-                    results=[result],
-                    response_data=None,
-                )
+                count_query = "SELECT COUNT(*) as total FROM players"
+                cursor.execute(count_query)
+                total_count = cursor.fetchone()["total"]
+
+                query = "SELECT * FROM players ORDER BY id LIMIT %s OFFSET %s"
+                cursor.execute(query, (results_per_page, offset))
+
+            rows = cursor.fetchall()
+
+            players = []
+            for row in rows:
+                player = Player()
+                player._data = row
+                player._dirty = False
+                results, thrift_player = player.into_thrift()
+                if thrift_player:
+                    players.append(thrift_player)
+
+            logger.info(f"SUCCESS: Listed {len(players)} players (total: {total_count})")
+
+            response_data = PlayerResponseData(
+                list_player=ListPlayerResponseData(
+                    players=players,
+                    total_count=total_count,
+                ),
+            )
+            result = GameResult(
+                status=StatusType.SUCCESS,
+                message=f"Successfully listed {len(players)} players",
+            )
+            return PlayerResponse(
+                results=[result],
+                response_data=response_data,
+            )
 
         except Exception as e:
             logger.error(f"EXCEPTION in list_records: {type(e).__name__}: {str(e)}")
@@ -388,3 +385,6 @@ class PlayerServiceHandler(BaseServiceHandler, PlayerServiceIface):
                 ],
                 response_data=None,
             )
+        finally:
+            if connection:
+                connection.close()

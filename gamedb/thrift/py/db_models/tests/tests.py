@@ -157,17 +157,6 @@ def create_seed_data():
     seed['itemblueprint2'].set_bake_time_ms(2)
     seed['itemblueprint2'].save()
 
-    # Create Item records
-    seed['item1'] = Item()
-    seed['item1'].set_internal_name('test_internal_name_1')
-    seed['item1'].set_item_type('test_item_type_1')
-    seed['item1'].save()
-
-    seed['item2'] = Item()
-    seed['item2'].set_internal_name('test_internal_name_2')
-    seed['item2'].set_item_type('test_item_type_2')
-    seed['item2'].save()
-
     # Create MobileItemBlueprint records
     seed['mobileitemblueprint1'] = MobileItemBlueprint()
     seed['mobileitemblueprint1'].set_bake_time_ms(1)
@@ -202,6 +191,12 @@ def create_seed_data():
         seed['itemblueprintcomponent1'].set_item_blueprint_id(seed['itemblueprint1'].get_id())
     seed['itemblueprintcomponent1'].set_ratio(1.0)
     seed['itemblueprintcomponent1'].save()
+
+    # Create Item records with relationships
+    seed['item1'] = Item()
+    seed['item1'].set_internal_name('test_internal_name_1')
+    seed['item1'].set_item_type('test_item_type_1')
+    seed['item1'].save()
 
     # Create MobileItemBlueprintComponent records with relationships
     seed['mobileitemblueprintcomponent1'] = MobileItemBlueprintComponent()
@@ -775,9 +770,45 @@ class TestAttributeRelationships(unittest.TestCase):
             # Expected if DB has FK constraints with RESTRICT or NO ACTION
             pass
 
-    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
-    # TODO: Add Owner union tests for tables with owner fields
-    # TODO: Add AttributeValue union tests for attributes table
+    def test_from_thrift_with_enum(self):
+        """Test from_thrift correctly converts enum integer to string name."""
+        from game.ttypes import Attribute as ThriftAttribute, AttributeType
+
+        # Create Thrift object with enum field
+        thrift_obj = ThriftAttribute(
+            internal_name='test_internal_name',
+            visible=1,
+            attribute_type=AttributeType.STRENGTH,
+        )
+
+        # Convert to model
+        model = Attribute()
+        model.from_thrift(thrift_obj)
+
+        # Verify enum was converted to string name
+        self.assertEqual(model._data['attribute_type'], 'STRENGTH')
+
+        # Save and reload to verify round-trip
+        model.save()
+        model_id = model.get_id()
+        self.assertIsNotNone(model_id)
+
+        # Load from database
+        loaded_model = Attribute.find(model_id)
+        self.assertIsNotNone(loaded_model)
+        self.assertEqual(loaded_model._data['attribute_type'], 'STRENGTH')
+
+        # Convert back to Thrift
+        results, thrift_obj_out = loaded_model.into_thrift()
+        if thrift_obj_out is None:
+            # Print error details if conversion failed
+            for result in results:
+                print(f"into_thrift error: {result.message}")
+        self.assertIsNotNone(thrift_obj_out, f"into_thrift failed: {results[0].message if results else 'unknown'}")
+        self.assertEqual(thrift_obj_out.attribute_type, AttributeType.STRENGTH)
+
+        # Clean up
+        loaded_model.destroy()
 
 
 
@@ -1088,7 +1119,6 @@ class TestInventoryRelationships(unittest.TestCase):
             # Expected if DB has FK constraints with RESTRICT or NO ACTION
             pass
 
-    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
     # TODO: Add Owner union tests for tables with owner fields
     # TODO: Add AttributeValue union tests for attributes table
 
@@ -1430,7 +1460,6 @@ class TestInventoryEntryRelationships(unittest.TestCase):
         self.assertFalse(parent._dirty)
         self.assertFalse(related._dirty)
 
-    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
     # TODO: Add Owner union tests for tables with owner fields
     # TODO: Add AttributeValue union tests for attributes table
 
@@ -1806,7 +1835,6 @@ class TestItemBlueprintComponentRelationships(unittest.TestCase):
         self.assertFalse(parent._dirty)
         self.assertFalse(related._dirty)
 
-    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
     # TODO: Add Owner union tests for tables with owner fields
     # TODO: Add AttributeValue union tests for attributes table
 
@@ -1878,6 +1906,244 @@ class TestItemBlueprintRelationships(unittest.TestCase):
         results_list = list(results_iter)
         self.assertEqual(len(results_list), 1)
         self.assertIsInstance(results_list[0], ItemBlueprintComponent)
+
+
+    def test_has_many_items_basic(self):
+        """Test items relationship basic getter."""
+        # Create parent
+        parent = ItemBlueprint()
+        parent.set_bake_time_ms(1)
+        parent.save()
+
+
+        # Create related records
+        child1 = Item()
+        child1.set_blueprint_id(parent.get_id())
+        child1.set_internal_name('test_internal_name')
+        child1.set_item_type(ThriftItemType.WEAPON)
+        child1.save()
+
+        child2 = Item()
+        child2.set_blueprint_id(parent.get_id())
+        child2.set_internal_name('test_internal_name')
+        child2.set_item_type(ThriftItemType.WEAPON)
+        child2.save()
+
+        # Test getter (eager mode)
+        results = parent.get_items(lazy=False)
+        self.assertIsInstance(results, list)
+        self.assertEqual(len(results), 2)
+
+        # Test caching
+        results2 = parent.get_items(lazy=False)
+        self.assertIs(results, results2)
+
+        # Test reload
+        results3 = parent.get_items(reload=True)
+        self.assertIsNot(results, results3)
+        self.assertEqual(len(results3), 2)
+
+
+    def test_has_many_items_lazy(self):
+        """Test items relationship lazy loading."""
+        # Create parent with children
+        parent = ItemBlueprint()
+        parent.set_bake_time_ms(1)
+        parent.save()
+
+
+        # Create child
+        child = Item()
+        child.set_blueprint_id(parent.get_id())
+        child.set_internal_name('test_internal_name')
+        child.set_item_type(ThriftItemType.WEAPON)
+        child.save()
+
+        # Test lazy mode
+        results_iter = parent.get_items(lazy=True)
+        self.assertFalse(isinstance(results_iter, list))
+
+        # Consume iterator
+        results_list = list(results_iter)
+        self.assertEqual(len(results_list), 1)
+        self.assertIsInstance(results_list[0], Item)
+
+
+    def test_has_many_mobile_items_basic(self):
+        """Test mobile_items relationship basic getter."""
+        # Create parent
+        parent = ItemBlueprint()
+        parent.set_bake_time_ms(1)
+        parent.save()
+
+
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq = Mobile()
+
+        mobile_prereq.set_mobile_type('test_prereq')
+
+        mobile_prereq.set_what_we_call_you('test_prereq')
+
+        mobile_prereq.save()
+
+
+        # Create prerequisite Item for item_id
+
+        item_prereq = Item()
+
+        item_prereq.set_internal_name('test_prereq')
+
+        item_prereq.set_item_type(ThriftItemType.WEAPON)
+
+        item_prereq.save()
+
+
+        # Create related records
+        child1 = MobileItem()
+        child1.set_blueprint_id(parent.get_id())
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_child1 = Mobile()
+
+        mobile_prereq_child1.set_mobile_type('test_prereq_child1')
+
+        mobile_prereq_child1.set_what_we_call_you('test_prereq_child1')
+
+        mobile_prereq_child1.save()
+
+
+        child1.set_mobile_id(mobile_prereq_child1.get_id())
+        child1.set_internal_name('test_internal_name')
+        child1.set_item_type(ThriftItemType.WEAPON)
+        # Create prerequisite Item for item_id
+
+        item_prereq_child1 = Item()
+
+        item_prereq_child1.set_internal_name('test_prereq_child1')
+
+        item_prereq_child1.set_item_type(ThriftItemType.WEAPON)
+
+        item_prereq_child1.save()
+
+
+        child1.set_item_id(item_prereq_child1.get_id())
+        child1.save()
+
+        child2 = MobileItem()
+        child2.set_blueprint_id(parent.get_id())
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_child2 = Mobile()
+
+        mobile_prereq_child2.set_mobile_type('test_prereq_child2')
+
+        mobile_prereq_child2.set_what_we_call_you('test_prereq_child2')
+
+        mobile_prereq_child2.save()
+
+
+        child2.set_mobile_id(mobile_prereq_child2.get_id())
+        child2.set_internal_name('test_internal_name')
+        child2.set_item_type(ThriftItemType.WEAPON)
+        # Create prerequisite Item for item_id
+
+        item_prereq_child2 = Item()
+
+        item_prereq_child2.set_internal_name('test_prereq_child2')
+
+        item_prereq_child2.set_item_type(ThriftItemType.WEAPON)
+
+        item_prereq_child2.save()
+
+
+        child2.set_item_id(item_prereq_child2.get_id())
+        child2.save()
+
+        # Test getter (eager mode)
+        results = parent.get_mobile_items(lazy=False)
+        self.assertIsInstance(results, list)
+        self.assertEqual(len(results), 2)
+
+        # Test caching
+        results2 = parent.get_mobile_items(lazy=False)
+        self.assertIs(results, results2)
+
+        # Test reload
+        results3 = parent.get_mobile_items(reload=True)
+        self.assertIsNot(results, results3)
+        self.assertEqual(len(results3), 2)
+
+
+    def test_has_many_mobile_items_lazy(self):
+        """Test mobile_items relationship lazy loading."""
+        # Create parent with children
+        parent = ItemBlueprint()
+        parent.set_bake_time_ms(1)
+        parent.save()
+
+
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_lazy = Mobile()
+
+        mobile_prereq_lazy.set_mobile_type('test_mobile_type')
+
+        mobile_prereq_lazy.set_what_we_call_you('test_what_we_call_you')
+
+        mobile_prereq_lazy.save()
+
+
+        # Create prerequisite Item for item_id
+
+        item_prereq_lazy = Item()
+
+        item_prereq_lazy.set_internal_name('test_internal_name')
+
+        item_prereq_lazy.set_item_type(ThriftItemType.WEAPON)
+
+        item_prereq_lazy.save()
+
+
+        # Create child
+        child = MobileItem()
+        child.set_blueprint_id(parent.get_id())
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_child_lazy = Mobile()
+
+        mobile_prereq_child_lazy.set_mobile_type('test_prereq_child_lazy')
+
+        mobile_prereq_child_lazy.set_what_we_call_you('test_prereq_child_lazy')
+
+        mobile_prereq_child_lazy.save()
+
+
+        child.set_mobile_id(mobile_prereq_child_lazy.get_id())
+        child.set_internal_name('test_internal_name')
+        child.set_item_type(ThriftItemType.WEAPON)
+        # Create prerequisite Item for item_id
+
+        item_prereq_child_lazy = Item()
+
+        item_prereq_child_lazy.set_internal_name('test_prereq_child_lazy')
+
+        item_prereq_child_lazy.set_item_type(ThriftItemType.WEAPON)
+
+        item_prereq_child_lazy.save()
+
+
+        child.set_item_id(item_prereq_child_lazy.get_id())
+        child.save()
+
+        # Test lazy mode
+        results_iter = parent.get_mobile_items(lazy=True)
+        self.assertFalse(isinstance(results_iter, list))
+
+        # Consume iterator
+        results_list = list(results_iter)
+        self.assertEqual(len(results_list), 1)
+        self.assertIsInstance(results_list[0], MobileItem)
 
     def test_dirty_tracking_new_model(self):
         """Test that new models are marked dirty."""
@@ -1991,7 +2257,6 @@ class TestItemBlueprintRelationships(unittest.TestCase):
             # Expected if DB has FK constraints with RESTRICT or NO ACTION
             pass
 
-    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
     # TODO: Add Owner union tests for tables with owner fields
     # TODO: Add AttributeValue union tests for attributes table
 
@@ -2003,6 +2268,55 @@ class TestItemRelationships(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.model = Item()
+
+    def test_belongs_to_blueprint_basic(self):
+        """Test blueprint relationship basic getter."""
+        # Create related model
+        related = ItemBlueprint()
+        related.set_bake_time_ms(1)
+        related.save()
+
+        # Create parent and set FK
+        parent = Item()
+        parent.set_internal_name('test_internal_name')
+        parent.set_item_type(ThriftItemType.WEAPON)
+        parent.set_blueprint_id(related.get_id())
+        parent.save()
+
+        # Test getter
+        result = parent.get_blueprint()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, ItemBlueprint)
+        self.assertEqual(result.get_id(), related.get_id())
+
+        # Test caching - second call should return same instance
+        result2 = parent.get_blueprint()
+        self.assertIs(result, result2)
+
+
+    def test_belongs_to_blueprint_setter(self):
+        """Test blueprint relationship setter."""
+        # Create related models
+        related1 = ItemBlueprint()
+        related1.set_bake_time_ms(1)
+        related1.save()
+
+        # Create parent
+        parent = Item()
+        parent.set_internal_name('test_internal_name')
+        parent.set_item_type(ThriftItemType.WEAPON)
+
+        # Use setter
+        parent.set_blueprint(related1)
+
+        # Verify FK updated
+        self.assertEqual(parent.get_blueprint_id(), related1.get_id())
+
+        # Verify model marked dirty
+        self.assertTrue(parent._dirty)
+
+        # Verify getter returns same instance
+        self.assertIs(parent.get_blueprint(), related1)
 
     def test_has_many_attribute_owners_basic(self):
         """Test attribute_owners relationship basic getter."""
@@ -2471,6 +2785,29 @@ class TestItemRelationships(unittest.TestCase):
         model.save()
         self.assertFalse(model._dirty)
 
+    def test_cascade_save_belongs_to(self):
+        """Test cascade save for belongs-to relationships."""
+        # Create related model (unsaved)
+        related = ItemBlueprint()
+        related.set_bake_time_ms(1)
+        self.assertTrue(related._dirty)
+        self.assertIsNone(related.get_id())
+
+        # Create parent (unsaved)
+        parent = Item()
+        parent.set_internal_name('test_internal_name')
+        parent.set_item_type(ThriftItemType.WEAPON)
+        parent.set_blueprint(related)
+
+        # Save parent with cascade
+        parent.save(cascade=True)
+
+        # Verify both saved
+        self.assertIsNotNone(parent.get_id())
+        self.assertIsNotNone(related.get_id())
+        self.assertFalse(parent._dirty)
+        self.assertFalse(related._dirty)
+
     def test_cascade_destroy(self):
         """Test cascade destroy for has-many relationships."""
         # Create parent
@@ -2549,9 +2886,44 @@ class TestItemRelationships(unittest.TestCase):
             # Expected if DB has FK constraints with RESTRICT or NO ACTION
             pass
 
-    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
-    # TODO: Add Owner union tests for tables with owner fields
-    # TODO: Add AttributeValue union tests for attributes table
+    def test_from_thrift_with_enum(self):
+        """Test from_thrift correctly converts enum integer to string name."""
+        from game.ttypes import Item as ThriftItem, ItemType
+
+        # Create Thrift object with enum field
+        thrift_obj = ThriftItem(
+            internal_name='test_internal_name',
+            item_type=ItemType.RAWMATERIAL,
+        )
+
+        # Convert to model
+        model = Item()
+        model.from_thrift(thrift_obj)
+
+        # Verify enum was converted to string name
+        self.assertEqual(model._data['item_type'], 'RAWMATERIAL')
+
+        # Save and reload to verify round-trip
+        model.save()
+        model_id = model.get_id()
+        self.assertIsNotNone(model_id)
+
+        # Load from database
+        loaded_model = Item.find(model_id)
+        self.assertIsNotNone(loaded_model)
+        self.assertEqual(loaded_model._data['item_type'], 'RAWMATERIAL')
+
+        # Convert back to Thrift
+        results, thrift_obj_out = loaded_model.into_thrift()
+        if thrift_obj_out is None:
+            # Print error details if conversion failed
+            for result in results:
+                print(f"into_thrift error: {result.message}")
+        self.assertIsNotNone(thrift_obj_out, f"into_thrift failed: {results[0].message if results else 'unknown'}")
+        self.assertEqual(thrift_obj_out.item_type, ItemType.RAWMATERIAL)
+
+        # Clean up
+        loaded_model.destroy()
 
 
 
@@ -2880,7 +3252,6 @@ class TestMobileItemBlueprintComponentRelationships(unittest.TestCase):
         self.assertFalse(parent._dirty)
         self.assertFalse(related._dirty)
 
-    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
     # TODO: Add Owner union tests for tables with owner fields
     # TODO: Add AttributeValue union tests for attributes table
 
@@ -3065,7 +3436,6 @@ class TestMobileItemBlueprintRelationships(unittest.TestCase):
             # Expected if DB has FK constraints with RESTRICT or NO ACTION
             pass
 
-    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
     # TODO: Add Owner union tests for tables with owner fields
     # TODO: Add AttributeValue union tests for attributes table
 
@@ -3164,6 +3534,104 @@ class TestMobileItemRelationships(unittest.TestCase):
 
         # Verify getter returns same instance
         self.assertIs(parent.get_mobile(), related1)
+
+
+    def test_belongs_to_blueprint_basic(self):
+        """Test blueprint relationship basic getter."""
+        # Create related model
+        related = ItemBlueprint()
+        related.set_bake_time_ms(1)
+        related.save()
+
+        # Create parent and set FK
+        parent = MobileItem()
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_basic = Mobile()
+
+        mobile_prereq_basic.set_mobile_type('test_prereq_basic')
+
+        mobile_prereq_basic.set_what_we_call_you('test_prereq_basic')
+
+        mobile_prereq_basic.save()
+
+
+        parent.set_mobile_id(mobile_prereq_basic.get_id())
+        parent.set_internal_name('test_internal_name')
+        parent.set_item_type(ThriftItemType.WEAPON)
+        # Create prerequisite Item for item_id
+
+        item_prereq_basic = Item()
+
+        item_prereq_basic.set_internal_name('test_prereq_basic')
+
+        item_prereq_basic.set_item_type(ThriftItemType.WEAPON)
+
+        item_prereq_basic.save()
+
+
+        parent.set_item_id(item_prereq_basic.get_id())
+        parent.set_blueprint_id(related.get_id())
+        parent.save()
+
+        # Test getter
+        result = parent.get_blueprint()
+        self.assertIsNotNone(result)
+        self.assertIsInstance(result, ItemBlueprint)
+        self.assertEqual(result.get_id(), related.get_id())
+
+        # Test caching - second call should return same instance
+        result2 = parent.get_blueprint()
+        self.assertIs(result, result2)
+
+
+    def test_belongs_to_blueprint_setter(self):
+        """Test blueprint relationship setter."""
+        # Create related models
+        related1 = ItemBlueprint()
+        related1.set_bake_time_ms(1)
+        related1.save()
+
+        # Create parent
+        parent = MobileItem()
+        # Create prerequisite Mobile for mobile_id
+
+        mobile_prereq_setter = Mobile()
+
+        mobile_prereq_setter.set_mobile_type('test_prereq_setter')
+
+        mobile_prereq_setter.set_what_we_call_you('test_prereq_setter')
+
+        mobile_prereq_setter.save()
+
+
+        parent.set_mobile_id(mobile_prereq_setter.get_id())
+        parent.set_internal_name('test_internal_name')
+        parent.set_item_type(ThriftItemType.WEAPON)
+        # Create prerequisite Item for item_id
+
+        item_prereq_setter = Item()
+
+        item_prereq_setter.set_internal_name('test_prereq_setter')
+
+        item_prereq_setter.set_item_type(ThriftItemType.WEAPON)
+
+        item_prereq_setter.save()
+
+
+        parent.set_item_id(item_prereq_setter.get_id())
+
+        # Use setter
+        parent.set_blueprint(related1)
+
+        # Verify FK updated
+        self.assertEqual(parent.get_blueprint_id(), related1.get_id())
+
+        # Verify model marked dirty
+        self.assertTrue(parent._dirty)
+
+        # Verify getter returns same instance
+        self.assertIs(parent.get_blueprint(), related1)
 
 
     def test_belongs_to_item_basic(self):
@@ -3691,9 +4159,46 @@ class TestMobileItemRelationships(unittest.TestCase):
             # Expected if DB has FK constraints with RESTRICT or NO ACTION
             pass
 
-    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
-    # TODO: Add Owner union tests for tables with owner fields
-    # TODO: Add AttributeValue union tests for attributes table
+    def test_from_thrift_with_enum(self):
+        """Test from_thrift correctly converts enum integer to string name."""
+        from game.ttypes import MobileItem as ThriftMobileItem, ItemType
+
+        # Create Thrift object with enum field
+        thrift_obj = ThriftMobileItem(
+            mobile_id=1,
+            internal_name='test_internal_name',
+            item_type=ItemType.RAWMATERIAL,
+            item_id=1,
+        )
+
+        # Convert to model
+        model = MobileItem()
+        model.from_thrift(thrift_obj)
+
+        # Verify enum was converted to string name
+        self.assertEqual(model._data['item_type'], 'RAWMATERIAL')
+
+        # Save and reload to verify round-trip
+        model.save()
+        model_id = model.get_id()
+        self.assertIsNotNone(model_id)
+
+        # Load from database
+        loaded_model = MobileItem.find(model_id)
+        self.assertIsNotNone(loaded_model)
+        self.assertEqual(loaded_model._data['item_type'], 'RAWMATERIAL')
+
+        # Convert back to Thrift
+        results, thrift_obj_out = loaded_model.into_thrift()
+        if thrift_obj_out is None:
+            # Print error details if conversion failed
+            for result in results:
+                print(f"into_thrift error: {result.message}")
+        self.assertIsNotNone(thrift_obj_out, f"into_thrift failed: {results[0].message if results else 'unknown'}")
+        self.assertEqual(thrift_obj_out.item_type, ItemType.RAWMATERIAL)
+
+        # Clean up
+        loaded_model.destroy()
 
 
 
@@ -4310,7 +4815,6 @@ class TestMobileRelationships(unittest.TestCase):
             # Expected if DB has FK constraints with RESTRICT or NO ACTION
             pass
 
-    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
     # TODO: Add Owner union tests for tables with owner fields
     # TODO: Add AttributeValue union tests for attributes table
 
@@ -4699,7 +5203,6 @@ class TestPlayerRelationships(unittest.TestCase):
             # Expected if DB has FK constraints with RESTRICT or NO ACTION
             pass
 
-    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
     # TODO: Add Owner union tests for tables with owner fields
     # TODO: Add AttributeValue union tests for attributes table
 

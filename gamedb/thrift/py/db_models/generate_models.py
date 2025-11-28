@@ -558,11 +558,28 @@ def detect_relationships_by_convention(
     """
     relationships = []
 
+    # Special case mappings for columns that don't follow standard naming
+    special_cases = {
+        'blueprint_id': 'item_blueprints',
+    }
+
     # Common semantic prefixes that don't affect the referenced table
     semantic_prefixes = ['owner_', 'parent_', 'child_', 'source_', 'target_', 'primary_', 'secondary_']
 
     for col in columns:
         if col["name"].endswith("_id") and col["name"] != "id":
+            # Check special cases first
+            if col["name"] in special_cases:
+                relationships.append(
+                    {
+                        "column": col["name"],
+                        "referenced_table": special_cases[col["name"]],
+                        "referenced_column": "id",
+                        "is_nullable": col["is_nullable"],
+                    }
+                )
+                continue
+
             # Remove _id suffix
             col_name = col["name"][:-3]
 
@@ -1297,7 +1314,7 @@ def generate_getters(columns: List[Dict[str, Any]], table_name: str = None) -> s
             # Convert string from _data to enum type
             getter = f"""    def get_{col["name"]}(self) -> {optional_type}:
         value = self._data.get('{col["name"]}')
-        return {enum_type}[value] if value is not None else None"""
+        return getattr({enum_type}, value) if value is not None else None"""
         else:
             optional_type = (
                 f"Optional[{python_type}]" if col["is_nullable"] else python_type
@@ -1736,9 +1753,14 @@ def generate_from_thrift_method(
 
         # Map the field if it exists on the Thrift object
         if is_enum_field:
-            # For enum fields, convert enum to string for storage
+            # For enum fields, convert enum integer to string name for storage
+            # Python Thrift enums are just integers, so we use _VALUES_TO_NAMES dict
+            enum_type = enum_fields[field_key]
             method_code += f"        if hasattr(thrift_obj, '{col_name}'):\n"
-            method_code += f"            self._data['{col_name}'] = thrift_obj.{col_name}.name if thrift_obj.{col_name} is not None else None\n"
+            method_code += f"            if thrift_obj.{col_name} is not None:\n"
+            method_code += f"                self._data['{col_name}'] = {enum_type}._VALUES_TO_NAMES[thrift_obj.{col_name}]\n"
+            method_code += f"            else:\n"
+            method_code += f"                self._data['{col_name}'] = None\n"
         else:
             method_code += f"        if hasattr(thrift_obj, '{col_name}'):\n"
             method_code += f"            self._data['{col_name}'] = thrift_obj.{col_name}\n"
@@ -1835,6 +1857,10 @@ def generate_into_thrift_method(
         'mobile_items.item_type': 'ThriftItemType',
     }
 
+    # Get list of belongs-to foreign key columns to skip (except owner union which is handled specially)
+    belongs_to_rels = relationships.get("belongs_to", [])
+    belongs_to_columns = [rel["column"] for rel in belongs_to_rels if rel["column"] not in ['owner_player_id', 'owner_mobile_id', 'owner_item_id', 'owner_asset_id']]
+
     # Map simple fields
     for col in columns:
         col_name = col['name']
@@ -1847,12 +1873,16 @@ def generate_into_thrift_method(
         if table_name == 'attributes' and col_name in ['bool_value', 'double_value', 'vector3_x', 'vector3_y', 'vector3_z', 'asset_id']:
             continue
 
+        # Skip foreign key columns - they're handled as belongs-to relationships below
+        if col_name in belongs_to_columns:
+            continue
+
         # Check if this is an enum field
         field_key = f"{table_name}.{col_name}"
         if field_key in enum_fields:
             enum_type = enum_fields[field_key]
-            # For enum fields, convert string back to enum
-            method_code += f"            thrift_params['{col_name}'] = {enum_type}[self._data.get('{col_name}')] if self._data.get('{col_name}') is not None else None\n"
+            # For enum fields, convert string back to enum integer
+            method_code += f"            thrift_params['{col_name}'] = getattr({enum_type}, self._data.get('{col_name}')) if self._data.get('{col_name}') is not None else None\n"
         else:
             method_code += f"            thrift_params['{col_name}'] = self._data.get('{col_name}')\n"
 
@@ -2972,6 +3002,126 @@ def generate_cascade_destroy_tests(model: Dict[str, Any], all_models: List[Dict[
     return tests
 
 
+def generate_thrift_conversion_tests(model: Dict[str, Any]) -> str:
+    """Generate tests for Thrift conversion (from_thrift/into_thrift) with focus on enum fields."""
+    table_name = model['table_name']
+    class_name = model['class_name']
+
+    # Enum field mapping
+    enum_fields = {
+        'attributes.attribute_type': ('AttributeType', 'STRENGTH'),
+        'items.item_type': ('ItemType', 'RAWMATERIAL'),
+        'mobile_items.item_type': ('ItemType', 'RAWMATERIAL'),
+    }
+
+    tests = ""
+
+    # Check if this model has enum fields
+    has_enum = False
+    enum_field_info = []
+    for col in model['columns']:
+        field_key = f"{table_name}.{col['name']}"
+        if field_key in enum_fields:
+            has_enum = True
+            enum_type, test_value = enum_fields[field_key]
+            enum_field_info.append((col['name'], enum_type, test_value))
+
+    if not has_enum:
+        return tests
+
+    # Generate from_thrift test with enum fields
+    tests += f'''
+    def test_from_thrift_with_enum(self):
+        """Test from_thrift correctly converts enum integer to string name."""'''
+
+    # Import and create Thrift struct
+    # Use base name from TABLE_TO_THRIFT_MAPPING
+    thrift_struct_name = TABLE_TO_THRIFT_MAPPING.get(table_name)
+    if not thrift_struct_name:
+        return tests  # No Thrift mapping for this table
+
+    # Alias the Thrift struct to avoid collision with model class name
+    thrift_alias = f"Thrift{thrift_struct_name}"
+
+    tests += f'''
+        from game.ttypes import {thrift_struct_name} as {thrift_alias}'''
+
+    for col_name, enum_type, test_value in enum_field_info:
+        tests += f''', {enum_type}'''
+
+    tests += f'''
+
+        # Create Thrift object with enum field'''
+
+    # Build Thrift constructor params using the aliased name
+    tests += f'''
+        thrift_obj = {thrift_alias}('''
+
+    # Add required fields
+    for col in model['columns']:
+        if col['name'] == 'id':
+            continue
+        field_key = f"{table_name}.{col['name']}"
+        if field_key in enum_fields:
+            enum_type, test_value = enum_fields[field_key]
+            tests += f'''
+            {col['name']}={enum_type}.{test_value},'''
+        elif not col['is_nullable']:
+            test_value = get_test_value_for_column(table_name, col)
+            tests += f'''
+            {col['name']}={test_value},'''
+
+    tests += f'''
+        )
+
+        # Convert to model
+        model = {class_name}()
+        model.from_thrift(thrift_obj)
+
+        # Verify enum was converted to string name'''
+
+    for col_name, enum_type, test_value in enum_field_info:
+        tests += f'''
+        self.assertEqual(model._data['{col_name}'], '{test_value}')'''
+
+    tests += f'''
+
+        # Save and reload to verify round-trip
+        model.save()
+        model_id = model.get_id()
+        self.assertIsNotNone(model_id)
+
+        # Load from database
+        loaded_model = {class_name}.find(model_id)
+        self.assertIsNotNone(loaded_model)'''
+
+    for col_name, enum_type, test_value in enum_field_info:
+        tests += f'''
+        self.assertEqual(loaded_model._data['{col_name}'], '{test_value}')'''
+
+    tests += f'''
+
+        # Convert back to Thrift
+        results, thrift_obj_out = loaded_model.into_thrift()
+        if thrift_obj_out is None:
+            # Print error details if conversion failed
+            for result in results:
+                print(f"into_thrift error: {{result.message}}")
+        self.assertIsNotNone(thrift_obj_out, f"into_thrift failed: {{results[0].message if results else 'unknown'}}")'''
+
+    for col_name, enum_type, test_value in enum_field_info:
+        tests += f'''
+        self.assertEqual(thrift_obj_out.{col_name}, {enum_type}.{test_value})'''
+
+    tests += '''
+
+        # Clean up
+        loaded_model.destroy()
+'''
+
+    return tests
+
+
 def generate_tests(models: List[Dict[str, Any]]) -> str:
     """Generate comprehensive tests.py file for all models with relationship testing."""
     # Add sys.path manipulation first
@@ -3133,9 +3283,12 @@ class Test{class_name}Relationships(unittest.TestCase):
 
         # Add Thrift conversion tests if table has Thrift mapping
         if has_thrift_mapping(model['table_name']):
-            # Basic note about Thrift conversion - full tests would be added here
-            test_class += f'''
-    # TODO: Add Thrift conversion tests (from_thrift/into_thrift round-trips)
+            thrift_tests = generate_thrift_conversion_tests(model)
+            if thrift_tests:
+                test_class += thrift_tests
+            else:
+                # Note about other Thrift tests that could be added
+                test_class += f'''
     # TODO: Add Owner union tests for tables with owner fields
     # TODO: Add AttributeValue union tests for attributes table
 '''

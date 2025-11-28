@@ -5,6 +5,33 @@
 **Current Commit:** 9942f614554744b62c16a3fbfbde9a958de98c81
 **Estimated Complexity:** Complex
 
+**Progress Summary:**
+- ✅ 2 of 3 services complete (PlayerService, ItemService)
+- ✅ All blocking db_models bugs resolved
+- 🔄 Next: InventoryService (most complex, has self.db calls and inventory.py integration)
+
+**Implementation Status:**
+- [x] **Step 0: Pre-Flight Verification** - COMPLETE (2025-11-27)
+- [x] **Step 1-3: PlayerService** - COMPLETE (2025-11-27) - All tests passing
+- [x] **Step 4-6: ItemService** - COMPLETE (2025-11-27) - All tests passing
+  - [x] Step 4: Imports and infrastructure removed
+  - [x] Step 5: All CRUD methods refactored
+  - [x] Step 6: Tests updated and passing
+  - **BLOCKERS RESOLVED:** Fixed two critical db_models generator bugs during ItemService testing:
+    1. **Enum subscriptability bug**: Thrift enums are not subscriptable with `[]` notation
+       - **Problem:** Generator used `ThriftItemType[value]` which failed with "type 'ItemType' is not subscriptable"
+       - **Fix:** Changed to `getattr(ThriftItemType, value)` in both getters and `into_thrift()`
+       - **Files modified:** generate_models.py lines 1300, 1860
+    2. **blueprint_id foreign key bug**: `blueprint_id` not detected as FK relationship
+       - **Problem:** `Item.into_thrift()` passed `blueprint_id` to Thrift constructor, but Thrift expects `blueprint` (ItemBlueprint object)
+       - **Root cause:** No SQL FK constraint in DB, so convention detection didn't find it
+       - **Fix:** Added special case mapping in `detect_relationships_by_convention()`: `blueprint_id` → `item_blueprints` table
+       - **Result:** Auto-generates `get_blueprint()` method, `into_thrift()` now loads blueprint relationship correctly
+       - **Files modified:** generate_models.py line 562-564
+    - **db_models status after fixes:** Generator properly handles code-level FK constraints (per explore-db-models.md guidance)
+- [ ] **Step 7-10: InventoryService** - NOT STARTED (ready to begin)
+- [ ] **Step 11: Final Verification** - NOT STARTED
+
 ## Overview
 
 This plan refactors the three main service handlers (PlayerService, ItemService, InventoryService) to use the new generated ActiveRecord-style db_models instead of the deleted hand-written model layer. The services are currently non-functional due to importing deleted model classes and referencing a non-existent `self.db` singleton. This refactoring will make services database-agnostic, remove all caching logic, and establish the correct flow: ThriftRequest → Model → Business Logic → model.into_thrift() → ThriftResponse.
@@ -102,15 +129,15 @@ For InventoryService specifically, we'll handle the complex inventory.py integra
 **Objective:** Confirm critical assumptions about db_models API before starting refactoring work
 
 **Acceptance Criteria:**
-- [ ] Verified that db_models have `destroy()` or `delete()` methods for deletion
-- [ ] Confirmed that `save()` method accepts optional `connection` parameter for transactions
-- [ ] Verified `.env` loading works correctly from `/vagrant/gamedb/thrift` directory
-- [ ] Reviewed Player, Item, Inventory, InventoryEntry models to understand available methods
-- [ ] Confirmed only ItemService.autocomplete() uses raw SQL (no other special cases)
+- [x] Verified that db_models have `destroy()` or `delete()` methods for deletion
+- [x] Confirmed that `save()` method accepts optional `connection` parameter for transactions
+- [x] Verified `.env` loading works correctly from `/vagrant/gamedb/thrift` directory
+- [x] Reviewed Player, Item, Inventory, InventoryEntry models to understand available methods
+- [x] Confirmed only ItemService.autocomplete() uses raw SQL (no other special cases)
 
 **Testing Requirements:**
-- [ ] Quick inspection of db_models/models.py to verify API
-- [ ] Check for existence of destroy/delete methods on main models
+- [x] Quick inspection of db_models/models.py to verify API
+- [x] Check for existence of destroy/delete methods on main models
 
 **Tasks:**
 
@@ -157,10 +184,10 @@ Confirm that only ItemService.autocomplete() uses raw SQL.
 - All other methods will be refactored to use db_models
 
 **Verification:**
-- [ ] Deletion methods confirmed to exist (or separate plan created)
-- [ ] Transaction support confirmed via connection parameter
-- [ ] Raw SQL usage documented (only autocomplete())
-- [ ] Ready to begin PlayerService refactoring
+- [x] Deletion methods confirmed to exist (or separate plan created)
+- [x] Transaction support confirmed via connection parameter
+- [x] Raw SQL usage documented (only autocomplete())
+- [x] Ready to begin PlayerService refactoring
 
 ---
 
@@ -173,16 +200,16 @@ Confirm that only ItemService.autocomplete() uses raw SQL.
 **Objective:** Remove broken imports, import from db_models, eliminate LRU cache, remove database credentials from constructor
 
 **Acceptance Criteria:**
-- [ ] No imports from `models.player_model` or any deleted model classes
-- [ ] `Player` imported from `db_models.models`
-- [ ] All LRU cache code removed (initialization, get/put calls, invalidation)
-- [ ] Constructor `__init__` has no database credential parameters (host, user, password, database)
-- [ ] Constructor `__init__` has no cache_size parameter
-- [ ] Code compiles without import errors
+- [x] No imports from `models.player_model` or any deleted model classes
+- [x] `Player` imported from `db_models.models`
+- [x] All LRU cache code removed (initialization, get/put calls, invalidation)
+- [x] Constructor `__init__` has no database credential parameters (host, user, password, database)
+- [x] Constructor `__init__` has no cache_size parameter
+- [x] Code compiles without import errors
 
 **Testing Requirements:**
-- [ ] Run `python3 -m py_compile py/services/player_service.py` successfully
-- [ ] No ImportError when importing PlayerServiceHandler
+- [x] Run `python3 -m py_compile py/services/player_service.py` successfully
+- [x] No ImportError when importing PlayerServiceHandler
 
 **Tasks:**
 
@@ -243,19 +270,19 @@ Remove all LRU cache operations (get, put, invalidate) throughout the service me
 **Objective:** Replace old model API with ActiveRecord patterns, establish ThriftRequest → Model → into_thrift → ThriftResponse flow
 
 **Acceptance Criteria:**
-- [ ] `load()` uses `Player.find(id)` and handles None return
-- [ ] `create()` uses `Player.from_thrift()` and `player.save()`
-- [ ] `save()` uses `Player.from_thrift()` and `player.save()`
-- [ ] `delete()` implements deletion with models
-- [ ] `list_records()` queries using db_models
-- [ ] All methods return proper Thrift Response objects with GameResult
-- [ ] Flow is: ThriftRequest → Model → model.into_thrift() → ThriftResponse
-- [ ] No references to old `player_model.load()`, `player_model.create()`, etc.
+- [x] `load()` uses `Player.find(id)` and handles None return
+- [x] `create()` uses `Player.from_thrift()` and `player.save()`
+- [x] `save()` uses `Player.from_thrift()` and `player.save()`
+- [x] `delete()` implements deletion with models
+- [x] `list_records()` queries using db_models
+- [x] All methods return proper Thrift Response objects with GameResult
+- [x] Flow is: ThriftRequest → Model → model.into_thrift() → ThriftResponse
+- [x] No references to old `player_model.load()`, `player_model.create()`, etc.
 
 **Testing Requirements:**
-- [ ] Manual code review of each method
-- [ ] Verify all methods construct GameResult properly
-- [ ] Check that None returns from find() are handled
+- [x] Manual code review of each method
+- [x] Verify all methods construct GameResult properly
+- [x] Check that None returns from find() are handled
 
 **Tasks:**
 
@@ -365,17 +392,17 @@ Update pagination and search to query using db_models.
 **Objective:** Update test file to use db_models, adapt test setup pattern, run tests and fix errors until all pass
 
 **Acceptance Criteria:**
-- [ ] Test imports from db_models.models, not deleted model classes
-- [ ] Test setup uses unique test database with CREATE_TABLE_STATEMENT from models
-- [ ] Test teardown drops test database
-- [ ] All PlayerService tests pass when run with proper PYTHONPATH
-- [ ] `describe()` method returns valid ServiceMetadata
-- [ ] No import errors or database connection errors
+- [x] Test imports from db_models.models, not deleted model classes
+- [x] Test setup uses unique test database with CREATE_TABLE_STATEMENT from models
+- [x] Test teardown drops test database
+- [x] All PlayerService tests pass when run with proper PYTHONPATH
+- [ ] `describe()` method returns valid ServiceMetadata (NOTE: Currently fails because base_service imports un-refactored services. Will work after all services are refactored.)
+- [x] No import errors or database connection errors
 
 **Testing Requirements:**
-- [ ] Run `PYTHONPATH="/vagrant/gamedb/thrift/gen-py:$PYTHONPATH" python3 py/services/tests/player_service_test.py`
-- [ ] All tests pass (no failures or errors)
-- [ ] Test database is created and dropped cleanly
+- [x] Run `PYTHONPATH="/vagrant/gamedb/thrift/gen-py:$PYTHONPATH" python3 py/services/tests/player_service_test.py`
+- [x] All tests pass (no failures or errors)
+- [x] Test database is created and dropped cleanly
 
 **Tasks:**
 
@@ -463,10 +490,10 @@ Test that BaseServiceHandler.describe() still works for PlayerService.
 - If describe() is broken, check services/snippets/ directory for missing JSON files
 
 **Verification:**
-- All PlayerService tests pass
-- describe() returns valid metadata
-- No lingering errors or warnings
-- Ready to move to ItemService
+- [x] All PlayerService tests pass
+- [ ] describe() returns valid metadata (NOTE: Will work after all services refactored)
+- [x] No lingering errors or warnings
+- [x] Ready to move to ItemService
 
 ---
 
@@ -1257,28 +1284,38 @@ If something goes wrong during implementation:
 
 ### Patterns to Follow
 
-**ActiveRecord CRUD pattern (see PlayerService Step 2):**
+**ActiveRecord CRUD pattern (VERIFIED in PlayerService Step 2):**
 ```python
-# Load
+# Load - into_thrift() returns tuple (results, thrift_obj)
 player = Player.find(player_id)
 if player:
-    thrift_player = player.into_thrift()
+    results, thrift_player = player.into_thrift()  # Unpack tuple!
 else:
     # Handle not found
 
-# Create
-player = Player.from_thrift(thrift_player)
+# Create - from_thrift() is INSTANCE method, not static
+player = Player()  # Create instance first
+player.from_thrift(thrift_player)  # Then populate from Thrift
 player.save()
+results, created_thrift_player = player.into_thrift()  # Unpack tuple!
 
-# Update
-player = Player.from_thrift(thrift_player)  # thrift_player.id is set
+# Update - same pattern as create
+player = Player()  # thrift_player.id is set
+player.from_thrift(thrift_player)
 player.save()
+results, saved_thrift_player = player.into_thrift()  # Unpack tuple!
 
-# Delete
+# Delete - must disconnect before destroy to avoid transaction conflict
 player = Player.find(player_id)
 if player:
-    player.destroy()  # Assumes destroy() method exists in model
+    player._disconnect()  # Critical! Avoid "Transaction already in progress"
+    player.destroy()
 ```
+
+**CRITICAL DISCOVERIES:**
+1. `from_thrift()` is an **instance method**: `player = Player()` then `player.from_thrift(thrift_obj)`
+2. `into_thrift()` returns a **tuple**: `(results, thrift_obj)` - must unpack!
+3. `find()` leaves connection open - call `_disconnect()` before `destroy()` to avoid transaction conflicts
 
 **Inventory.py integration pattern (see InventoryService Step 9):**
 ```python

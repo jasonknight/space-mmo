@@ -44,8 +44,11 @@ from game.ttypes import (
     FieldEnumMapping,
 )
 from game.ItemService import Iface as ItemServiceIface
-from models.item_model import ItemModel
-from common import is_ok
+from db_models.models import (
+    Item,
+    ItemBlueprint,
+    ItemBlueprintComponent,
+)
 from services.base_service import BaseServiceHandler
 
 
@@ -55,16 +58,8 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
     Handles item CRUD operations using the ItemModel layer.
     """
 
-    def __init__(
-        self,
-        host: str,
-        user: str,
-        password: str,
-        database: str,
-    ):
+    def __init__(self):
         BaseServiceHandler.__init__(self, ItemServiceHandler)
-        self.item_model = ItemModel(host, user, password, database)
-        self.database = database
 
     def create(self, request: ItemRequest) -> ItemResponse:
         """Create a new item."""
@@ -84,31 +79,24 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                 )
 
             create_data = request.data.create_item
-            logger.info(
-                f"Creating item with internal_name={create_data.item.internal_name}"
+            thrift_item = create_data.item
+            logger.info(f"Creating item with internal_name={thrift_item.internal_name}")
+
+            item = Item()
+            item.from_thrift(thrift_item)
+            item.save()
+
+            logger.info(f"SUCCESS: Created item with id={item.get_id()}")
+            results, created_thrift_item = item.into_thrift()
+            response_data = ItemResponseData(
+                create_item=CreateItemResponseData(
+                    item=created_thrift_item,
+                ),
             )
-
-            results = self.item_model.create(create_data.item)
-
-            if is_ok(results):
-                logger.info(f"SUCCESS: Created item with id={create_data.item.id}")
-                response_data = ItemResponseData(
-                    create_item=CreateItemResponseData(
-                        item=create_data.item,
-                    ),
-                )
-                return ItemResponse(
-                    results=results,
-                    response_data=response_data,
-                )
-            else:
-                logger.warning(
-                    f"FAILURE: Could not create item - {results[0].message if results else 'unknown error'}"
-                )
-                return ItemResponse(
-                    results=results,
-                    response_data=None,
-                )
+            return ItemResponse(
+                results=results,
+                response_data=response_data,
+            )
 
         except Exception as e:
             logger.error(f"EXCEPTION in create: {type(e).__name__}: {str(e)}")
@@ -144,23 +132,30 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             item_id = load_data.item_id
             logger.info(f"Loading item_id={item_id}")
 
-            result, item = self.item_model.load(item_id)
+            item = Item.find(item_id)
 
             if item:
                 logger.info(f"SUCCESS: Loaded item_id={item_id}")
+                results, thrift_item = item.into_thrift()
                 response_data = ItemResponseData(
                     load_item=LoadItemResponseData(
-                        item=item,
+                        item=thrift_item,
                     ),
                 )
                 return ItemResponse(
-                    results=[result],
+                    results=results,
                     response_data=response_data,
                 )
             else:
                 logger.warning(f"FAILURE: Item_id={item_id} not found in database")
                 return ItemResponse(
-                    results=[result],
+                    results=[
+                        GameResult(
+                            status=StatusType.FAILURE,
+                            message=f"Item {item_id} not found",
+                            error_code=GameError.DB_RECORD_NOT_FOUND,
+                        ),
+                    ],
                     response_data=None,
                 )
 
@@ -195,30 +190,25 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                 )
 
             save_data = request.data.save_item
-            item_id = save_data.item.id if save_data.item.id else "NEW"
+            thrift_item = save_data.item
+            item_id = thrift_item.id if thrift_item.id else "NEW"
             logger.info(f"Saving item_id={item_id}")
 
-            results = self.item_model.save(save_data.item)
+            item = Item()
+            item.from_thrift(thrift_item)
+            item.save()
 
-            if is_ok(results):
-                logger.info(f"SUCCESS: Saved item_id={save_data.item.id}")
-                response_data = ItemResponseData(
-                    save_item=SaveItemResponseData(
-                        item=save_data.item,
-                    ),
-                )
-                return ItemResponse(
-                    results=results,
-                    response_data=response_data,
-                )
-            else:
-                logger.warning(
-                    f"FAILURE: Could not save item - {results[0].message if results else 'unknown error'}"
-                )
-                return ItemResponse(
-                    results=results,
-                    response_data=None,
-                )
+            logger.info(f"SUCCESS: Saved item_id={item.get_id()}")
+            results, saved_thrift_item = item.into_thrift()
+            response_data = ItemResponseData(
+                save_item=SaveItemResponseData(
+                    item=saved_thrift_item,
+                ),
+            )
+            return ItemResponse(
+                results=results,
+                response_data=response_data,
+            )
 
         except Exception as e:
             logger.error(f"EXCEPTION in save: {type(e).__name__}: {str(e)}")
@@ -227,7 +217,7 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                     GameResult(
                         status=StatusType.FAILURE,
                         message=f"Failed to save item: {str(e)}",
-                        error_code=GameError.DB_INSERT_FAILED,
+                        error_code=GameError.DB_UPDATE_FAILED,
                     ),
                 ],
                 response_data=None,
@@ -254,27 +244,39 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             item_id = destroy_data.item_id
             logger.info(f"Destroying item_id={item_id}")
 
-            results = self.item_model.destroy(item_id)
+            item = Item.find(item_id)
 
-            if is_ok(results):
-                logger.info(f"SUCCESS: Destroyed item_id={item_id}")
-                response_data = ItemResponseData(
-                    destroy_item=DestroyItemResponseData(
-                        item_id=item_id,
-                    ),
-                )
+            if not item:
+                logger.warning(f"FAILURE: Item_id={item_id} not found")
                 return ItemResponse(
-                    results=results,
-                    response_data=response_data,
-                )
-            else:
-                logger.warning(
-                    f"FAILURE: Could not destroy item - {results[0].message if results else 'unknown error'}"
-                )
-                return ItemResponse(
-                    results=results,
+                    results=[
+                        GameResult(
+                            status=StatusType.FAILURE,
+                            message=f"Item {item_id} not found",
+                            error_code=GameError.DB_RECORD_NOT_FOUND,
+                        ),
+                    ],
                     response_data=None,
                 )
+
+            item._disconnect()
+            item.destroy()
+
+            logger.info(f"SUCCESS: Destroyed item_id={item_id}")
+            response_data = ItemResponseData(
+                destroy_item=DestroyItemResponseData(
+                    item_id=item_id,
+                ),
+            )
+            return ItemResponse(
+                results=[
+                    GameResult(
+                        status=StatusType.SUCCESS,
+                        message=f"Item {item_id} destroyed successfully",
+                    ),
+                ],
+                response_data=response_data,
+            )
 
         except Exception as e:
             logger.error(f"EXCEPTION in destroy: {type(e).__name__}: {str(e)}")
@@ -317,32 +319,83 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                 f"Listing items: page={page}, results_per_page={results_per_page}, search_string={search_string}"
             )
 
-            result, items, total_count = self.item_model.search(
-                page,
-                results_per_page,
-                search_string=search_string,
-            )
+            connection = Item._create_connection()
+            cursor = connection.cursor(dictionary=True)
 
-            if items is not None:
-                logger.info(
-                    f"SUCCESS: Listed {len(items)} items (total: {total_count})"
+            offset = page * results_per_page
+
+            if search_string:
+                count_query = """
+                    SELECT COUNT(*) as total
+                    FROM items
+                    WHERE internal_name LIKE %s
+                """
+                query = """
+                    SELECT *
+                    FROM items
+                    WHERE internal_name LIKE %s
+                    ORDER BY internal_name
+                    LIMIT %s OFFSET %s
+                """
+                search_pattern = f"%{search_string}%"
+                cursor.execute(
+                    count_query,
+                    (search_pattern,),
                 )
-                response_data = ItemResponseData(
-                    list_item=ListItemResponseData(
-                        items=items,
-                        total_count=total_count,
+                total_count = cursor.fetchone()["total"]
+                cursor.execute(
+                    query,
+                    (
+                        search_pattern,
+                        results_per_page,
+                        offset,
                     ),
                 )
-                return ItemResponse(
-                    results=[result],
-                    response_data=response_data,
-                )
             else:
-                logger.warning(f"FAILURE: Could not list items - {result.message}")
-                return ItemResponse(
-                    results=[result],
-                    response_data=None,
+                count_query = "SELECT COUNT(*) as total FROM items"
+                query = """
+                    SELECT *
+                    FROM items
+                    ORDER BY internal_name
+                    LIMIT %s OFFSET %s
+                """
+                cursor.execute(count_query)
+                total_count = cursor.fetchone()["total"]
+                cursor.execute(
+                    query,
+                    (
+                        results_per_page,
+                        offset,
+                    ),
                 )
+
+            rows = cursor.fetchall()
+            cursor.close()
+            connection.close()
+
+            items = []
+            for row in rows:
+                item = Item()
+                item._populate_from_dict(row)
+                _, thrift_item = item.into_thrift()
+                items.append(thrift_item)
+
+            logger.info(f"SUCCESS: Listed {len(items)} items (total: {total_count})")
+            response_data = ItemResponseData(
+                list_item=ListItemResponseData(
+                    items=items,
+                    total_count=total_count,
+                ),
+            )
+            return ItemResponse(
+                results=[
+                    GameResult(
+                        status=StatusType.SUCCESS,
+                        message=f"Found {len(items)} items",
+                    ),
+                ],
+                response_data=response_data,
+            )
 
         except Exception as e:
             logger.error(f"EXCEPTION in list_records: {type(e).__name__}: {str(e)}")
@@ -386,14 +439,12 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                 f"Autocomplete search: search_string={search_string}, max_results={max_results}"
             )
 
-            # Use custom SQL query for lightweight autocomplete
-            self.item_model.connect()
-            cursor = self.item_model.connection.cursor(dictionary=True)
+            connection = Item._create_connection()
+            cursor = connection.cursor(dictionary=True)
 
-            # Search by internal_name with LIKE
-            query = f"""
+            query = """
                 SELECT id, internal_name
-                FROM {self.database}.items
+                FROM items
                 WHERE internal_name LIKE %s
                 ORDER BY internal_name
                 LIMIT %s
@@ -409,6 +460,7 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             )
             rows = cursor.fetchall()
             cursor.close()
+            connection.close()
 
             results = [
                 ItemAutocompleteResult(
@@ -474,20 +526,26 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                 f"Loading blueprint tree for item_id={item_id}, max_depth={max_depth}"
             )
 
-            # Load the root item
-            result, item = self.item_model.load(item_id)
+            item_model = Item.find(item_id)
 
-            if not item:
+            if not item_model:
                 logger.warning(f"FAILURE: Item_id={item_id} not found")
                 return ItemResponse(
-                    results=[result],
+                    results=[
+                        GameResult(
+                            status=StatusType.FAILURE,
+                            message=f"Item {item_id} not found",
+                            error_code=GameError.DB_RECORD_NOT_FOUND,
+                        ),
+                    ],
                     response_data=None,
                 )
 
-            # Build the blueprint tree recursively
+            _, thrift_item = item_model.into_thrift()
+
             visited_items = set()
             tree = self._build_blueprint_tree_node(
-                item,
+                thrift_item,
                 visited_items,
                 current_depth=0,
                 max_depth=max_depth,
@@ -507,7 +565,7 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                 results=[
                     GameResult(
                         status=StatusType.SUCCESS,
-                        message=f"Loaded blueprint tree for item {item.internal_name}",
+                        message=f"Loaded blueprint tree for item {thrift_item.internal_name}",
                     ),
                 ],
                 response_data=response_data,
@@ -542,7 +600,7 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
         Recursively build a blueprint tree node.
 
         Args:
-            item: The current item to process
+            item: The current item (Thrift object) to process
             visited_items: Set of item IDs we've already visited (for cycle detection)
             current_depth: Current recursion depth
             max_depth: Maximum recursion depth
@@ -554,32 +612,27 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
             f"Building tree node for item_id={item.id}, internal_name={item.internal_name}, depth={current_depth}"
         )
 
-        # Initialize the tree node
         component_nodes = []
         component_ratios = []
         total_bake_time = 0
         max_depth_reached = False
         cycle_detected = False
 
-        # Add this item's bake time if it has a blueprint
         if item.blueprint:
             total_bake_time = item.blueprint.bake_time_ms
             logger.debug(
                 f"Item has blueprint with bake_time={item.blueprint.bake_time_ms}ms"
             )
 
-            # Check if we can recurse deeper
             if current_depth >= max_depth:
                 logger.debug(f"Max depth {max_depth} reached at item_id={item.id}")
                 max_depth_reached = True
             elif item.blueprint.components:
-                # Process each component
                 for component_item_id, component in item.blueprint.components.items():
                     logger.debug(
                         f"Processing component: item_id={component_item_id}, ratio={component.ratio}"
                     )
 
-                    # Check for cycles
                     if component_item_id in visited_items:
                         logger.debug(
                             f"Cycle detected: item_id={component_item_id} already visited"
@@ -587,27 +640,24 @@ class ItemServiceHandler(BaseServiceHandler, ItemServiceIface):
                         cycle_detected = True
                         continue
 
-                    # Load the component item
-                    result, component_item = self.item_model.load(component_item_id)
+                    component_item_model = Item.find(component_item_id)
 
-                    if component_item:
-                        # Add to visited set
+                    if component_item_model:
+                        _, component_thrift_item = component_item_model.into_thrift()
+
                         new_visited = visited_items.copy()
                         new_visited.add(item.id)
 
-                        # Recursively build the component's tree
                         component_node = self._build_blueprint_tree_node(
-                            component_item,
+                            component_thrift_item,
                             new_visited,
                             current_depth + 1,
                             max_depth,
                         )
 
-                        # Add to lists
                         component_nodes.append(component_node)
                         component_ratios.append(component.ratio)
 
-                        # Add component's total bake time to our total
                         total_bake_time += component_node.total_bake_time_ms
                     else:
                         logger.warning(

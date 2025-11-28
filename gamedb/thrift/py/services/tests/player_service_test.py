@@ -1,14 +1,24 @@
 #!/usr/bin/env python3
-"""Simplified tests for PlayerService."""
+"""Tests for PlayerService using db_models."""
 
 import sys
+import os
+import uuid
 
-sys.path.append("../../gen-py")
-sys.path.append("..")
+thrift_gen_path = '/vagrant/gamedb/thrift/gen-py'
+if thrift_gen_path not in sys.path:
+    sys.path.insert(0, thrift_gen_path)
+
+py_path = '/vagrant/gamedb/thrift/py'
+if py_path not in sys.path:
+    sys.path.insert(0, py_path)
+
+from dotenv import load_dotenv
+load_dotenv()
 
 import mysql.connector
 from services.player_service import PlayerServiceHandler
-from models.player_model import PlayerModel
+from db_models.models import Player
 from game.ttypes import (
     PlayerRequest,
     PlayerRequestData,
@@ -16,94 +26,63 @@ from game.ttypes import (
     LoadPlayerRequestData,
     SavePlayerRequestData,
     DeletePlayerRequestData,
-    Player,
+    Player as ThriftPlayer,
     StatusType,
     GameError,
 )
-from common import is_ok, is_true
-from db_tables import get_table_sql
+from common import is_ok
+
+TEST_DATABASE = None
 
 
-def setup_database(host, user, password, database_name):
-    """Create all necessary tables for testing."""
+def setUpModule():
+    """Create unique test database and tables."""
+    global TEST_DATABASE
+    TEST_DATABASE = f"gamedb_test_{uuid.uuid4().hex[:8]}"
+
     connection = mysql.connector.connect(
-        host=host,
-        user=user,
-        password=password,
+        host=os.environ.get('DB_HOST', 'localhost'),
+        user=os.environ.get('DB_USER', 'admin'),
+        password=os.environ.get('DB_PASSWORD', 'minda'),
         auth_plugin="mysql_native_password",
         ssl_disabled=True,
         use_pure=True,
     )
     cursor = connection.cursor()
 
-    cursor.execute(f"DROP DATABASE IF EXISTS {database_name}")
-    cursor.execute(f"CREATE DATABASE {database_name}")
+    cursor.execute(f"CREATE DATABASE `{TEST_DATABASE}`")
+    connection.database = TEST_DATABASE
 
-    # Create players table
-    cursor.execute(
-        f"CREATE TABLE IF NOT EXISTS {database_name}.players ("
-        f"id BIGINT AUTO_INCREMENT PRIMARY KEY, "
-        f"full_name VARCHAR(255) NOT NULL, "
-        f"what_we_call_you VARCHAR(255) NOT NULL, "
-        f"security_token VARCHAR(255) NOT NULL, "
-        f"over_13 BOOLEAN NOT NULL, "
-        f"year_of_birth INT NOT NULL, "
-        f"email VARCHAR(255) NOT NULL"
-        f")"
-    )
-
-    # Create mobiles table
-    cursor.execute(
-        f"CREATE TABLE IF NOT EXISTS {database_name}.mobiles ("
-        f"id BIGINT AUTO_INCREMENT PRIMARY KEY, "
-        f"what_we_call_you VARCHAR(255), "
-        f"mobile_type VARCHAR(50) NOT NULL, "
-        f"owner_player_id BIGINT, "
-        f"owner_item_id BIGINT"
-        f")"
-    )
-
-    # Create attributes table
-    cursor.execute(
-        f"CREATE TABLE IF NOT EXISTS {database_name}.attributes ("
-        f"id BIGINT AUTO_INCREMENT PRIMARY KEY, "
-        f"attribute_name VARCHAR(255) NOT NULL UNIQUE, "
-        f"attribute_type VARCHAR(50) NOT NULL, "
-        f"description TEXT"
-        f")"
-    )
-
-    # Create attribute_owners table
-    cursor.execute(
-        f"CREATE TABLE IF NOT EXISTS {database_name}.attribute_owners ("
-        f"id BIGINT AUTO_INCREMENT PRIMARY KEY, "
-        f"attribute_id BIGINT NOT NULL, "
-        f"owner_mobile_id BIGINT NOT NULL, "
-        f"attribute_value VARCHAR(255), "
-        f"FOREIGN KEY (attribute_id) REFERENCES {database_name}.attributes(id)"
-        f")"
-    )
+    cursor.execute("SET FOREIGN_KEY_CHECKS=0")
+    cursor.execute(Player.CREATE_TABLE_STATEMENT)
+    cursor.execute("SET FOREIGN_KEY_CHECKS=1")
 
     connection.commit()
     cursor.close()
     connection.close()
 
+    os.environ['DB_DATABASE'] = TEST_DATABASE
+    print(f"✓ Test database created: {TEST_DATABASE}")
 
-def teardown_database(host, user, password, database_name):
-    """Delete the test database."""
-    connection = mysql.connector.connect(
-        host=host,
-        user=user,
-        password=password,
-        auth_plugin="mysql_native_password",
-        ssl_disabled=True,
-        use_pure=True,
-    )
-    cursor = connection.cursor()
-    cursor.execute(f"DROP DATABASE IF EXISTS {database_name}")
-    connection.commit()
-    cursor.close()
-    connection.close()
+
+def tearDownModule():
+    """Drop test database."""
+    global TEST_DATABASE
+    if TEST_DATABASE:
+        connection = mysql.connector.connect(
+            host=os.environ.get('DB_HOST', 'localhost'),
+            user=os.environ.get('DB_USER', 'admin'),
+            password=os.environ.get('DB_PASSWORD', 'minda'),
+            auth_plugin="mysql_native_password",
+            ssl_disabled=True,
+            use_pure=True,
+        )
+        cursor = connection.cursor()
+        cursor.execute(f"DROP DATABASE IF EXISTS `{TEST_DATABASE}`")
+        connection.commit()
+        cursor.close()
+        connection.close()
+        print(f"✓ Test database dropped: {TEST_DATABASE}")
 
 
 def run_all_tests():
@@ -112,23 +91,13 @@ def run_all_tests():
     print("Running PlayerService Tests")
     print("=" * 60 + "\n")
 
-    host = "localhost"
-    user = "admin"
-    password = "minda"
-    database_name = "test_player_service_db"
-
-    print("Setting up test database...")
-    setup_database(host, user, password, database_name)
-    print("✓ Test database ready\n")
-
-    service = PlayerServiceHandler(host, user, password, database_name, cache_size=1000)
-    player_model = PlayerModel(host, user, password, database_name)
+    service = PlayerServiceHandler()
     print("✓ PlayerService handler created\n")
 
     try:
         # Test create
         print("Testing PlayerService.create()...")
-        player = Player(
+        player = ThriftPlayer(
             id=None,
             full_name="John Doe",
             what_we_call_you="JohnD",
@@ -153,8 +122,6 @@ def run_all_tests():
 
         # Test load
         print("Testing PlayerService.load()...")
-        service.cache.clear()
-
         load_request = PlayerRequest(
             data=PlayerRequestData(
                 load_player=LoadPlayerRequestData(player_id=created_player.id),
@@ -166,13 +133,7 @@ def run_all_tests():
         loaded_player = response.response_data.load_player.player
         assert loaded_player.id == created_player.id
         assert loaded_player.full_name == "John Doe"
-        print(f"  ✓ Loaded player (cache miss)\n")
-
-        # Test load from cache
-        response2 = service.load(load_request)
-        assert is_ok(response2.results)
-        assert "cache" in response2.results[0].message.lower()
-        print(f"  ✓ Loaded player (cache hit)\n")
+        print(f"  ✓ Loaded player\n")
 
         # Test save
         print("Testing PlayerService.save()...")
@@ -190,10 +151,10 @@ def run_all_tests():
         print(f"  ✓ Saved player\n")
 
         # Verify save
-        result, updated_player = player_model.load(created_player.id)
-        assert is_true(result)
-        assert updated_player.full_name == "John Doe Updated"
-        assert updated_player.security_token == "new_hashed_password_456"
+        updated_player = Player.find(created_player.id)
+        assert updated_player is not None
+        assert updated_player.get_full_name() == "John Doe Updated"
+        assert updated_player.get_security_token() == "new_hashed_password_456"
         print(f"  ✓ Verified updates in database\n")
 
         # Test delete
@@ -210,8 +171,7 @@ def run_all_tests():
         print(f"  ✓ Deleted player\n")
 
         # Verify delete
-        result, deleted_player = player_model.load(created_player.id)
-        assert not is_true(result)
+        deleted_player = Player.find(created_player.id)
         assert deleted_player is None
         print(f"  ✓ Verified player removed from database\n")
 
@@ -219,11 +179,14 @@ def run_all_tests():
         print("✓ All PlayerService tests passed!")
         print("=" * 60)
 
-    finally:
-        print("\nCleaning up test database...")
-        teardown_database(host, user, password, database_name)
-        print("✓ Test database removed")
+    except Exception as e:
+        print(f"\n✗ Test failed with exception: {type(e).__name__}: {str(e)}")
+        raise
 
 
 if __name__ == "__main__":
-    run_all_tests()
+    setUpModule()
+    try:
+        run_all_tests()
+    finally:
+        tearDownModule()

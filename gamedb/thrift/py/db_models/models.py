@@ -45,7 +45,7 @@ class AttributeOwner:
           PRIMARY KEY (`id`),
           KEY `attribute_id` (`attribute_id`),
           CONSTRAINT `attribute_owners_ibfk_1` FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1019 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1338 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -676,7 +676,7 @@ class Attribute:
           `vector3_z` double DEFAULT NULL,
           `asset_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1198 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1579 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -720,7 +720,7 @@ class Attribute:
 
     def get_attribute_type(self) -> ThriftAttributeType:
         value = self._data.get('attribute_type')
-        return ThriftAttributeType[value] if value is not None else None
+        return getattr(ThriftAttributeType, value) if value is not None else None
 
     def get_bool_value(self) -> Optional[int]:
         return self._data.get('bool_value')
@@ -897,7 +897,10 @@ class Attribute:
         if hasattr(thrift_obj, 'visible'):
             self._data['visible'] = thrift_obj.visible
         if hasattr(thrift_obj, 'attribute_type'):
-            self._data['attribute_type'] = thrift_obj.attribute_type.name if thrift_obj.attribute_type is not None else None
+            if thrift_obj.attribute_type is not None:
+                self._data['attribute_type'] = ThriftAttributeType._VALUES_TO_NAMES[thrift_obj.attribute_type]
+            else:
+                self._data['attribute_type'] = None
 
         # Convert ThriftAttributeValue union to flattened database columns
         if hasattr(thrift_obj, 'value') and thrift_obj.value is not None:
@@ -949,7 +952,7 @@ class Attribute:
             thrift_params['id'] = self._data.get('id')
             thrift_params['internal_name'] = self._data.get('internal_name')
             thrift_params['visible'] = self._data.get('visible')
-            thrift_params['attribute_type'] = ThriftAttributeType[self._data.get('attribute_type')] if self._data.get('attribute_type') is not None else None
+            thrift_params['attribute_type'] = getattr(ThriftAttributeType, self._data.get('attribute_type')) if self._data.get('attribute_type') is not None else None
 
             # Convert flattened database columns to ThriftAttributeValue union
             # Priority: vector3 -> asset_id -> double_value -> bool_value (default)
@@ -1219,7 +1222,7 @@ class Inventory:
           `max_volume` double NOT NULL,
           `last_calculated_volume` double DEFAULT '0',
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=233 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=398 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1701,7 +1704,7 @@ class InventoryEntry:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_entries_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=153 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=395 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -1986,11 +1989,8 @@ class InventoryEntry:
             thrift_params = {}
 
             thrift_params['id'] = self._data.get('id')
-            thrift_params['inventory_id'] = self._data.get('inventory_id')
-            thrift_params['item_id'] = self._data.get('item_id')
             thrift_params['quantity'] = self._data.get('quantity')
             thrift_params['is_max_stacked'] = self._data.get('is_max_stacked')
-            thrift_params['mobile_item_id'] = self._data.get('mobile_item_id')
 
             # Load inventory relationship
             inventory_model = self.get_inventory()
@@ -2310,7 +2310,7 @@ class InventoryOwner:
           PRIMARY KEY (`id`),
           KEY `inventory_id` (`inventory_id`),
           CONSTRAINT `inventory_owners_ibfk_1` FOREIGN KEY (`inventory_id`) REFERENCES `inventories` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=499 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=686 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -2937,7 +2937,7 @@ class ItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=136 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=257 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3100,7 +3100,6 @@ class ItemBlueprintComponent:
             thrift_params = {}
 
             thrift_params['id'] = self._data.get('id')
-            thrift_params['item_blueprint_id'] = self._data.get('item_blueprint_id')
             thrift_params['component_item_id'] = self._data.get('component_item_id')
             thrift_params['ratio'] = self._data.get('ratio')
 
@@ -3361,7 +3360,7 @@ class ItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=361 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=493 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3440,6 +3439,74 @@ class ItemBlueprint:
             return iter([]) if lazy else []
 
         results = ItemBlueprintComponent.find_by_item_blueprint_id(my_id)
+
+        # Cache results for non-lazy calls
+        if not lazy:
+            setattr(self, cache_key, results)
+
+        return iter(results) if lazy else results
+
+    def get_items(self, reload: bool = False, lazy: bool = False):
+        """
+        Get all associated Item records.
+
+        Args:
+            reload: If True, bypass cache and fetch fresh from database.
+            lazy: If True, return an iterator. If False, return a list.
+
+        Returns:
+            List[Item] or Iterator[Item]
+        """
+        cache_key = '_items_cache'
+
+        # Check cache unless reload is requested
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                if lazy:
+                    return iter(cached)
+                return cached
+
+        # Fetch from database
+        my_id = self.get_id()
+        if my_id is None:
+            return iter([]) if lazy else []
+
+        results = Item.find_by_blueprint_id(my_id)
+
+        # Cache results for non-lazy calls
+        if not lazy:
+            setattr(self, cache_key, results)
+
+        return iter(results) if lazy else results
+
+    def get_mobile_items(self, reload: bool = False, lazy: bool = False):
+        """
+        Get all associated MobileItem records.
+
+        Args:
+            reload: If True, bypass cache and fetch fresh from database.
+            lazy: If True, return an iterator. If False, return a list.
+
+        Returns:
+            List[MobileItem] or Iterator[MobileItem]
+        """
+        cache_key = '_mobile_items_cache'
+
+        # Check cache unless reload is requested
+        if not reload and hasattr(self, cache_key):
+            cached = getattr(self, cache_key)
+            if cached is not None:
+                if lazy:
+                    return iter(cached)
+                return cached
+
+        # Fetch from database
+        my_id = self.get_id()
+        if my_id is None:
+            return iter([]) if lazy else []
+
+        results = MobileItem.find_by_blueprint_id(my_id)
 
         # Cache results for non-lazy calls
         if not lazy:
@@ -3570,6 +3637,22 @@ class ItemBlueprint:
                         for related in related_list:
                             if hasattr(related, '_dirty') and related._dirty:
                                 related.save(connection=connection, cascade=cascade)
+# Save items if cached
+                cache_key = '_items_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, '_dirty') and related._dirty:
+                                related.save(connection=connection, cascade=cascade)
+# Save mobile_items if cached
+                cache_key = '_mobile_items_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, '_dirty') and related._dirty:
+                                related.save(connection=connection, cascade=cascade)
 
             # Only commit if we own the connection
             if owns_connection:
@@ -3622,6 +3705,42 @@ class ItemBlueprint:
                     if self.get_id() is not None:
                         try:
                             children = self.get_item_blueprint_components(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Cascade destroy items children
+                cache_key = '_items_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_items(reload=True)
+                            for child in children:
+                                if hasattr(child, 'destroy'):
+                                    child.destroy(connection=connection, cascade=cascade)
+                        except:
+                            pass  # Relationship method may not exist
+# Cascade destroy mobile_items children
+                cache_key = '_mobile_items_cache'
+                if hasattr(self, cache_key):
+                    related_list = getattr(self, cache_key)
+                    if related_list is not None:
+                        for related in related_list:
+                            if hasattr(related, 'destroy'):
+                                related.destroy(connection=connection, cascade=cascade)
+                else:
+                    # Load and destroy children if not cached
+                    if self.get_id() is not None:
+                        try:
+                            children = self.get_mobile_items(reload=True)
                             for child in children:
                                 if hasattr(child, 'destroy'):
                                     child.destroy(connection=connection, cascade=cascade)
@@ -3717,7 +3836,7 @@ class Item:
           `item_type` varchar(50) NOT NULL,
           `blueprint_id` bigint DEFAULT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=2166 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=2790 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -3761,7 +3880,7 @@ class Item:
 
     def get_item_type(self) -> ThriftItemType:
         value = self._data.get('item_type')
-        return ThriftItemType[value] if value is not None else None
+        return getattr(ThriftItemType, value) if value is not None else None
 
     def get_blueprint_id(self) -> Optional[int]:
         return self._data.get('blueprint_id')
@@ -3840,7 +3959,56 @@ class Item:
         return self
 
 
+    def get_blueprint(self, strict: bool = False) -> Optional['ItemBlueprint']:
+        """
+        Get the associated ItemBlueprint for this blueprint relationship.
+        Uses lazy loading with caching.
 
+        Args:
+            strict: If True, raises ValueError when FK is set but record doesn't exist.
+                   If False, returns None when record doesn't exist.
+        """
+        # Check cache first
+        cache_key = '_blueprint_cache'
+        if hasattr(self, cache_key) and getattr(self, cache_key) is not None:
+            return getattr(self, cache_key)
+
+        # Get foreign key value
+        fk_value = self.get_blueprint_id()
+        if fk_value is None:
+            return None
+
+        # Lazy load from database
+        related = ItemBlueprint.find(fk_value)
+
+        if related is None and strict:
+            raise ValueError(f"{self.__class__.__name__} has blueprint_id={fk_value} but no ItemBlueprint record exists")
+
+        # Cache the result
+        setattr(self, cache_key, related)
+        return related
+
+    def set_blueprint(self, model: Optional['ItemBlueprint']) -> 'self.__class__':
+        """
+        Set the associated ItemBlueprint for this blueprint relationship.
+        Updates the foreign key and marks the model as dirty.
+
+        Args:
+            model: The ItemBlueprint instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
+        """
+        # Update cache
+        cache_key = '_blueprint_cache'
+        setattr(self, cache_key, model)
+
+        # Update foreign key
+        if model is None:
+            self.set_blueprint_id(None)
+        else:
+            self.set_blueprint_id(model.get_id())
+        return self
 
     def get_attribute_owners(self, reload: bool = False, lazy: bool = False):
         """
@@ -4449,7 +4617,10 @@ class Item:
         if hasattr(thrift_obj, 'max_stack_size'):
             self._data['max_stack_size'] = thrift_obj.max_stack_size
         if hasattr(thrift_obj, 'item_type'):
-            self._data['item_type'] = thrift_obj.item_type.name if thrift_obj.item_type is not None else None
+            if thrift_obj.item_type is not None:
+                self._data['item_type'] = ThriftItemType._VALUES_TO_NAMES[thrift_obj.item_type]
+            else:
+                self._data['item_type'] = None
         if hasattr(thrift_obj, 'blueprint_id'):
             self._data['blueprint_id'] = thrift_obj.blueprint_id
 
@@ -4486,8 +4657,7 @@ class Item:
             thrift_params['id'] = self._data.get('id')
             thrift_params['internal_name'] = self._data.get('internal_name')
             thrift_params['max_stack_size'] = self._data.get('max_stack_size')
-            thrift_params['item_type'] = ThriftItemType[self._data.get('item_type')] if self._data.get('item_type') is not None else None
-            thrift_params['blueprint_id'] = self._data.get('blueprint_id')
+            thrift_params['item_type'] = getattr(ThriftItemType, self._data.get('item_type')) if self._data.get('item_type') is not None else None
 
             # Load attributes via pivot table and convert to map<AttributeType, Attribute>
             attributes_map = {}
@@ -4501,6 +4671,15 @@ class Item:
                         # Use attribute_type as the map key
                         attributes_map[attr_thrift.attribute_type] = attr_thrift
             thrift_params['attributes'] = attributes_map
+
+            # Load blueprint relationship
+            blueprint_model = self.get_blueprint()
+            if blueprint_model is not None:
+                blueprint_results, blueprint_thrift = blueprint_model.into_thrift()
+                if blueprint_thrift is not None:
+                    thrift_params['blueprint'] = blueprint_thrift
+                else:
+                    results.extend(blueprint_results)
 
             # Create Thrift object
             thrift_obj = ThriftItem(**thrift_params)
@@ -4545,7 +4724,14 @@ class Item:
         try:
             # Cascade save belongs-to relationships first (even if parent not dirty)
             if cascade:
-                pass  # No belongs-to relationships
+                # Save blueprint if cached and dirty
+                cache_key = '_blueprint_cache'
+                if hasattr(self, cache_key):
+                    related = getattr(self, cache_key)
+                    if related is not None and hasattr(related, '_dirty') and related._dirty:
+                        related.save(connection=connection, cascade=cascade)
+                        # Update foreign key with saved ID
+                        self._data['blueprint_id'] = related.get_id()
 
             # Only execute SQL if this record is dirty
             if self._dirty:
@@ -4893,7 +5079,7 @@ class MobileItemAttribute:
           PRIMARY KEY (`id`),
           KEY `mobile_item_id` (`mobile_item_id`),
           CONSTRAINT `mobile_item_attributes_ibfk_1` FOREIGN KEY (`mobile_item_id`) REFERENCES `mobile_items` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=83 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=171 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5301,7 +5487,7 @@ class MobileItemBlueprintComponent:
           PRIMARY KEY (`id`),
           KEY `item_blueprint_id` (`item_blueprint_id`),
           CONSTRAINT `mobile_item_blueprint_components_ibfk_1` FOREIGN KEY (`item_blueprint_id`) REFERENCES `mobile_item_blueprints` (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=108 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=229 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -5464,7 +5650,6 @@ class MobileItemBlueprintComponent:
             thrift_params = {}
 
             thrift_params['id'] = self._data.get('id')
-            thrift_params['item_blueprint_id'] = self._data.get('item_blueprint_id')
             thrift_params['component_item_id'] = self._data.get('component_item_id')
             thrift_params['ratio'] = self._data.get('ratio')
 
@@ -5725,7 +5910,7 @@ class MobileItemBlueprint:
           `id` bigint NOT NULL AUTO_INCREMENT,
           `bake_time_ms` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=325 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=435 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -6083,7 +6268,7 @@ class MobileItem:
           `blueprint_id` bigint DEFAULT NULL,
           `item_id` bigint NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=340 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=611 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -6130,7 +6315,7 @@ class MobileItem:
 
     def get_item_type(self) -> ThriftItemType:
         value = self._data.get('item_type')
-        return ThriftItemType[value] if value is not None else None
+        return getattr(ThriftItemType, value) if value is not None else None
 
     def get_blueprint_id(self) -> Optional[int]:
         return self._data.get('blueprint_id')
@@ -6271,6 +6456,57 @@ class MobileItem:
             self.set_mobile_id(None)
         else:
             self.set_mobile_id(model.get_id())
+        return self
+
+    def get_blueprint(self, strict: bool = False) -> Optional['ItemBlueprint']:
+        """
+        Get the associated ItemBlueprint for this blueprint relationship.
+        Uses lazy loading with caching.
+
+        Args:
+            strict: If True, raises ValueError when FK is set but record doesn't exist.
+                   If False, returns None when record doesn't exist.
+        """
+        # Check cache first
+        cache_key = '_blueprint_cache'
+        if hasattr(self, cache_key) and getattr(self, cache_key) is not None:
+            return getattr(self, cache_key)
+
+        # Get foreign key value
+        fk_value = self.get_blueprint_id()
+        if fk_value is None:
+            return None
+
+        # Lazy load from database
+        related = ItemBlueprint.find(fk_value)
+
+        if related is None and strict:
+            raise ValueError(f"{self.__class__.__name__} has blueprint_id={fk_value} but no ItemBlueprint record exists")
+
+        # Cache the result
+        setattr(self, cache_key, related)
+        return related
+
+    def set_blueprint(self, model: Optional['ItemBlueprint']) -> 'self.__class__':
+        """
+        Set the associated ItemBlueprint for this blueprint relationship.
+        Updates the foreign key and marks the model as dirty.
+
+        Args:
+            model: The ItemBlueprint instance to associate, or None to clear.
+
+        Returns:
+            self for method chaining
+        """
+        # Update cache
+        cache_key = '_blueprint_cache'
+        setattr(self, cache_key, model)
+
+        # Update foreign key
+        if model is None:
+            self.set_blueprint_id(None)
+        else:
+            self.set_blueprint_id(model.get_id())
         return self
 
     def get_item(self, strict: bool = False) -> Optional['Item']:
@@ -6416,7 +6652,10 @@ class MobileItem:
         if hasattr(thrift_obj, 'max_stack_size'):
             self._data['max_stack_size'] = thrift_obj.max_stack_size
         if hasattr(thrift_obj, 'item_type'):
-            self._data['item_type'] = thrift_obj.item_type.name if thrift_obj.item_type is not None else None
+            if thrift_obj.item_type is not None:
+                self._data['item_type'] = ThriftItemType._VALUES_TO_NAMES[thrift_obj.item_type]
+            else:
+                self._data['item_type'] = None
         if hasattr(thrift_obj, 'blueprint_id'):
             self._data['blueprint_id'] = thrift_obj.blueprint_id
         if hasattr(thrift_obj, 'item_id'):
@@ -6453,12 +6692,9 @@ class MobileItem:
             thrift_params = {}
 
             thrift_params['id'] = self._data.get('id')
-            thrift_params['mobile_id'] = self._data.get('mobile_id')
             thrift_params['internal_name'] = self._data.get('internal_name')
             thrift_params['max_stack_size'] = self._data.get('max_stack_size')
-            thrift_params['item_type'] = ThriftItemType[self._data.get('item_type')] if self._data.get('item_type') is not None else None
-            thrift_params['blueprint_id'] = self._data.get('blueprint_id')
-            thrift_params['item_id'] = self._data.get('item_id')
+            thrift_params['item_type'] = getattr(ThriftItemType, self._data.get('item_type')) if self._data.get('item_type') is not None else None
 
             # Load attributes via pivot table and convert to map<AttributeType, Attribute>
             attributes_map = {}
@@ -6481,6 +6717,15 @@ class MobileItem:
                     thrift_params['mobile'] = mobile_thrift
                 else:
                     results.extend(mobile_results)
+
+            # Load blueprint relationship
+            blueprint_model = self.get_blueprint()
+            if blueprint_model is not None:
+                blueprint_results, blueprint_thrift = blueprint_model.into_thrift()
+                if blueprint_thrift is not None:
+                    thrift_params['blueprint'] = blueprint_thrift
+                else:
+                    results.extend(blueprint_results)
 
             # Load item relationship
             item_model = self.get_item()
@@ -6542,6 +6787,14 @@ class MobileItem:
                         related.save(connection=connection, cascade=cascade)
                         # Update foreign key with saved ID
                         self._data['mobile_id'] = related.get_id()
+# Save blueprint if cached and dirty
+                cache_key = '_blueprint_cache'
+                if hasattr(self, cache_key):
+                    related = getattr(self, cache_key)
+                    if related is not None and hasattr(related, '_dirty') and related._dirty:
+                        related.save(connection=connection, cascade=cascade)
+                        # Update foreign key with saved ID
+                        self._data['blueprint_id'] = related.get_id()
 # Save item if cached and dirty
                 cache_key = '_item_cache'
                 if hasattr(self, cache_key):
@@ -6823,7 +7076,7 @@ class Mobile:
           `owner_player_id` bigint DEFAULT NULL,
           `what_we_call_you` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=1378 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=1884 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
@@ -8142,7 +8395,7 @@ class Player:
           `year_of_birth` bigint NOT NULL,
           `email` varchar(255) NOT NULL,
           PRIMARY KEY (`id`)
-        ) ENGINE=InnoDB AUTO_INCREMENT=608 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+        ) ENGINE=InnoDB AUTO_INCREMENT=786 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
     """
 
     def __init__(self):
